@@ -115,7 +115,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-                    <mainClass>com.trading.bot.test.CheckCurrentPrices</mainClass>
+                    <mainClass>com.trading.bot.CloudLauncher</mainClass>
                 </configuration>
             </plugin>
             <plugin>
