@@ -3,13 +3,16 @@ com\trading\bot\core\Phase2IntegratedBot.class
 com\trading\bot\ml\SimplifiedMarketPredictor.class
 com\trading\bot\technical\AdvancedIndicatorsEngine.class
 com\trading\bot\ai\AIPredictor$AIPrediction.class
+com\trading\bot\CloudLauncher.class
 com\trading\bot\technical\AdvancedTechnicalAnalyzer$TechnicalResult.class
 com\trading\bot\technical\AdvancedIndicatorsEngine$StochasticResult.class
+com\trading\bot\CloudLauncher$HealthHandler.class
 com\trading\bot\smartmoney\OrderBlockDetector$OrderBlockStrength.class
 com\trading\bot\util\MarketHours.class
 com\trading\bot\smartmoney\OrderBlockDetector$OrderBlockAnalysis.class
 com\trading\bot\smartmoney\OrderBlockDetector.class
 com\trading\bot\ml\MLSignalValidator$ValidationResult.class
+com\trading\bot\test\CheckCurrentPrices.class
 com\trading\bot\smartmoney\FairValueGapDetector$FVGType.class
 com\trading\bot\technical\AdvancedTechnicalAnalyzer.class
 com\trading\bot\ai\AIPredictor.class
@@ -30,6 +33,7 @@ com\trading\bot\test\BacktestRunner.class
 com\trading\bot\smartmoney\FairValueGapDetector$FVGStatus.class
 com\trading\bot\smartmoney\LiquidityAnalyzer$LiquidityAnalysis.class
 com\trading\bot\smartmoney\FairValueGapDetector$FVGAnalysis.class
+com\trading\bot\test\DebugPrices.class
 com\trading\bot\telegram\Phase3TelegramBot.class
 com\trading\bot\core\Phase3IntegratedBot.class
 com\trading\bot\ai\ScanningService.class

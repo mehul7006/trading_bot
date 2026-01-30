@@ -1,11 +1,14 @@
+E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\test\DebugPrices.java
 E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\market\HonestMarketDataFetcher.java
 E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\technical\MultiTimeframeAnalyzer.java
+E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\CloudLauncher.java
 E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\test\BacktestRunner.java
 E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\ml\SimplifiedMarketPredictor.java
 E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\smartmoney\FairValueGapDetector.java
 E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\market\SimpleMarketData.java
 E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\ml\MLSignalValidator.java
 E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\smartmoney\OrderBlockDetector.java
+E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\test\CheckCurrentPrices.java
 E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\test\StrategyOptimizer.java
 E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\telegram\Phase3TelegramBot.java
 E:\app\index  pridiction\Trail\clean_bot\src\main\java\com\trading\bot\ai\AIPredictor.java

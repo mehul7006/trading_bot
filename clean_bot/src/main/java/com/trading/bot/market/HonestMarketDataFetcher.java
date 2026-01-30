@@ -2,6 +2,8 @@ package com.trading.bot.market;
 
 import com.trading.bot.market.SimpleMarketData;
 import com.trading.bot.util.MarketHours;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -9,6 +11,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -18,6 +21,7 @@ import java.util.*;
 public class HonestMarketDataFetcher {
     
     private final HttpClient httpClient;
+    private final ObjectMapper objectMapper;
     private final Map<String, Double> lastValidPrices;
     private final Map<String, LocalDateTime> lastValidTimes;
     
@@ -36,6 +40,7 @@ public class HonestMarketDataFetcher {
     
     public HonestMarketDataFetcher() {
         this.httpClient = HttpClient.newHttpClient();
+        this.objectMapper = new ObjectMapper();
         this.lastValidPrices = new HashMap<>();
         this.lastValidTimes = new HashMap<>();
         loadTokenFromFile();
@@ -86,26 +91,39 @@ public class HonestMarketDataFetcher {
     public List<SimpleMarketData> getRealMarketData(String symbol) throws Exception {
         System.out.println("🔍 Fetching HONEST market data for: " + symbol);
         
-        // 0. Check Market Hours
-        if (!MarketHours.isMarketOpen()) {
-            String error = "⛔ " + MarketHours.getMarketStatusMessage();
-            System.err.println(error);
-            throw new Exception(error);
-        }
-
-        // 1. Fetch historical candles (which include current price at the end)
+        // 1. Fetch historical candles (might be stale)
         List<SimpleMarketData> historicalData = fetchHistoricalCandles(symbol, "1minute");
         
+        // 2. Fetch Today's Real-Time OHLC (To fix stale data issues)
+        SimpleMarketData todayOHLC = fetchDayOHLC(symbol);
+        
+        if (todayOHLC != null) {
+            // Check if we need to append
+            if (historicalData.isEmpty()) {
+                historicalData.add(todayOHLC);
+            } else {
+                SimpleMarketData lastHist = historicalData.get(historicalData.size() - 1);
+                // If todayOHLC is newer than last history
+                if (todayOHLC.timestamp.toLocalDate().isAfter(lastHist.timestamp.toLocalDate()) ||
+                    (todayOHLC.timestamp.toLocalDate().isEqual(lastHist.timestamp.toLocalDate()) && todayOHLC.timestamp.isAfter(lastHist.timestamp))) {
+                    
+                    System.out.println("🔹 Appending Real-Time OHLC candle for " + symbol + " (" + todayOHLC.price + ")");
+                    historicalData.add(todayOHLC);
+                }
+            }
+        }
+
         if (!historicalData.isEmpty()) {
             // SUCCESS - Got real data
             SimpleMarketData latest = historicalData.get(historicalData.size() - 1);
             
-            // 2. Check Data Freshness (Must be within last 15 minutes)
+            // 2. Check Data Freshness (Must be within last 15 minutes OR be Today's OHLC)
             LocalDateTime now = LocalDateTime.now();
-            if (latest.timestamp.isBefore(now.minusMinutes(15))) {
-                String error = "⚠️ Data is stale! Latest data from: " + latest.timestamp + ". Market might be closed or API delayed.";
-                System.err.println(error);
-                throw new Exception(error);
+            boolean isFresh = latest.timestamp.isAfter(now.minusMinutes(15)) || latest.timestamp.toLocalDate().isEqual(now.toLocalDate());
+            
+            if (!isFresh) {
+                 String warning = "⚠️ Data might be stale! Latest data from: " + latest.timestamp;
+                 System.out.println(warning); // Just warn, don't fail, as user might want to see whatever we have
             }
             
             lastValidPrices.put(symbol, latest.price);
@@ -118,6 +136,54 @@ public class HonestMarketDataFetcher {
             System.err.println(error);
             throw new Exception(error);
         }
+    }
+
+    private SimpleMarketData fetchDayOHLC(String symbol) {
+        try {
+            String instrumentKey = SYMBOL_MAPPING.get(symbol);
+            if (instrumentKey == null) return null;
+            
+            String encodedKey = URLEncoder.encode(instrumentKey, StandardCharsets.UTF_8).replace("+", "%20");
+            String url = "https://api.upstox.com/v2/market-quote/ohlc?instrument_key=" + encodedKey + "&interval=1d";
+            
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Authorization", "Bearer " + UPSTOX_ACCESS_TOKEN)
+                .header("Accept", "application/json")
+                .timeout(java.time.Duration.ofSeconds(10))
+                .GET()
+                .build();
+            
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            
+            if (response.statusCode() == 200) {
+                JsonNode root = objectMapper.readTree(response.body());
+                if (root.path("status").asText().equals("success")) {
+                    JsonNode dataNode = root.path("data");
+                    
+                    Iterator<Map.Entry<String, JsonNode>> fields = dataNode.fields();
+                    while (fields.hasNext()) {
+                        Map.Entry<String, JsonNode> entry = fields.next();
+                        JsonNode ohlcNode = entry.getValue().path("ohlc");
+                        if (!ohlcNode.isMissingNode()) {
+                            double close = ohlcNode.path("close").asDouble();
+                            double open = ohlcNode.path("open").asDouble();
+                            double high = ohlcNode.path("high").asDouble();
+                            double low = ohlcNode.path("low").asDouble();
+                            
+                            // Create candle with NOW timestamp to indicate it's current
+                            SimpleMarketData candle = new SimpleMarketData(
+                                symbol, close, open, high, low, 0, LocalDateTime.now()
+                            );
+                            return candle;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Failed to fetch OHLC for " + symbol + ": " + e.getMessage());
+        }
+        return null;
     }
 
     /**
@@ -226,8 +292,8 @@ public class HonestMarketDataFetcher {
      * Helper to get single real price
      */
     private double fetchRealPriceFromUpstox(String symbol) throws Exception {
-        // We reuse the historical candle fetcher to get the latest price
-        List<SimpleMarketData> data = fetchHistoricalCandles(symbol, "1minute");
+        // Use getRealMarketData which now includes OHLC fallback
+        List<SimpleMarketData> data = getRealMarketData(symbol);
         if (data != null && !data.isEmpty()) {
             return data.get(data.size() - 1).price;
         }

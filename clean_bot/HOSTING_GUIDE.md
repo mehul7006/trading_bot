@@ -15,6 +15,7 @@ Render offers a free tier for Web Services, but they spin down after 15 minutes 
 3. Connect your GitHub repository.
 4. **Settings**:
    - **Name**: `my-trading-bot`
+   - **Root Directory**: `clean_bot` (IMPORTANT: Set this to the folder name where your code is!)
    - **Runtime**: **Docker** (Render will detect the Dockerfile automatically).
    - **Region**: Choose one close to India (e.g., Singapore) if available, otherwise any.
    - **Instance Type**: **Free**.
