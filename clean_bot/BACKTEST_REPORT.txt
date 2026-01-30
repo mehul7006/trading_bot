@@ -1,0 +1,33 @@
+===========================================
+📈 BACKTEST RESULTS (LAST 30 DAYS)
+===========================================
+Run Date: 2026-01-25
+Symbol: NIFTY50
+Data Source: Upstox Real Historical Data (1-minute interval)
+Total Candles Analyzed: 7500 (~20 days due to API limits)
+
+-------------------------------------------
+📊 PERFORMANCE SUMMARY
+-------------------------------------------
+Total Signals Generated: 58
+✅ Wins (Target Hit):   13
+❌ Losses (SL Hit):     45
+
+🎯 WIN RATE:           22.41%
+💰 NET POINTS:         -239.26
+
+-------------------------------------------
+📝 ANALYSIS
+-------------------------------------------
+The current "Real Enhanced Strategy" relies on standard indicators (MACD, RSI, SMA) on a 1-minute timeframe. 
+The low accuracy (22%) indicates:
+1. The 1-minute timeframe is too noisy for this specific strategy.
+2. The "Stop Loss" of 15 points is being hit frequently by market noise.
+3. The strategy needs "Multi-Timeframe Confirmation" (e.g., check 5-min or 15-min trend) to filter out false signals.
+
+-------------------------------------------
+🛠 RECOMMENDATION
+-------------------------------------------
+1. Switch Scanning to 5-minute timeframe for better stability.
+2. Implement "Trend Filtering" (only buy if price > 200 EMA).
+3. Increase Confidence Threshold from 80% to 90%.

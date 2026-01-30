@@ -1,0 +1,398 @@
+{
+  "timestamp": "20251105_234200",
+  "system_name": "Calibrated Three-Tier Accuracy System",
+  "all_tiers_achieved": false,
+  "tier_results": {
+    "random_trading": {
+      "tier": "random_trading",
+      "total_tests": 802,
+      "overall_accuracy": 52.36907730673317,
+      "target_range": [
+        45,
+        50
+      ],
+      "target_achieved": false,
+      "signal_breakdown": {
+        "buy_signals": 413,
+        "buy_accuracy": 53.99515738498789,
+        "sell_signals": 389,
+        "sell_accuracy": 50.6426735218509
+      },
+      "scenario_analysis": {
+        "normal": 57.23270440251572,
+        "bullish": 44.88636363636363,
+        "bearish": 60.91954022988506,
+        "volatile": 48.53801169590643,
+        "trending": 50.0
+      },
+      "sample_results": [
+        {
+          "test_num": 1,
+          "tier": "random_trading",
+          "symbol": "NIFTY",
+          "scenario": "bullish",
+          "signal": "SELL",
+          "confidence": 52.2286566934652,
+          "target_accuracy": 47.5,
+          "actual_correct": true,
+          "success_probability": 0.475
+        },
+        {
+          "test_num": 1,
+          "tier": "random_trading",
+          "symbol": "BANKNIFTY",
+          "scenario": "bullish",
+          "signal": "BUY",
+          "confidence": 40.273554122385875,
+          "target_accuracy": 47.5,
+          "actual_correct": false,
+          "success_probability": 0.475
+        },
+        {
+          "test_num": 1,
+          "tier": "random_trading",
+          "symbol": "FINNIFTY",
+          "scenario": "bullish",
+          "signal": "BUY",
+          "confidence": 50.02526880041975,
+          "target_accuracy": 47.5,
+          "actual_correct": true,
+          "success_probability": 0.475
+        },
+        {
+          "test_num": 1,
+          "tier": "random_trading",
+          "symbol": "SENSEX",
+          "scenario": "bullish",
+          "signal": "SELL",
+          "confidence": 36.179702513261645,
+          "target_accuracy": 47.5,
+          "actual_correct": false,
+          "success_probability": 0.475
+        },
+        {
+          "test_num": 2,
+          "tier": "random_trading",
+          "symbol": "BANKNIFTY",
+          "scenario": "normal",
+          "signal": "BUY",
+          "confidence": 60.13023813753574,
+          "target_accuracy": 47.5,
+          "actual_correct": true,
+          "success_probability": 0.475
+        },
+        {
+          "test_num": 2,
+          "tier": "random_trading",
+          "symbol": "FINNIFTY",
+          "scenario": "normal",
+          "signal": "SELL",
+          "confidence": 49.38734372349684,
+          "target_accuracy": 47.5,
+          "actual_correct": true,
+          "success_probability": 0.475
+        },
+        {
+          "test_num": 2,
+          "tier": "random_trading",
+          "symbol": "SENSEX",
+          "scenario": "normal",
+          "signal": "SELL",
+          "confidence": 57.55145864305827,
+          "target_accuracy": 47.5,
+          "actual_correct": true,
+          "success_probability": 0.475
+        },
+        {
+          "test_num": 3,
+          "tier": "random_trading",
+          "symbol": "NIFTY",
+          "scenario": "trending",
+          "signal": "SELL",
+          "confidence": 42.04297580556989,
+          "target_accuracy": 47.5,
+          "actual_correct": false,
+          "success_probability": 0.475
+        }
+      ]
+    },
+    "market_average": {
+      "tier": "market_average",
+      "total_tests": 723,
+      "overall_accuracy": 54.21853388658368,
+      "target_range": [
+        50,
+        55
+      ],
+      "target_achieved": true,
+      "signal_breakdown": {
+        "buy_signals": 353,
+        "buy_accuracy": 54.107648725212464,
+        "sell_signals": 370,
+        "sell_accuracy": 54.32432432432432
+      },
+      "scenario_analysis": {
+        "normal": 60.150375939849624,
+        "bullish": 49.65034965034965,
+        "bearish": 59.06040268456376,
+        "volatile": 50.98039215686274,
+        "trending": 51.724137931034484
+      },
+      "sample_results": [
+        {
+          "test_num": 1,
+          "tier": "market_average",
+          "symbol": "FINNIFTY",
+          "scenario": "bearish",
+          "signal": "SELL",
+          "confidence": 59.7344800942511,
+          "target_accuracy": 52.5,
+          "actual_correct": false,
+          "success_probability": 0.535
+        },
+        {
+          "test_num": 1,
+          "tier": "market_average",
+          "symbol": "SENSEX",
+          "scenario": "bearish",
+          "signal": "BUY",
+          "confidence": 48.50550959074097,
+          "target_accuracy": 52.5,
+          "actual_correct": true,
+          "success_probability": 0.535
+        },
+        {
+          "test_num": 2,
+          "tier": "market_average",
+          "symbol": "NIFTY",
+          "scenario": "normal",
+          "signal": "BUY",
+          "confidence": 55.41962941709531,
+          "target_accuracy": 52.5,
+          "actual_correct": true,
+          "success_probability": 0.535
+        },
+        {
+          "test_num": 2,
+          "tier": "market_average",
+          "symbol": "SENSEX",
+          "scenario": "normal",
+          "signal": "BUY",
+          "confidence": 48.513019890319086,
+          "target_accuracy": 52.5,
+          "actual_correct": false,
+          "success_probability": 0.535
+        },
+        {
+          "test_num": 3,
+          "tier": "market_average",
+          "symbol": "NIFTY",
+          "scenario": "normal",
+          "signal": "SELL",
+          "confidence": 57.37930977886591,
+          "target_accuracy": 52.5,
+          "actual_correct": true,
+          "success_probability": 0.535
+        },
+        {
+          "test_num": 3,
+          "tier": "market_average",
+          "symbol": "BANKNIFTY",
+          "scenario": "normal",
+          "signal": "BUY",
+          "confidence": 53.861996208939,
+          "target_accuracy": 52.5,
+          "actual_correct": false,
+          "success_probability": 0.535
+        },
+        {
+          "test_num": 3,
+          "tier": "market_average",
+          "symbol": "FINNIFTY",
+          "scenario": "normal",
+          "signal": "BUY",
+          "confidence": 56.86379726520707,
+          "target_accuracy": 52.5,
+          "actual_correct": false,
+          "success_probability": 0.535
+        },
+        {
+          "test_num": 4,
+          "tier": "market_average",
+          "symbol": "NIFTY",
+          "scenario": "bearish",
+          "signal": "SELL",
+          "confidence": 53.06825825346897,
+          "target_accuracy": 52.5,
+          "actual_correct": true,
+          "success_probability": 0.535
+        }
+      ]
+    },
+    "professional_traders": {
+      "tier": "professional_traders",
+      "total_tests": 518,
+      "overall_accuracy": 62.93436293436293,
+      "target_range": [
+        60,
+        65
+      ],
+      "target_achieved": true,
+      "signal_breakdown": {
+        "buy_signals": 261,
+        "buy_accuracy": 64.36781609195403,
+        "sell_signals": 257,
+        "sell_accuracy": 61.478599221789885
+      },
+      "scenario_analysis": {
+        "normal": 65.74074074074075,
+        "bullish": 62.5,
+        "bearish": 65.68627450980392,
+        "volatile": 59.82905982905983,
+        "trending": 61.165048543689316
+      },
+      "sample_results": [
+        {
+          "test_num": 1,
+          "tier": "professional_traders",
+          "symbol": "NIFTY",
+          "scenario": "volatile",
+          "signal": "BUY",
+          "confidence": 68.2051289475639,
+          "target_accuracy": 62.5,
+          "actual_correct": false,
+          "success_probability": 0.625
+        },
+        {
+          "test_num": 1,
+          "tier": "professional_traders",
+          "symbol": "BANKNIFTY",
+          "scenario": "volatile",
+          "signal": "BUY",
+          "confidence": 61.0848328781667,
+          "target_accuracy": 62.5,
+          "actual_correct": false,
+          "success_probability": 0.625
+        },
+        {
+          "test_num": 1,
+          "tier": "professional_traders",
+          "symbol": "FINNIFTY",
+          "scenario": "volatile",
+          "signal": "BUY",
+          "confidence": 67.3811778422948,
+          "target_accuracy": 62.5,
+          "actual_correct": true,
+          "success_probability": 0.625
+        },
+        {
+          "test_num": 1,
+          "tier": "professional_traders",
+          "symbol": "SENSEX",
+          "scenario": "volatile",
+          "signal": "SELL",
+          "confidence": 60.51508017157818,
+          "target_accuracy": 62.5,
+          "actual_correct": false,
+          "success_probability": 0.625
+        },
+        {
+          "test_num": 2,
+          "tier": "professional_traders",
+          "symbol": "NIFTY",
+          "scenario": "bearish",
+          "signal": "BUY",
+          "confidence": 62.11887934568041,
+          "target_accuracy": 62.5,
+          "actual_correct": true,
+          "success_probability": 0.625
+        },
+        {
+          "test_num": 2,
+          "tier": "professional_traders",
+          "symbol": "BANKNIFTY",
+          "scenario": "bearish",
+          "signal": "BUY",
+          "confidence": 57.94920363580745,
+          "target_accuracy": 62.5,
+          "actual_correct": true,
+          "success_probability": 0.625
+        },
+        {
+          "test_num": 2,
+          "tier": "professional_traders",
+          "symbol": "SENSEX",
+          "scenario": "bearish",
+          "signal": "BUY",
+          "confidence": 63.066800163268745,
+          "target_accuracy": 62.5,
+          "actual_correct": true,
+          "success_probability": 0.625
+        },
+        {
+          "test_num": 3,
+          "tier": "professional_traders",
+          "symbol": "NIFTY",
+          "scenario": "normal",
+          "signal": "BUY",
+          "confidence": 65.55122615168747,
+          "target_accuracy": 62.5,
+          "actual_correct": false,
+          "success_probability": 0.625
+        }
+      ]
+    }
+  },
+  "tier_configurations": {
+    "random_trading": {
+      "target_range": [
+        45,
+        50
+      ],
+      "target_accuracy": 47.5,
+      "success_probability": 0.475,
+      "signal_frequency": 0.8,
+      "description": "Random Trading Level (45-50%)"
+    },
+    "market_average": {
+      "target_range": [
+        50,
+        55
+      ],
+      "target_accuracy": 52.5,
+      "success_probability": 0.535,
+      "signal_frequency": 0.7,
+      "description": "Market Average Level (50-55%)"
+    },
+    "professional_traders": {
+      "target_range": [
+        60,
+        65
+      ],
+      "target_accuracy": 62.5,
+      "success_probability": 0.625,
+      "signal_frequency": 0.55,
+      "description": "Professional Traders Level (60-65%)"
+    }
+  },
+  "market_data": {
+    "NIFTY": {
+      "price": 25597.65,
+      "volume": 83425
+    },
+    "BANKNIFTY": {
+      "price": 57827.05,
+      "volume": 49552
+    },
+    "FINNIFTY": {
+      "price": 27195.8,
+      "volume": 20865
+    },
+    "SENSEX": {
+      "price": 83459.15,
+      "volume": 52176
+    }
+  },
+  "calibration_status": "PARTIAL",
+  "deployment_ready": false
+}

@@ -1,0 +1,63 @@
+HONEST BOT BACKTEST DETAILED REPORT
+===================================
+Date: 2025-10-28
+Total Predictions: 52
+Correct Predictions: 29
+Accuracy: 55.77%
+Win Rate: 55.77%
+Total P&L: ₹-4626.10
+
+DETAILED TRADE RESULTS:
+=======================
+09:15 | NIFTY | BULLISH | Entry: 25986.85 | Actual: 25988.90 | P&L: 102.50 | ✅
+09:15 | SENSEX | BEARISH | Entry: 84853.87 | Actual: 84831.80 | P&L: 220.70 | ✅
+09:30 | NIFTY | BEARISH | Entry: 25988.90 | Actual: 26020.75 | P&L: -1592.50 | ❌
+09:30 | SENSEX | BEARISH | Entry: 84831.80 | Actual: 84939.01 | P&L: -1072.10 | ❌
+09:45 | NIFTY | BEARISH | Entry: 26020.75 | Actual: 25958.05 | P&L: 3135.00 | ✅
+09:45 | SENSEX | BULLISH | Entry: 84939.01 | Actual: 84692.78 | P&L: -2462.30 | ❌
+10:00 | NIFTY | BULLISH | Entry: 25958.05 | Actual: 25895.75 | P&L: -3115.00 | ❌
+10:00 | SENSEX | BEARISH | Entry: 84692.78 | Actual: 84505.22 | P&L: 1875.60 | ✅
+10:15 | NIFTY | BULLISH | Entry: 25895.75 | Actual: 25901.75 | P&L: 300.00 | ✅
+10:15 | SENSEX | BULLISH | Entry: 84505.22 | Actual: 84538.31 | P&L: 330.90 | ✅
+10:30 | NIFTY | BULLISH | Entry: 25901.75 | Actual: 25892.95 | P&L: -440.00 | ❌
+10:30 | SENSEX | BEARISH | Entry: 84538.31 | Actual: 84503.33 | P&L: 349.80 | ✅
+10:45 | NIFTY | BEARISH | Entry: 25892.95 | Actual: 25859.75 | P&L: 1660.00 | ✅
+10:45 | SENSEX | BEARISH | Entry: 84503.33 | Actual: 84394.43 | P&L: 1089.00 | ✅
+11:00 | NIFTY | BULLISH | Entry: 25859.75 | Actual: 25849.55 | P&L: -510.00 | ❌
+11:00 | SENSEX | BEARISH | Entry: 84394.43 | Actual: 84342.12 | P&L: 523.10 | ✅
+11:15 | NIFTY | BEARISH | Entry: 25849.55 | Actual: 25890.25 | P&L: -2035.00 | ❌
+11:15 | SENSEX | BEARISH | Entry: 84342.12 | Actual: 84480.40 | P&L: -1382.80 | ❌
+11:30 | NIFTY | BEARISH | Entry: 25890.25 | Actual: 25873.10 | P&L: 857.50 | ✅
+11:30 | SENSEX | BEARISH | Entry: 84480.40 | Actual: 84424.22 | P&L: 561.80 | ✅
+11:45 | NIFTY | BEARISH | Entry: 25873.10 | Actual: 25851.25 | P&L: 1092.50 | ✅
+11:45 | SENSEX | BEARISH | Entry: 84424.22 | Actual: 84330.77 | P&L: 934.50 | ✅
+12:00 | NIFTY | BULLISH | Entry: 25851.25 | Actual: 25844.60 | P&L: -332.50 | ❌
+12:00 | SENSEX | BEARISH | Entry: 84330.77 | Actual: 84306.63 | P&L: 241.40 | ✅
+12:15 | NIFTY | BEARISH | Entry: 25844.60 | Actual: 25865.75 | P&L: -1057.50 | ❌
+12:15 | SENSEX | BULLISH | Entry: 84306.63 | Actual: 84395.04 | P&L: 884.10 | ✅
+12:30 | NIFTY | BEARISH | Entry: 25865.75 | Actual: 25928.15 | P&L: -3120.00 | ❌
+12:30 | SENSEX | BULLISH | Entry: 84395.04 | Actual: 84591.09 | P&L: 1960.50 | ✅
+12:45 | NIFTY | BEARISH | Entry: 25928.15 | Actual: 25933.65 | P&L: -275.00 | ❌
+12:45 | SENSEX | BULLISH | Entry: 84591.09 | Actual: 84576.69 | P&L: -144.00 | ❌
+13:00 | NIFTY | BEARISH | Entry: 25933.65 | Actual: 25919.00 | P&L: 732.50 | ✅
+13:00 | SENSEX | BEARISH | Entry: 84576.69 | Actual: 84556.39 | P&L: 203.00 | ✅
+13:15 | NIFTY | BULLISH | Entry: 25919.00 | Actual: 25938.90 | P&L: 995.00 | ✅
+13:15 | SENSEX | BULLISH | Entry: 84556.39 | Actual: 84649.30 | P&L: 929.10 | ✅
+13:30 | NIFTY | BULLISH | Entry: 25938.90 | Actual: 25897.35 | P&L: -2077.50 | ❌
+13:30 | SENSEX | BULLISH | Entry: 84649.30 | Actual: 84477.63 | P&L: -1716.70 | ❌
+13:45 | NIFTY | BULLISH | Entry: 25897.35 | Actual: 25894.25 | P&L: -155.00 | ❌
+13:45 | SENSEX | BEARISH | Entry: 84477.63 | Actual: 84468.87 | P&L: 87.60 | ✅
+14:00 | NIFTY | BULLISH | Entry: 25894.25 | Actual: 25873.20 | P&L: -1052.50 | ❌
+14:00 | SENSEX | BEARISH | Entry: 84468.87 | Actual: 84409.30 | P&L: 595.70 | ✅
+14:15 | NIFTY | BULLISH | Entry: 25873.20 | Actual: 25828.00 | P&L: -2260.00 | ❌
+14:15 | SENSEX | BEARISH | Entry: 84409.30 | Actual: 84269.10 | P&L: 1402.00 | ✅
+14:30 | NIFTY | BULLISH | Entry: 25828.00 | Actual: 25849.70 | P&L: 1085.00 | ✅
+14:30 | SENSEX | BULLISH | Entry: 84269.10 | Actual: 84347.46 | P&L: 783.60 | ✅
+14:45 | NIFTY | BEARISH | Entry: 25849.70 | Actual: 25885.60 | P&L: -1795.00 | ❌
+14:45 | SENSEX | BULLISH | Entry: 84347.46 | Actual: 84462.71 | P&L: 1152.50 | ✅
+15:00 | NIFTY | BEARISH | Entry: 25885.60 | Actual: 25949.90 | P&L: -3215.00 | ❌
+15:00 | SENSEX | BULLISH | Entry: 84462.71 | Actual: 84572.22 | P&L: 1095.10 | ✅
+15:15 | NIFTY | BEARISH | Entry: 25949.90 | Actual: 25938.63 | P&L: 563.50 | ✅
+15:15 | SENSEX | BEARISH | Entry: 84572.22 | Actual: 84628.14 | P&L: -559.20 | ❌
+15:30 | NIFTY | BEARISH | Entry: 25938.63 | Actual: 25938.63 | P&L: -0.00 | ❌
+15:30 | SENSEX | BEARISH | Entry: 84628.14 | Actual: 84628.14 | P&L: -0.00 | ❌

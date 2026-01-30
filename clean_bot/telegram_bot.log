@@ -1,0 +1,373 @@
+🏦 STARTING PHASE 3 INSTITUTIONAL TELEGRAM BOT
+===============================================
+
+[0;32m✅ Phase 3 Telegram Bot compiled and ready[0m
+
+[0;34mℹ️  Bot Features:[0m
+   🧠 Phase 1: Enhanced Technical + Machine Learning
+   📊 Phase 2: Multi-Timeframe + Advanced Indicators
+   🏦 Phase 3: Smart Money Concepts + Institutional Analysis
+
+📱 Smart Money Features:
+   • Order Block Detection
+   • Fair Value Gap Analysis
+   • Liquidity Analysis
+   • Institutional Grade Classification
+
+[0;34mℹ️  Available Telegram Commands:[0m
+   /start - Activate bot and show welcome message
+   /analyze - Full institutional market analysis
+   /nifty - NIFTY50 Smart Money analysis
+   /sensex - SENSEX institutional analysis
+   /banknifty - BANKNIFTY liquidity analysis
+   /auto_on - Start continuous analysis
+   /auto_off - Stop continuous analysis
+   /status - Check bot status
+   /help - Show all commands
+
+[0;34mℹ️  Bot Configuration:[0m
+   📱 Bot Token: 7921964521:AAG... (configured)
+   🔄 Polling: Every 2 seconds
+   💬 Response: Immediate to /start command
+   🏦 Engine: Phase 3 Integrated Bot
+
+[1;33m⚠️  IMPORTANT: Make sure to send /start command in Telegram to activate the bot![0m
+
+[0;32m✅ Starting Phase 3 Telegram Bot...[0m
+
+🔄 Bot is starting... Press Ctrl+C to stop
+📱 Go to your Telegram bot and send /start command
+🏦 The bot will respond with Phase 3 institutional trading features
+
+====================================================================================
+🏦 STARTING PHASE 3 INSTITUTIONAL TELEGRAM BOT
+===============================================
+✅ Smart Money Concepts Integration
+✅ Order Block Detection
+✅ Fair Value Gap Analysis
+✅ Liquidity Analysis
+✅ Institutional Grade Classification
+
+20:04:04.320 [main] INFO  c.trading.bot.ml.MLSignalValidator - Initializing advanced ML signal validator...
+20:04:04.321 [main] INFO  c.t.bot.ml.SimplifiedMarketPredictor - Initializing simplified ML model...
+20:04:04.322 [main] INFO  c.t.bot.ml.SimplifiedMarketPredictor - Simplified ML model initialized successfully
+20:04:04.322 [main] INFO  c.trading.bot.ml.MLSignalValidator - Advanced ML signal validator initialized successfully
+20:04:04.322 [main] INFO  c.t.bot.core.Phase3IntegratedBot - === Initializing Phase 3 Smart Money Concepts Bot ===
+20:04:04.322 [main] INFO  c.t.bot.core.Phase3IntegratedBot - Initializing Phase 2 foundation...
+20:04:04.322 [main] INFO  c.t.bot.core.Phase2IntegratedBot - === Initializing Phase 2 Advanced Integrated Bot ===
+20:04:04.322 [main] INFO  c.t.bot.core.Phase2IntegratedBot - Initializing technical analyzer...
+20:04:04.322 [main] INFO  c.t.bot.core.Phase2IntegratedBot - Initializing multi-timeframe analyzer...
+20:04:04.323 [main] INFO  c.t.bot.core.Phase2IntegratedBot - Initializing advanced indicators engine...
+20:04:04.323 [main] INFO  c.t.bot.core.Phase2IntegratedBot - Initializing ML signal validator...
+20:04:04.323 [main] INFO  c.t.bot.core.Phase2IntegratedBot - ✅ Phase 2 Advanced Integrated Bot initialized successfully
+20:04:04.323 [main] INFO  c.t.bot.core.Phase3IntegratedBot - Initializing Order Block Detector...
+20:04:04.323 [main] INFO  c.t.bot.core.Phase3IntegratedBot - Initializing Fair Value Gap Detector...
+20:04:04.323 [main] INFO  c.t.bot.core.Phase3IntegratedBot - Initializing Liquidity Analyzer...
+20:04:04.323 [main] INFO  c.t.bot.core.Phase3IntegratedBot - ✅ Phase 3 Smart Money Concepts Bot initialized successfully
+20:04:04.324 [main] INFO  c.t.bot.telegram.Phase3TelegramBot - ✅ Phase 3 Integrated Bot initialized successfully
+20:04:04.327 [main] INFO  c.t.bot.telegram.Phase3TelegramBot - 🚀 Starting Phase 3 Telegram Bot...
+20:04:04.328 [main] INFO  c.t.bot.telegram.Phase3TelegramBot - 📱 Phase 3 Telegram Bot is ready for commands
+20:04:04.330 [main] INFO  c.t.bot.telegram.Phase3TelegramBot - ✅ Phase 3 Telegram Bot started successfully
+20:04:04.330 [main] INFO  c.t.bot.telegram.Phase3TelegramBot - 🏦 Available features: Smart Money Analysis, Order Blocks, FVGs, Liquidity Analysis
+20:04:04.331 [main] INFO  c.t.bot.telegram.Phase3TelegramBot - 📱 Send /start to begin institutional trading analysis
+20:04:06.888 [pool-1-thread-1] INFO  c.t.bot.telegram.Phase3TelegramBot - 📱 Received command: /start from chat: 457623834
+20:04:09.081 [pool-1-thread-1] DEBUG c.t.bot.telegram.Phase3TelegramBot - 📤 Sent message to chat 457623834: 🏦 **PHASE 3 INSTITUTIONAL TRADING BOT ACTIVATED**
+20:04:09.085 [pool-1-thread-1] INFO  c.t.bot.telegram.Phase3TelegramBot - 📱 Received command: /start from chat: 457623834
+20:04:09.641 [pool-1-thread-1] DEBUG c.t.bot.telegram.Phase3TelegramBot - 📤 Sent message to chat 457623834: 🏦 **PHASE 3 INSTITUTIONAL TRADING BOT ACTIVATED**
+20:04:12.089 [pool-1-thread-2] DEBUG c.t.bot.telegram.Phase3TelegramBot - 📤 Sent message to chat 457623834: 📊 **Generating initial market analysis...**
+20:04:12.256 [pool-1-thread-1] DEBUG c.t.bot.telegram.Phase3TelegramBot - 📤 Sent message to chat 457623834: 📊 **Generating initial market analysis...**
+20:04:12.482 [pool-1-thread-2] DEBUG c.t.bot.telegram.Phase3TelegramBot - 📤 Sent message to chat 457623834: 🔍 **Performing Phase 3 Smart Money Analysis...**\
+20:04:12.485 [pool-1-thread-2] INFO  c.t.bot.core.Phase3IntegratedBot - === Generating Phase 3 Institutional Trading Call for NIFTY50 ===
+20:04:12.486 [pool-1-thread-2] INFO  c.t.bot.core.Phase2IntegratedBot - === Generating Phase 2 Advanced Trading Call for NIFTY50 ===
+20:04:12.487 [pool-1-thread-2] INFO  c.t.b.t.AdvancedTechnicalAnalyzer - Calculating enhanced confidence for NIFTY50
+20:04:12.487 [pool-1-thread-2] DEBUG c.t.b.t.AdvancedTechnicalAnalyzer - MACD calculated - Line: -6.49468778057053, Signal: 0.0, Histogram: -6.49468778057053
+20:04:12.489 [pool-1-thread-2] DEBUG c.t.b.t.AdvancedTechnicalAnalyzer - Bollinger Bands - Upper: 19877.108723134497, Middle: 19820.824989069326, Lower: 19764.541255004155
+20:04:12.490 [pool-1-thread-2] INFO  c.t.b.t.AdvancedTechnicalAnalyzer - Enhanced confidence calculated: 58.0 for NIFTY50 with reasoning: Trend:20.0, Momentum:5.0, Volume:15.0, Volatility:10.5, Pattern:7.5
+20:04:12.491 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Technical analysis: Trend:20.0, Momentum:5.0, Volume:15.0, Volatility:10.5, Pattern:7.5
+20:04:12.492 [pool-1-thread-2] INFO  c.t.b.t.MultiTimeframeAnalyzer - Performing multi-timeframe analysis on 100 data points
+20:04:12.501 [pool-1-thread-2] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: SHORT_TERM: NEUTRAL (25.0% strength, 54.0% confidence) - MA(19806.04) vs MA(19798.52), Strength: 25.0%
+20:04:12.502 [pool-1-thread-2] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: MEDIUM_TERM: NEUTRAL (57.9% strength, 60.2% confidence) - MA(19798.52) vs MA(19820.82), Strength: 57.9%
+20:04:12.503 [pool-1-thread-2] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: LONG_TERM: NEUTRAL (46.9% strength, 57.7% confidence) - MA(19798.52) vs MA(19811.07), Strength: 46.9%
+20:04:12.504 [pool-1-thread-2] INFO  c.t.b.t.MultiTimeframeAnalyzer - Multi-timeframe result: NEUTRAL trend with 50.0% confidence (STRONG_ALIGNMENT)
+20:04:12.504 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Timeframe analysis: Long: NEUTRAL(57.7), Medium: NEUTRAL(60.2), Short: NEUTRAL(54.0) -> STRONG_ALIGNMENT
+20:04:12.504 [pool-1-thread-2] INFO  c.t.b.t.AdvancedIndicatorsEngine - Performing advanced indicators analysis on 100 data points
+20:04:12.510 [pool-1-thread-2] INFO  c.t.b.t.AdvancedIndicatorsEngine - Advanced indicators result: BEARISH with 100.0% confluence
+20:04:12.510 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Indicators analysis: Stoch: NEUTRAL, Williams: BEARISH, ADX: BEARISH, Confluence: 100.0%
+20:04:12.511 [pool-1-thread-2] INFO  c.trading.bot.ml.MLSignalValidator - Validating signal with advanced ML for 100 data points
+20:04:12.520 [pool-1-thread-2] INFO  c.trading.bot.ml.MLSignalValidator - ML validation result: ML Validation: BUY (52.5% confidence, 23.2% validation, UNRELIABLE)
+20:04:12.520 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - ML validation: ML Prediction: 0.659, Validation: 23.2%, Features: 25
+20:04:12.521 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Combining Phase 2 advanced signals...
+20:04:12.522 [pool-1-thread-2] INFO  c.t.bot.core.Phase2IntegratedBot - ✅ Generated Phase 2 call: [2025-11-13T20:04:12.522355] NIFTY50: SELL (100.0%) - GOOD
+20:04:12.522 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Full call details:
+[2025-11-13T20:04:12.522355] PHASE2 NIFTY50: SELL (100.0%) at 19806.04 - Quality: GOOD
+  Technical: Trend:20.0, Momentum:5.0, Volume:15.0, Volatility:10.5, Pattern:7.5
+  Timeframe: Long: NEUTRAL(57.7), Medium: NEUTRAL(60.2), Short: NEUTRAL(54.0) -> STRONG_ALIGNMENT (50.0% alignment)
+  Indicators: Stoch: NEUTRAL, Williams: BEARISH, ADX: BEARISH, Confluence: 100.0% (100.0% confluence)
+  ML: ML Prediction: 0.659, Validation: 23.2%, Features: 25 (23.2% validation)
+  Combined: Phase2: Tech(58.0) + Time(50.0) + Ind(100.0) + ML(52.5) + Align(15.0) + Conf(20.0) + Val(0.0) + Consist(50.0%) = 100.0%
+20:04:12.523 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Phase 2 foundation: [2025-11-13T20:04:12.522355] NIFTY50: SELL (100.0%) - GOOD
+20:04:12.523 [pool-1-thread-2] INFO  c.t.b.smartmoney.OrderBlockDetector - Detecting order blocks from 100 data points
+20:04:12.523 [pool-1-thread-2] DEBUG c.t.b.smartmoney.OrderBlockDetector - Identified 0 order block candidates
+20:04:12.526 [pool-1-thread-2] INFO  c.t.b.smartmoney.OrderBlockDetector - Order block analysis completed: 0 blocks detected, bias: {:.1f}%, structure: 50.0
+20:04:12.526 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Order blocks: 0 detected, bias: {:.1f}%
+20:04:12.527 [pool-1-thread-2] INFO  c.t.b.s.FairValueGapDetector - Detecting Fair Value Gaps from 100 data points
+20:04:12.533 [pool-1-thread-2] INFO  c.t.b.s.FairValueGapDetector - FVG analysis completed: 0 gaps detected, 0 unfilled, strength: {:.1f}%
+20:04:12.534 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Fair Value Gaps: 0 detected, strength: {:.1f}%
+20:04:12.534 [pool-1-thread-2] INFO  c.t.bot.smartmoney.LiquidityAnalyzer - Analyzing liquidity patterns from 100 data points
+20:04:12.553 [pool-1-thread-2] INFO  c.t.bot.smartmoney.LiquidityAnalyzer - Liquidity analysis completed: 93 pools, bias: NEUTRAL_BIAS, score: {:.1f}%, hunt: 54.04620887237797
+20:04:12.554 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Liquidity: 93 pools, score: {:.1f}%, bias: 54.04620887237797
+20:04:12.554 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Combining Smart Money analysis...
+20:04:12.556 [pool-1-thread-2] INFO  c.t.bot.core.Phase3IntegratedBot - ✅ Generated Phase 3 institutional call: [2025-11-13T20:04:12.555829] NIFTY50: SELL (100.0%) - Smart Money: 18.9% 👤
+20:04:12.556 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Full institutional analysis:
+[2025-11-13T20:04:12.555829] PHASE3 NIFTY50: SELL (100.0%) at 19806.04 - Smart Money: 18.9% (RETAIL)
+  📊 Order Blocks: No significant order blocks detected
+  🔄 Fair Value Gaps: No significant fair value gaps detected
+  💧 Liquidity: 93 pools detected, 54.0% score, NEUTRAL_BIAS, HIGH hunt probability
+  🏦 Institutional Strategy: INSTITUTIONAL STRATEGY: Look for institutional distribution. Watch liquidity at 19826.77 - HIGH probability hunt. 
+  🎯 Master Analysis: Phase3: SELL + Smart Money(18.9%) = TEMPERED 100.0% | INSTITUTIONAL_NEUTRAL | Grade: RETAIL
+20:04:12.557 [pool-1-thread-2] INFO  c.t.bot.core.Phase3IntegratedBot - === Generating Phase 3 Institutional Trading Call for SENSEX ===
+20:04:12.557 [pool-1-thread-2] INFO  c.t.bot.core.Phase2IntegratedBot - === Generating Phase 2 Advanced Trading Call for SENSEX ===
+20:04:12.558 [pool-1-thread-2] INFO  c.t.b.t.AdvancedTechnicalAnalyzer - Calculating enhanced confidence for SENSEX
+20:04:12.558 [pool-1-thread-2] DEBUG c.t.b.t.AdvancedTechnicalAnalyzer - MACD calculated - Line: -17.24152399650484, Signal: 0.0, Histogram: -17.24152399650484
+20:04:12.558 [pool-1-thread-2] DEBUG c.t.b.t.AdvancedTechnicalAnalyzer - Bollinger Bands - Upper: 66072.21668041662, Middle: 65874.20331807916, Lower: 65676.1899557417
+20:04:12.558 [pool-1-thread-2] INFO  c.t.b.t.AdvancedTechnicalAnalyzer - Enhanced confidence calculated: 53.0 for SENSEX with reasoning: Trend:20.0, Momentum:5.0, Volume:10.0, Volatility:10.5, Pattern:7.5
+20:04:12.559 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Technical analysis: Trend:20.0, Momentum:5.0, Volume:10.0, Volatility:10.5, Pattern:7.5
+20:04:12.559 [pool-1-thread-2] INFO  c.t.b.t.MultiTimeframeAnalyzer - Performing multi-timeframe analysis on 100 data points
+20:04:12.559 [pool-1-thread-2] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: SHORT_TERM: NEUTRAL (50.0% strength, 58.8% confidence) - MA(65838.74) vs MA(65779.11), Strength: 50.0%
+20:04:12.560 [pool-1-thread-2] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: MEDIUM_TERM: NEUTRAL (31.6% strength, 54.8% confidence) - MA(65779.11) vs MA(65874.20), Strength: 31.6%
+20:04:12.560 [pool-1-thread-2] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: LONG_TERM: BULLISH (34.7% strength, 58.8% confidence) - MA(65779.11) vs MA(65838.33), Strength: 34.7%
+20:04:12.561 [pool-1-thread-2] INFO  c.t.b.t.MultiTimeframeAnalyzer - Multi-timeframe result: BULLISH trend with 23.535910505176147% confidence (WEAK_ALIGNMENT)
+20:04:12.561 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Timeframe analysis: Long: BULLISH(58.8), Medium: NEUTRAL(54.8), Short: NEUTRAL(58.8) -> WEAK_ALIGNMENT
+20:04:12.561 [pool-1-thread-2] INFO  c.t.b.t.AdvancedIndicatorsEngine - Performing advanced indicators analysis on 100 data points
+20:04:12.561 [pool-1-thread-2] INFO  c.t.b.t.AdvancedIndicatorsEngine - Advanced indicators result: BEARISH with 100.0% confluence
+20:04:12.562 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Indicators analysis: Stoch: NEUTRAL, Williams: BEARISH, ADX: BEARISH, Confluence: 100.0%
+20:04:12.562 [pool-1-thread-2] INFO  c.trading.bot.ml.MLSignalValidator - Validating signal with advanced ML for 100 data points
+20:04:12.562 [pool-1-thread-2] INFO  c.trading.bot.ml.MLSignalValidator - ML validation result: ML Validation: BUY (45.2% confidence, 23.5% validation, UNRELIABLE)
+20:04:12.562 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - ML validation: ML Prediction: 0.585, Validation: 23.5%, Features: 25
+20:04:12.562 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Combining Phase 2 advanced signals...
+20:04:12.563 [pool-1-thread-2] INFO  c.t.bot.core.Phase2IntegratedBot - ✅ Generated Phase 2 call: [2025-11-13T20:04:12.563238] SENSEX: HOLD (81.9%) - FAIR
+20:04:12.563 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Full call details:
+[2025-11-13T20:04:12.563238] PHASE2 SENSEX: HOLD (81.9%) at 65838.74 - Quality: FAIR
+  Technical: Trend:20.0, Momentum:5.0, Volume:10.0, Volatility:10.5, Pattern:7.5
+  Timeframe: Long: BULLISH(58.8), Medium: NEUTRAL(54.8), Short: NEUTRAL(58.8) -> WEAK_ALIGNMENT (23.5% alignment)
+  Indicators: Stoch: NEUTRAL, Williams: BEARISH, ADX: BEARISH, Confluence: 100.0% (100.0% confluence)
+  ML: ML Prediction: 0.585, Validation: 23.5%, Features: 25 (23.5% validation)
+  Combined: Phase2: Tech(53.0) + Time(23.5) + Ind(100.0) + ML(45.2) + Align(5.0) + Conf(20.0) + Val(0.0) + Consist(50.0%) = 81.9%
+20:04:12.563 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Phase 2 foundation: [2025-11-13T20:04:12.563238] SENSEX: HOLD (81.9%) - FAIR
+20:04:12.563 [pool-1-thread-2] INFO  c.t.b.smartmoney.OrderBlockDetector - Detecting order blocks from 100 data points
+20:04:12.564 [pool-1-thread-2] DEBUG c.t.b.smartmoney.OrderBlockDetector - Identified 0 order block candidates
+20:04:12.564 [pool-1-thread-2] INFO  c.t.b.smartmoney.OrderBlockDetector - Order block analysis completed: 0 blocks detected, bias: {:.1f}%, structure: 50.0
+20:04:12.564 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Order blocks: 0 detected, bias: {:.1f}%
+20:04:12.564 [pool-1-thread-2] INFO  c.t.b.s.FairValueGapDetector - Detecting Fair Value Gaps from 100 data points
+20:04:12.564 [pool-1-thread-2] INFO  c.t.b.s.FairValueGapDetector - FVG analysis completed: 0 gaps detected, 0 unfilled, strength: {:.1f}%
+20:04:12.564 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Fair Value Gaps: 0 detected, strength: {:.1f}%
+20:04:12.565 [pool-1-thread-2] INFO  c.t.bot.smartmoney.LiquidityAnalyzer - Analyzing liquidity patterns from 100 data points
+20:04:12.572 [pool-1-thread-2] INFO  c.t.bot.smartmoney.LiquidityAnalyzer - Liquidity analysis completed: 96 pools, bias: NEUTRAL_BIAS, score: {:.1f}%, hunt: 55.58835657898891
+20:04:12.572 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Liquidity: 96 pools, score: {:.1f}%, bias: 55.58835657898891
+20:04:12.573 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Combining Smart Money analysis...
+20:04:12.573 [pool-1-thread-2] INFO  c.t.bot.core.Phase3IntegratedBot - ✅ Generated Phase 3 institutional call: [2025-11-13T20:04:12.573552] SENSEX: HOLD (90.9%) - Smart Money: 19.5% 👤
+20:04:12.573 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Full institutional analysis:
+[2025-11-13T20:04:12.573552] PHASE3 SENSEX: HOLD (90.9%) at 65838.74 - Smart Money: 19.5% (RETAIL)
+  📊 Order Blocks: No significant order blocks detected
+  🔄 Fair Value Gaps: No significant fair value gaps detected
+  💧 Liquidity: 96 pools detected, 55.6% score, NEUTRAL_BIAS, HIGH hunt probability
+  🏦 Institutional Strategy: INSTITUTIONAL STRATEGY: Range-bound institutional activity. Wait for clear Smart Money direction. Watch liquidity at 65777.99 - HIGH probability hunt. 
+  🎯 Master Analysis: Phase3: HOLD + Smart Money(19.5%) = ENHANCED 90.9% | INSTITUTIONAL_NEUTRAL | Grade: RETAIL
+20:04:12.574 [pool-1-thread-2] INFO  c.t.bot.core.Phase3IntegratedBot - === Generating Phase 3 Institutional Trading Call for BANKNIFTY ===
+20:04:12.574 [pool-1-thread-2] INFO  c.t.bot.core.Phase2IntegratedBot - === Generating Phase 2 Advanced Trading Call for BANKNIFTY ===
+20:04:12.575 [pool-1-thread-2] INFO  c.t.b.t.AdvancedTechnicalAnalyzer - Calculating enhanced confidence for BANKNIFTY
+20:04:12.575 [pool-1-thread-2] DEBUG c.t.b.t.AdvancedTechnicalAnalyzer - MACD calculated - Line: -18.405853238451527, Signal: 0.0, Histogram: -18.405853238451527
+20:04:12.575 [pool-1-thread-2] DEBUG c.t.b.t.AdvancedTechnicalAnalyzer - Bollinger Bands - Upper: 44669.75716213003, Middle: 44547.38944087267, Lower: 44425.02171961531
+20:04:12.576 [pool-1-thread-2] INFO  c.t.b.t.AdvancedTechnicalAnalyzer - Enhanced confidence calculated: 53.75 for BANKNIFTY with reasoning: Trend:20.0, Momentum:5.0, Volume:10.0, Volatility:11.3, Pattern:7.5
+20:04:12.576 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Technical analysis: Trend:20.0, Momentum:5.0, Volume:10.0, Volatility:11.3, Pattern:7.5
+20:04:12.576 [pool-1-thread-2] INFO  c.t.b.t.MultiTimeframeAnalyzer - Performing multi-timeframe analysis on 100 data points
+20:04:12.576 [pool-1-thread-2] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: SHORT_TERM: NEUTRAL (50.0% strength, 59.2% confidence) - MA(44419.50) vs MA(44477.51), Strength: 50.0%
+20:04:12.577 [pool-1-thread-2] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: MEDIUM_TERM: BEARISH (57.9% strength, 63.9% confidence) - MA(44477.51) vs MA(44547.39), Strength: 57.9%
+20:04:12.577 [pool-1-thread-2] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: LONG_TERM: BEARISH (28.6% strength, 53.8% confidence) - MA(44477.51) vs MA(44509.99), Strength: 28.6%
+20:04:12.578 [pool-1-thread-2] INFO  c.t.b.t.MultiTimeframeAnalyzer - Multi-timeframe result: BEARISH trend with 43.892792003973284% confidence (WEAK_ALIGNMENT)
+20:04:12.578 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Timeframe analysis: Long: BEARISH(53.8), Medium: BEARISH(63.9), Short: NEUTRAL(59.2) -> WEAK_ALIGNMENT
+20:04:12.578 [pool-1-thread-2] INFO  c.t.b.t.AdvancedIndicatorsEngine - Performing advanced indicators analysis on 100 data points
+20:04:12.578 [pool-1-thread-2] INFO  c.t.b.t.AdvancedIndicatorsEngine - Advanced indicators result: NEUTRAL with 43.33333333333333% confluence
+20:04:12.578 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Indicators analysis: Stoch: OVERSOLD, Williams: OVERSOLD, ADX: BEARISH, Confluence: 43.3%
+20:04:12.578 [pool-1-thread-2] INFO  c.trading.bot.ml.MLSignalValidator - Validating signal with advanced ML for 100 data points
+20:04:12.579 [pool-1-thread-2] INFO  c.trading.bot.ml.MLSignalValidator - ML validation result: ML Validation: BUY (49.4% confidence, 20.7% validation, UNRELIABLE)
+20:04:12.580 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - ML validation: ML Prediction: 0.640, Validation: 20.7%, Features: 25
+20:04:12.580 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Combining Phase 2 advanced signals...
+20:04:12.580 [pool-1-thread-2] INFO  c.t.bot.core.Phase2IntegratedBot - ✅ Generated Phase 2 call: [2025-11-13T20:04:12.580760] BANKNIFTY: HOLD (54.8%) - POOR
+20:04:12.581 [pool-1-thread-2] DEBUG c.t.bot.core.Phase2IntegratedBot - Full call details:
+[2025-11-13T20:04:12.580760] PHASE2 BANKNIFTY: HOLD (54.8%) at 44419.50 - Quality: POOR
+  Technical: Trend:20.0, Momentum:5.0, Volume:10.0, Volatility:11.3, Pattern:7.5
+  Timeframe: Long: BEARISH(53.8), Medium: BEARISH(63.9), Short: NEUTRAL(59.2) -> WEAK_ALIGNMENT (43.9% alignment)
+  Indicators: Stoch: OVERSOLD, Williams: OVERSOLD, ADX: BEARISH, Confluence: 43.3% (43.3% confluence)
+  ML: ML Prediction: 0.640, Validation: 20.7%, Features: 25 (20.7% validation)
+  Combined: Phase2: Tech(53.8) + Time(43.9) + Ind(43.3) + ML(49.4) + Align(5.0) + Conf(0.0) + Val(0.0) + Consist(50.0%) = 54.8%
+20:04:12.581 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Phase 2 foundation: [2025-11-13T20:04:12.580760] BANKNIFTY: HOLD (54.8%) - POOR
+20:04:12.581 [pool-1-thread-2] INFO  c.t.b.smartmoney.OrderBlockDetector - Detecting order blocks from 100 data points
+20:04:12.581 [pool-1-thread-2] DEBUG c.t.b.smartmoney.OrderBlockDetector - Identified 0 order block candidates
+20:04:12.582 [pool-1-thread-2] INFO  c.t.b.smartmoney.OrderBlockDetector - Order block analysis completed: 0 blocks detected, bias: {:.1f}%, structure: 50.0
+20:04:12.582 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Order blocks: 0 detected, bias: {:.1f}%
+20:04:12.582 [pool-1-thread-2] INFO  c.t.b.s.FairValueGapDetector - Detecting Fair Value Gaps from 100 data points
+20:04:12.582 [pool-1-thread-2] INFO  c.t.b.s.FairValueGapDetector - FVG analysis completed: 0 gaps detected, 0 unfilled, strength: {:.1f}%
+20:04:12.582 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Fair Value Gaps: 0 detected, strength: {:.1f}%
+20:04:12.582 [pool-1-thread-2] INFO  c.t.bot.smartmoney.LiquidityAnalyzer - Analyzing liquidity patterns from 100 data points
+20:04:12.589 [pool-1-thread-2] INFO  c.t.bot.smartmoney.LiquidityAnalyzer - Liquidity analysis completed: 92 pools, bias: NEUTRAL_BIAS, score: {:.1f}%, hunt: 55.926125740620876
+20:04:12.589 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Liquidity: 92 pools, score: {:.1f}%, bias: 55.926125740620876
+20:04:12.589 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Combining Smart Money analysis...
+20:04:12.590 [pool-1-thread-2] INFO  c.t.bot.core.Phase3IntegratedBot - ✅ Generated Phase 3 institutional call: [2025-11-13T20:04:12.590130] BANKNIFTY: HOLD (63.8%) - Smart Money: 19.6% 👤
+20:04:12.590 [pool-1-thread-2] DEBUG c.t.bot.core.Phase3IntegratedBot - Full institutional analysis:
+[2025-11-13T20:04:12.590130] PHASE3 BANKNIFTY: HOLD (63.8%) at 44419.50 - Smart Money: 19.6% (RETAIL)
+  📊 Order Blocks: No significant order blocks detected
+  🔄 Fair Value Gaps: No significant fair value gaps detected
+  💧 Liquidity: 92 pools detected, 55.9% score, NEUTRAL_BIAS, HIGH hunt probability
+  🏦 Institutional Strategy: INSTITUTIONAL STRATEGY: Range-bound institutional activity. Wait for clear Smart Money direction. Watch liquidity at 44470.78 - HIGH probability hunt. 
+  🎯 Master Analysis: Phase3: HOLD + Smart Money(19.6%) = ENHANCED 63.8% | INSTITUTIONAL_NEUTRAL | Grade: RETAIL
+20:04:12.655 [pool-1-thread-1] DEBUG c.t.bot.telegram.Phase3TelegramBot - 📤 Sent message to chat 457623834: 🔍 **Performing Phase 3 Smart Money Analysis...**\
+20:04:12.657 [pool-1-thread-1] INFO  c.t.bot.core.Phase3IntegratedBot - === Generating Phase 3 Institutional Trading Call for NIFTY50 ===
+20:04:12.657 [pool-1-thread-1] INFO  c.t.bot.core.Phase2IntegratedBot - === Generating Phase 2 Advanced Trading Call for NIFTY50 ===
+20:04:12.657 [pool-1-thread-1] INFO  c.t.b.t.AdvancedTechnicalAnalyzer - Calculating enhanced confidence for NIFTY50
+20:04:12.657 [pool-1-thread-1] DEBUG c.t.b.t.AdvancedTechnicalAnalyzer - MACD calculated - Line: -10.375691597040714, Signal: 0.0, Histogram: -10.375691597040714
+20:04:12.657 [pool-1-thread-1] DEBUG c.t.b.t.AdvancedTechnicalAnalyzer - Bollinger Bands - Upper: 19865.835502063866, Middle: 19810.354603248394, Lower: 19754.87370443292
+20:04:12.658 [pool-1-thread-1] INFO  c.t.b.t.AdvancedTechnicalAnalyzer - Enhanced confidence calculated: 58.0 for NIFTY50 with reasoning: Trend:20.0, Momentum:5.0, Volume:15.0, Volatility:10.5, Pattern:7.5
+20:04:12.658 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Technical analysis: Trend:20.0, Momentum:5.0, Volume:15.0, Volatility:10.5, Pattern:7.5
+20:04:12.658 [pool-1-thread-1] INFO  c.t.b.t.MultiTimeframeAnalyzer - Performing multi-timeframe analysis on 100 data points
+20:04:12.658 [pool-1-thread-1] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: SHORT_TERM: NEUTRAL (50.0% strength, 58.9% confidence) - MA(19770.87) vs MA(19788.57), Strength: 50.0%
+20:04:12.659 [pool-1-thread-1] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: MEDIUM_TERM: BEARISH (57.9% strength, 62.9% confidence) - MA(19788.57) vs MA(19810.35), Strength: 57.9%
+20:04:12.659 [pool-1-thread-1] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: LONG_TERM: BEARISH (24.5% strength, 53.3% confidence) - MA(19788.57) vs MA(19806.23), Strength: 24.5%
+20:04:12.660 [pool-1-thread-1] INFO  c.t.b.t.MultiTimeframeAnalyzer - Multi-timeframe result: BEARISH trend with 43.32979753670479% confidence (WEAK_ALIGNMENT)
+20:04:12.660 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Timeframe analysis: Long: BEARISH(53.3), Medium: BEARISH(62.9), Short: NEUTRAL(58.9) -> WEAK_ALIGNMENT
+20:04:12.660 [pool-1-thread-1] INFO  c.t.b.t.AdvancedIndicatorsEngine - Performing advanced indicators analysis on 100 data points
+20:04:12.660 [pool-1-thread-1] INFO  c.t.b.t.AdvancedIndicatorsEngine - Advanced indicators result: NEUTRAL with 43.33333333333333% confluence
+20:04:12.661 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Indicators analysis: Stoch: OVERSOLD, Williams: OVERSOLD, ADX: BEARISH, Confluence: 43.3%
+20:04:12.661 [pool-1-thread-1] INFO  c.trading.bot.ml.MLSignalValidator - Validating signal with advanced ML for 100 data points
+20:04:12.661 [pool-1-thread-1] INFO  c.trading.bot.ml.MLSignalValidator - ML validation result: ML Validation: BUY (47.4% confidence, 21.4% validation, UNRELIABLE)
+20:04:12.661 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - ML validation: ML Prediction: 0.617, Validation: 21.4%, Features: 25
+20:04:12.661 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Combining Phase 2 advanced signals...
+20:04:12.662 [pool-1-thread-1] INFO  c.t.bot.core.Phase2IntegratedBot - ✅ Generated Phase 2 call: [2025-11-13T20:04:12.662141] NIFTY50: HOLD (55.3%) - POOR
+20:04:12.662 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Full call details:
+[2025-11-13T20:04:12.662141] PHASE2 NIFTY50: HOLD (55.3%) at 19770.87 - Quality: POOR
+  Technical: Trend:20.0, Momentum:5.0, Volume:15.0, Volatility:10.5, Pattern:7.5
+  Timeframe: Long: BEARISH(53.3), Medium: BEARISH(62.9), Short: NEUTRAL(58.9) -> WEAK_ALIGNMENT (43.3% alignment)
+  Indicators: Stoch: OVERSOLD, Williams: OVERSOLD, ADX: BEARISH, Confluence: 43.3% (43.3% confluence)
+  ML: ML Prediction: 0.617, Validation: 21.4%, Features: 25 (21.4% validation)
+  Combined: Phase2: Tech(58.0) + Time(43.3) + Ind(43.3) + ML(47.4) + Align(5.0) + Conf(0.0) + Val(0.0) + Consist(50.0%) = 55.3%
+20:04:12.662 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Phase 2 foundation: [2025-11-13T20:04:12.662141] NIFTY50: HOLD (55.3%) - POOR
+20:04:12.662 [pool-1-thread-1] INFO  c.t.b.smartmoney.OrderBlockDetector - Detecting order blocks from 100 data points
+20:04:12.663 [pool-1-thread-1] DEBUG c.t.b.smartmoney.OrderBlockDetector - Identified 0 order block candidates
+20:04:12.663 [pool-1-thread-1] INFO  c.t.b.smartmoney.OrderBlockDetector - Order block analysis completed: 0 blocks detected, bias: {:.1f}%, structure: 50.0
+20:04:12.663 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Order blocks: 0 detected, bias: {:.1f}%
+20:04:12.663 [pool-1-thread-1] INFO  c.t.b.s.FairValueGapDetector - Detecting Fair Value Gaps from 100 data points
+20:04:12.663 [pool-1-thread-1] INFO  c.t.b.s.FairValueGapDetector - FVG analysis completed: 0 gaps detected, 0 unfilled, strength: {:.1f}%
+20:04:12.664 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Fair Value Gaps: 0 detected, strength: {:.1f}%
+20:04:12.664 [pool-1-thread-1] INFO  c.t.bot.smartmoney.LiquidityAnalyzer - Analyzing liquidity patterns from 100 data points
+20:04:12.669 [pool-1-thread-1] INFO  c.t.bot.smartmoney.LiquidityAnalyzer - Liquidity analysis completed: 91 pools, bias: NEUTRAL_BIAS, score: {:.1f}%, hunt: 52.856096779445075
+20:04:12.670 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Liquidity: 91 pools, score: {:.1f}%, bias: 52.856096779445075
+20:04:12.670 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Combining Smart Money analysis...
+20:04:12.671 [pool-1-thread-1] INFO  c.t.bot.core.Phase3IntegratedBot - ✅ Generated Phase 3 institutional call: [2025-11-13T20:04:12.671299] NIFTY50: HOLD (64.3%) - Smart Money: 18.5% 👤
+20:04:12.671 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Full institutional analysis:
+[2025-11-13T20:04:12.671299] PHASE3 NIFTY50: HOLD (64.3%) at 19770.87 - Smart Money: 18.5% (RETAIL)
+  📊 Order Blocks: No significant order blocks detected
+  🔄 Fair Value Gaps: No significant fair value gaps detected
+  💧 Liquidity: 91 pools detected, 52.9% score, NEUTRAL_BIAS, HIGH hunt probability
+  🏦 Institutional Strategy: INSTITUTIONAL STRATEGY: Range-bound institutional activity. Wait for clear Smart Money direction. Watch liquidity at 19789.37 - HIGH probability hunt. 
+  🎯 Master Analysis: Phase3: HOLD + Smart Money(18.5%) = ENHANCED 64.3% | INSTITUTIONAL_NEUTRAL | Grade: RETAIL
+20:04:12.672 [pool-1-thread-1] INFO  c.t.bot.core.Phase3IntegratedBot - === Generating Phase 3 Institutional Trading Call for SENSEX ===
+20:04:12.673 [pool-1-thread-1] INFO  c.t.bot.core.Phase2IntegratedBot - === Generating Phase 2 Advanced Trading Call for SENSEX ===
+20:04:12.673 [pool-1-thread-1] INFO  c.t.b.t.AdvancedTechnicalAnalyzer - Calculating enhanced confidence for SENSEX
+20:04:12.673 [pool-1-thread-1] DEBUG c.t.b.t.AdvancedTechnicalAnalyzer - MACD calculated - Line: -30.555033650714904, Signal: 0.0, Histogram: -30.555033650714904
+20:04:12.673 [pool-1-thread-1] DEBUG c.t.b.t.AdvancedTechnicalAnalyzer - Bollinger Bands - Upper: 66043.75242246919, Middle: 65859.876367087, Lower: 65676.0003117048
+20:04:12.673 [pool-1-thread-1] INFO  c.t.b.t.AdvancedTechnicalAnalyzer - Enhanced confidence calculated: 53.75 for SENSEX with reasoning: Trend:20.0, Momentum:5.0, Volume:10.0, Volatility:11.3, Pattern:7.5
+20:04:12.673 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Technical analysis: Trend:20.0, Momentum:5.0, Volume:10.0, Volatility:11.3, Pattern:7.5
+20:04:12.674 [pool-1-thread-1] INFO  c.t.b.t.MultiTimeframeAnalyzer - Performing multi-timeframe analysis on 100 data points
+20:04:12.674 [pool-1-thread-1] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: SHORT_TERM: NEUTRAL (50.0% strength, 58.9% confidence) - MA(65645.96) vs MA(65738.23), Strength: 50.0%
+20:04:12.674 [pool-1-thread-1] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: MEDIUM_TERM: BEARISH (26.3% strength, 59.0% confidence) - MA(65738.23) vs MA(65859.88), Strength: 26.3%
+20:04:12.675 [pool-1-thread-1] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: LONG_TERM: BEARISH (42.9% strength, 58.1% confidence) - MA(65738.23) vs MA(65818.02), Strength: 42.9%
+20:04:12.675 [pool-1-thread-1] INFO  c.t.b.t.MultiTimeframeAnalyzer - Multi-timeframe result: BEARISH trend with 43.87315885092971% confidence (WEAK_ALIGNMENT)
+20:04:12.675 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Timeframe analysis: Long: BEARISH(58.1), Medium: BEARISH(59.0), Short: NEUTRAL(58.9) -> WEAK_ALIGNMENT
+20:04:12.676 [pool-1-thread-1] INFO  c.t.b.t.AdvancedIndicatorsEngine - Performing advanced indicators analysis on 100 data points
+20:04:12.676 [pool-1-thread-1] INFO  c.t.b.t.AdvancedIndicatorsEngine - Advanced indicators result: NEUTRAL with 43.33333333333333% confluence
+20:04:12.677 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Indicators analysis: Stoch: BEARISH, Williams: OVERSOLD, ADX: BEARISH, Confluence: 43.3%
+20:04:12.677 [pool-1-thread-1] INFO  c.trading.bot.ml.MLSignalValidator - Validating signal with advanced ML for 100 data points
+20:04:12.677 [pool-1-thread-1] INFO  c.trading.bot.ml.MLSignalValidator - ML validation result: ML Validation: BUY (49.0% confidence, 20.7% validation, UNRELIABLE)
+20:04:12.677 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - ML validation: ML Prediction: 0.637, Validation: 20.7%, Features: 25
+20:04:12.678 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Combining Phase 2 advanced signals...
+20:04:12.678 [pool-1-thread-1] INFO  c.t.bot.core.Phase2IntegratedBot - ✅ Generated Phase 2 call: [2025-11-13T20:04:12.678440] SENSEX: HOLD (54.7%) - POOR
+20:04:12.678 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Full call details:
+[2025-11-13T20:04:12.678440] PHASE2 SENSEX: HOLD (54.7%) at 65645.96 - Quality: POOR
+  Technical: Trend:20.0, Momentum:5.0, Volume:10.0, Volatility:11.3, Pattern:7.5
+  Timeframe: Long: BEARISH(58.1), Medium: BEARISH(59.0), Short: NEUTRAL(58.9) -> WEAK_ALIGNMENT (43.9% alignment)
+  Indicators: Stoch: BEARISH, Williams: OVERSOLD, ADX: BEARISH, Confluence: 43.3% (43.3% confluence)
+  ML: ML Prediction: 0.637, Validation: 20.7%, Features: 25 (20.7% validation)
+  Combined: Phase2: Tech(53.8) + Time(43.9) + Ind(43.3) + ML(49.0) + Align(5.0) + Conf(0.0) + Val(0.0) + Consist(50.0%) = 54.7%
+20:04:12.679 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Phase 2 foundation: [2025-11-13T20:04:12.678440] SENSEX: HOLD (54.7%) - POOR
+20:04:12.679 [pool-1-thread-1] INFO  c.t.b.smartmoney.OrderBlockDetector - Detecting order blocks from 100 data points
+20:04:12.681 [pool-1-thread-1] DEBUG c.t.b.smartmoney.OrderBlockDetector - Identified 2 order block candidates
+20:04:12.682 [pool-1-thread-1] INFO  c.t.b.smartmoney.OrderBlockDetector - Order block analysis completed: 2 blocks detected, bias: {:.1f}%, structure: 51.13118176549099
+20:04:12.683 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Order blocks: 2 detected, bias: {:.1f}%
+20:04:12.683 [pool-1-thread-1] INFO  c.t.b.s.FairValueGapDetector - Detecting Fair Value Gaps from 100 data points
+20:04:12.683 [pool-1-thread-1] INFO  c.t.b.s.FairValueGapDetector - FVG analysis completed: 0 gaps detected, 0 unfilled, strength: {:.1f}%
+20:04:12.683 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Fair Value Gaps: 0 detected, strength: {:.1f}%
+20:04:12.683 [pool-1-thread-1] INFO  c.t.bot.smartmoney.LiquidityAnalyzer - Analyzing liquidity patterns from 100 data points
+20:04:12.688 [pool-1-thread-1] INFO  c.t.bot.smartmoney.LiquidityAnalyzer - Liquidity analysis completed: 91 pools, bias: NEUTRAL_BIAS, score: {:.1f}%, hunt: 53.60000796863786
+20:04:12.689 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Liquidity: 91 pools, score: {:.1f}%, bias: 53.60000796863786
+20:04:12.689 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Combining Smart Money analysis...
+20:04:12.689 [pool-1-thread-1] INFO  c.t.bot.core.Phase3IntegratedBot - ✅ Generated Phase 3 institutional call: [2025-11-13T20:04:12.689872] SENSEX: HOLD (69.1%) - Smart Money: 29.1% 👤
+20:04:12.690 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Full institutional analysis:
+[2025-11-13T20:04:12.689872] PHASE3 SENSEX: HOLD (69.1%) at 65645.96 - Smart Money: 29.1% (RETAIL)
+  📊 Order Blocks: 2 blocks detected, 51.1% institutional bias, RANGING_STRUCTURE structure
+  🔄 Fair Value Gaps: No significant fair value gaps detected
+  💧 Liquidity: 91 pools detected, 53.6% score, NEUTRAL_BIAS, HIGH hunt probability
+  🏦 Institutional Strategy: INSTITUTIONAL STRATEGY: Range-bound institutional activity. Wait for clear Smart Money direction. Watch liquidity at 65679.66 - HIGH probability hunt. 
+  🎯 Master Analysis: Phase3: HOLD + Smart Money(29.1%) = ENHANCED 69.1% | INSTITUTIONAL_NEUTRAL | Grade: RETAIL
+20:04:12.691 [pool-1-thread-1] INFO  c.t.bot.core.Phase3IntegratedBot - === Generating Phase 3 Institutional Trading Call for BANKNIFTY ===
+20:04:12.691 [pool-1-thread-1] INFO  c.t.bot.core.Phase2IntegratedBot - === Generating Phase 2 Advanced Trading Call for BANKNIFTY ===
+20:04:12.691 [pool-1-thread-1] INFO  c.t.b.t.AdvancedTechnicalAnalyzer - Calculating enhanced confidence for BANKNIFTY
+20:04:12.691 [pool-1-thread-1] DEBUG c.t.b.t.AdvancedTechnicalAnalyzer - MACD calculated - Line: -19.717534513387363, Signal: 0.0, Histogram: -19.717534513387363
+20:04:12.692 [pool-1-thread-1] DEBUG c.t.b.t.AdvancedTechnicalAnalyzer - Bollinger Bands - Upper: 44636.933120330374, Middle: 44527.405487557, Lower: 44417.87785478363
+20:04:12.692 [pool-1-thread-1] INFO  c.t.b.t.AdvancedTechnicalAnalyzer - Enhanced confidence calculated: 58.0 for BANKNIFTY with reasoning: Trend:20.0, Momentum:5.0, Volume:15.0, Volatility:10.5, Pattern:7.5
+20:04:12.692 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Technical analysis: Trend:20.0, Momentum:5.0, Volume:15.0, Volatility:10.5, Pattern:7.5
+20:04:12.692 [pool-1-thread-1] INFO  c.t.b.t.MultiTimeframeAnalyzer - Performing multi-timeframe analysis on 100 data points
+20:04:12.693 [pool-1-thread-1] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: SHORT_TERM: NEUTRAL (100.0% strength, 68.9% confidence) - MA(44495.22) vs MA(44478.20), Strength: 100.0%
+20:04:12.693 [pool-1-thread-1] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: MEDIUM_TERM: NEUTRAL (42.1% strength, 57.2% confidence) - MA(44478.20) vs MA(44527.41), Strength: 42.1%
+20:04:12.694 [pool-1-thread-1] DEBUG c.t.b.t.MultiTimeframeAnalyzer - Timeframe analysis: LONG_TERM: NEUTRAL (28.6% strength, 54.1% confidence) - MA(44478.20) vs MA(44524.30), Strength: 28.6%
+20:04:12.694 [pool-1-thread-1] INFO  c.t.b.t.MultiTimeframeAnalyzer - Multi-timeframe result: NEUTRAL trend with 50.0% confidence (STRONG_ALIGNMENT)
+20:04:12.694 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Timeframe analysis: Long: NEUTRAL(54.1), Medium: NEUTRAL(57.2), Short: NEUTRAL(68.9) -> STRONG_ALIGNMENT
+20:04:12.694 [pool-1-thread-1] INFO  c.t.b.t.AdvancedIndicatorsEngine - Performing advanced indicators analysis on 100 data points
+20:04:12.694 [pool-1-thread-1] INFO  c.t.b.t.AdvancedIndicatorsEngine - Advanced indicators result: NEUTRAL with 43.33333333333333% confluence
+20:04:12.695 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Indicators analysis: Stoch: BULLISH, Williams: BULLISH, ADX: BEARISH, Confluence: 43.3%
+20:04:12.695 [pool-1-thread-1] INFO  c.trading.bot.ml.MLSignalValidator - Validating signal with advanced ML for 100 data points
+20:04:12.695 [pool-1-thread-1] INFO  c.trading.bot.ml.MLSignalValidator - ML validation result: ML Validation: BUY (50.9% confidence, 22.9% validation, UNRELIABLE)
+20:04:12.695 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - ML validation: ML Prediction: 0.645, Validation: 22.9%, Features: 25
+20:04:12.696 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Combining Phase 2 advanced signals...
+20:04:12.696 [pool-1-thread-1] INFO  c.t.bot.core.Phase2IntegratedBot - ✅ Generated Phase 2 call: [2025-11-13T20:04:12.696521] BANKNIFTY: HOLD (69.3%) - FAIR
+20:04:12.696 [pool-1-thread-1] DEBUG c.t.bot.core.Phase2IntegratedBot - Full call details:
+[2025-11-13T20:04:12.696521] PHASE2 BANKNIFTY: HOLD (69.3%) at 44495.22 - Quality: FAIR
+  Technical: Trend:20.0, Momentum:5.0, Volume:15.0, Volatility:10.5, Pattern:7.5
+  Timeframe: Long: NEUTRAL(54.1), Medium: NEUTRAL(57.2), Short: NEUTRAL(68.9) -> STRONG_ALIGNMENT (50.0% alignment)
+  Indicators: Stoch: BULLISH, Williams: BULLISH, ADX: BEARISH, Confluence: 43.3% (43.3% confluence)
+  ML: ML Prediction: 0.645, Validation: 22.9%, Features: 25 (22.9% validation)
+  Combined: Phase2: Tech(58.0) + Time(50.0) + Ind(43.3) + ML(50.9) + Align(15.0) + Conf(0.0) + Val(0.0) + Consist(75.0%) = 69.3%
+20:04:12.697 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Phase 2 foundation: [2025-11-13T20:04:12.696521] BANKNIFTY: HOLD (69.3%) - FAIR
+20:04:12.697 [pool-1-thread-1] INFO  c.t.b.smartmoney.OrderBlockDetector - Detecting order blocks from 100 data points
+20:04:12.697 [pool-1-thread-1] DEBUG c.t.b.smartmoney.OrderBlockDetector - Identified 0 order block candidates
+20:04:12.697 [pool-1-thread-1] INFO  c.t.b.smartmoney.OrderBlockDetector - Order block analysis completed: 0 blocks detected, bias: {:.1f}%, structure: 50.0
+20:04:12.698 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Order blocks: 0 detected, bias: {:.1f}%
+20:04:12.698 [pool-1-thread-1] INFO  c.t.b.s.FairValueGapDetector - Detecting Fair Value Gaps from 100 data points
+20:04:12.698 [pool-1-thread-1] INFO  c.t.b.s.FairValueGapDetector - FVG analysis completed: 0 gaps detected, 0 unfilled, strength: {:.1f}%
+20:04:12.698 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Fair Value Gaps: 0 detected, strength: {:.1f}%
+20:04:12.699 [pool-1-thread-1] INFO  c.t.bot.smartmoney.LiquidityAnalyzer - Analyzing liquidity patterns from 100 data points
+20:04:12.703 [pool-1-thread-1] INFO  c.t.bot.smartmoney.LiquidityAnalyzer - Liquidity analysis completed: 94 pools, bias: NEUTRAL_BIAS, score: {:.1f}%, hunt: 55.24637415057682
+20:04:12.703 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Liquidity: 94 pools, score: {:.1f}%, bias: 55.24637415057682
+20:04:12.703 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Combining Smart Money analysis...
+20:04:12.704 [pool-1-thread-1] INFO  c.t.bot.core.Phase3IntegratedBot - ✅ Generated Phase 3 institutional call: [2025-11-13T20:04:12.704138] BANKNIFTY: HOLD (78.3%) - Smart Money: 19.3% 👤
+20:04:12.704 [pool-1-thread-1] DEBUG c.t.bot.core.Phase3IntegratedBot - Full institutional analysis:
+[2025-11-13T20:04:12.704138] PHASE3 BANKNIFTY: HOLD (78.3%) at 44495.22 - Smart Money: 19.3% (RETAIL)
+  📊 Order Blocks: No significant order blocks detected
+  🔄 Fair Value Gaps: No significant fair value gaps detected
+  💧 Liquidity: 94 pools detected, 55.2% score, NEUTRAL_BIAS, HIGH hunt probability
+  🏦 Institutional Strategy: INSTITUTIONAL STRATEGY: Range-bound institutional activity. Wait for clear Smart Money direction. Watch liquidity at 44457.00 - HIGH probability hunt. 
+  🎯 Master Analysis: Phase3: HOLD + Smart Money(19.3%) = ENHANCED 78.3% | INSTITUTIONAL_NEUTRAL | Grade: RETAIL
+20:04:12.778 [pool-1-thread-2] DEBUG c.t.bot.telegram.Phase3TelegramBot - 📤 Sent message to chat 457623834: 🏦 **COMPREHENSIVE INSTITUTIONAL ANALYSIS**\n=====
+20:04:13.118 [pool-1-thread-1] DEBUG c.t.bot.telegram.Phase3TelegramBot - 📤 Sent message to chat 457623834: 🏦 **COMPREHENSIVE INSTITUTIONAL ANALYSIS**\n=====
+\n🛑 Shutting down Phase 3 Telegram Bot...
+20:07:55.220 [Thread-0] INFO  c.t.bot.telegram.Phase3TelegramBot - 🛑 Stopping Phase 3 Telegram Bot...
+20:07:55.221 [Thread-0] INFO  c.t.bot.telegram.Phase3TelegramBot - ✅ Phase 3 Telegram Bot stopped

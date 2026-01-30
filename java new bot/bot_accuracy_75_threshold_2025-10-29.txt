@@ -1,0 +1,15 @@
+BOT ACCURACY TEST WITH 75% THRESHOLD
+===================================
+Date: 2025-10-29
+Confidence Threshold: 75%+
+Total Calls: 17
+Overall Accuracy: 82.35%
+Average Confidence: 90.4%
+Average P&L: ₹64.86
+
+ACCURACY BY CALL TYPE:
+=====================
+SENSEX_PE: 0.00% (0/0 calls)
+SENSEX_CE: 85.71% (6/7 calls)
+NIFTY_PE: 100.00% (1/1 calls)
+NIFTY_CE: 77.78% (7/9 calls)

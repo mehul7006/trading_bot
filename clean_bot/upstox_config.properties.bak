@@ -1,0 +1,6 @@
+#Updated Upstox API Configuration - Fri Nov 14 21:34:05 IST 2025
+#Fri Nov 14 21:34:05 IST 2025
+upstox.access.token=eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OTE3MzVjZmI1MTBhZDM2MDNhMTJkNjciLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2MzEyODc4MywiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzYzMTU3NjAwfQ.E40et7KwwJ9htWG_ppgtoYQMdmdtLopNuiU_wmBPnqA
+upstox.api.key=768a303b-80f1-46d6-af16-f847f9341213
+upstox.api.secret=j0w9ga2m9w
+upstox.base.url=https\://api.upstox.com/v2

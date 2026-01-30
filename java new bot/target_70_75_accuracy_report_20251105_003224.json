@@ -1,0 +1,43 @@
+{
+  "timestamp": "20251105_003224",
+  "target_range": {
+    "min": 70.0,
+    "max": 75.0
+  },
+  "achieved_accuracy": 0.0,
+  "target_achieved": false,
+  "calibration_results": {
+    "total_tests": 1,
+    "overall_accuracy": 0.0,
+    "strong_signal_accuracy": 0,
+    "moderate_signal_accuracy": 0.0,
+    "target_range_accuracy": 0.0,
+    "target_achieved": false,
+    "results": [
+      {
+        "test_num": 115,
+        "symbol": "SENSEX",
+        "signal": "BUY",
+        "confidence": 73.0,
+        "expected_accuracy": 68.0,
+        "actual_correct": false,
+        "scenario": "trending_bull",
+        "signal_strength": "MODERATE"
+      }
+    ]
+  },
+  "optimization_parameters": {
+    "confidence_range": [
+      72,
+      82
+    ],
+    "signal_thresholds": {
+      "strong_bullish_signals": 4,
+      "strong_bearish_signals": 4,
+      "moderate_bullish_signals": 3,
+      "moderate_bearish_signals": 3,
+      "minimum_confidence": 72.0
+    }
+  },
+  "performance_grade": "B (Needs Adjustment)"
+}

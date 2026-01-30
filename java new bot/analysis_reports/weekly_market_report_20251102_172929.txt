@@ -1,0 +1,18 @@
+WEEKLY MARKET ANALYSIS REPORT
+==================================================
+Generated: 2025-11-02 17:29:29
+
+DETAILED ANALYSIS DATA:
+------------------------------
+   Symbol  WeekStart    WeekEnd  WeekOpen  WeekClose  WeekHigh  WeekLow  WeekChange  WeekChange%  TotalVolume  TradingDays       Movement  Volatility%
+   SENSEX 2025-10-20 2025-10-24  84420.99   82382.06  84879.53 81385.82    -2038.93        -2.42   1115386758            5 STRONG_BEARISH         4.14
+BANKNIFTY 2025-10-20 2025-10-24  49777.18   47527.02  50527.92 46324.34    -2250.15        -4.52   3560760393            5 STRONG_BEARISH         8.44
+ FINNIFTY 2025-10-20 2025-10-24  23938.57   23025.26  24375.48 22835.77     -913.31        -3.82    797480532            5 STRONG_BEARISH         6.43
+    NIFTY 2025-10-20 2025-10-24  24555.25   23619.44  24651.17 23335.62     -935.81        -3.81   3002612996            5 STRONG_BEARISH         5.36
+
+MARKET DATA SUMMARY:
+------------------------------
+Total data points: 20
+Date range: 2025-10-20 00:00:00 to 2025-10-24 00:00:00
+Symbols covered: SENSEX, BANKNIFTY, FINNIFTY, NIFTY
+Data sources: DEMO

@@ -1,0 +1,4 @@
+Symbol,Date,ActualPrice,ActualChange%,ActualTrend,BotPrediction,BotAccuracy,TestType
+NIFTY50,2025-11-02,24274.16,-0.92,SIDEWAYS,BEARISH,WRONG,Current market test
+SENSEX,2025-11-02,81676.23,2.10,BULLISH,BULLISH,CORRECT,Current market test
+BANKNIFTY,2025-11-02,51677.53,1.33,BULLISH,BULLISH,CORRECT,Current market test

@@ -1,0 +1,14 @@
+🎯 REAL BOT ACCURACY REPORT - 2025-10-30
+============================================================
+Total Analysis: 150
+Calls Generated: 128
+CE Options: 58
+PE Options: 70
+10-min Accuracy: 54.7%
+20-min Accuracy: 46.9%
+30-min Accuracy: 40.6%
+Avg Confidence: 74.9%
+Call Confidence: 78.8%
+10-min P&L: 33797.4%
+20-min P&L: 38902.5%
+30-min P&L: 28726.7%

@@ -1,0 +1,7 @@
+TODAY'S HONEST OPTIONS BACKTESTING REPORT
+=========================================
+Date: 2025-10-30
+Min Confidence: 75%+
+Total Calls: 0
+Win Rate: NaN%
+Total P&L: ₹0.00

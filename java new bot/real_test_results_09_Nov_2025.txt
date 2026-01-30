@@ -1,0 +1,23 @@
+REAL MARKET ACCURACY TEST - 09-Nov-2025
+==========================================
+Generated at: 08-Nov-2025 22:32:13
+
+CALLS TO TRACK:
+---------------
+Call 1: NIFTY Long Call 23550CE
+Entry Price: ₹186.69
+Confidence: 55.0%
+Generated Time: 22:32:12
+Result: [TO BE FILLED TOMORROW]
+Accuracy: [TO BE CALCULATED]
+
+END OF DAY RESULTS:
+------------------
+Successful calls: [TO BE COUNTED]
+Failed calls: [TO BE COUNTED]
+Overall accuracy: [TO BE CALCULATED]
+
+HONEST ASSESSMENT:
+- No manipulation of results
+- Real market data used
+- Genuine win/loss tracking

@@ -1,0 +1,38 @@
+{
+  "NIFTY": {
+    "signal": "HOLD",
+    "confidence": 50.0,
+    "supporting_factors": [
+      "INSUFFICIENT_DATA"
+    ],
+    "options_strategies": [],
+    "current_price": 25722.099609375
+  },
+  "BANKNIFTY": {
+    "signal": "HOLD",
+    "confidence": 50.0,
+    "supporting_factors": [
+      "INSUFFICIENT_DATA"
+    ],
+    "options_strategies": [],
+    "current_price": 57776.3515625
+  },
+  "FINNIFTY": {
+    "signal": "HOLD",
+    "confidence": 50.0,
+    "supporting_factors": [
+      "INSUFFICIENT_DATA"
+    ],
+    "options_strategies": [],
+    "current_price": 27138.849609375
+  },
+  "SENSEX": {
+    "signal": "HOLD",
+    "confidence": 50.0,
+    "supporting_factors": [
+      "INSUFFICIENT_DATA"
+    ],
+    "options_strategies": [],
+    "current_price": 83938.7109375
+  }
+}

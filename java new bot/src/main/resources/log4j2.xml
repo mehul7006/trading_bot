@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <!-- Console Appender -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+        
+        <!-- File Appender for Bot Logs -->
+        <File name="BotFile" fileName="bot.log">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </File>
+    </Appenders>
+    
+    <Loggers>
+        <!-- Bot specific loggers -->
+        <Logger name="com.stockbot" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="BotFile"/>
+        </Logger>
+        
+        <!-- Root logger -->
+        <Root level="WARN">
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+</Configuration>

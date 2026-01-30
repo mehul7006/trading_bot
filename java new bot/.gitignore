@@ -1,0 +1,52 @@
+# Security - Never commit these files
+.env
+*.env
+.env.local
+.env.production
+
+# Credentials and sensitive data
+credentials.json
+config.properties
+application-secure.properties
+
+# Logs
+*.log
+logs/
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.eclipse/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp_*
+temp_*
+*.tmp
+*.temp
+
+# Build artifacts
+*.jar
+*.war
+*.ear
+*.class
+
+# Bot specific
+bot_data/
+cache/
+backup/

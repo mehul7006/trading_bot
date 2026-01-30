@@ -1,0 +1,10 @@
+#!/bin/bash
+
+echo "🤖 RESPONSIVE TRADING BOT - GUARANTEED /start RESPONSE"
+echo ""
+
+cd clean_bot
+
+# Test /start command immediately
+echo "🚀 Testing /start command..."
+java -cp "target/classes:lib/*" com.trading.bot.simple.ResponsiveBot /start

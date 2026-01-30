@@ -1,0 +1,46 @@
+🏦 STARTING PHASE 3 INSTITUTIONAL TELEGRAM BOT
+===============================================
+✅ Smart Money Concepts Integration
+✅ Order Block Detection
+✅ Fair Value Gap Analysis
+✅ Liquidity Analysis
+✅ Institutional Grade Classification
+
+20:08:07.728 [main] INFO  c.trading.bot.ml.MLSignalValidator - Initializing advanced ML signal validator...
+20:08:07.731 [main] INFO  c.t.bot.ml.SimplifiedMarketPredictor - Initializing simplified ML model...
+20:08:07.731 [main] INFO  c.t.bot.ml.SimplifiedMarketPredictor - Simplified ML model initialized successfully
+20:08:07.731 [main] INFO  c.trading.bot.ml.MLSignalValidator - Advanced ML signal validator initialized successfully
+20:08:07.733 [main] INFO  c.t.bot.core.Phase3IntegratedBot - === Initializing Phase 3 Smart Money Concepts Bot ===
+20:08:07.734 [main] INFO  c.t.bot.core.Phase3IntegratedBot - Initializing Phase 2 foundation...
+20:08:07.734 [main] INFO  c.t.bot.core.Phase2IntegratedBot - === Initializing Phase 2 Advanced Integrated Bot ===
+20:08:07.734 [main] INFO  c.t.bot.core.Phase2IntegratedBot - Initializing technical analyzer...
+20:08:07.734 [main] INFO  c.t.bot.core.Phase2IntegratedBot - Initializing multi-timeframe analyzer...
+20:08:07.734 [main] INFO  c.t.bot.core.Phase2IntegratedBot - Initializing advanced indicators engine...
+20:08:07.734 [main] INFO  c.t.bot.core.Phase2IntegratedBot - Initializing ML signal validator...
+20:08:07.735 [main] INFO  c.t.bot.core.Phase2IntegratedBot - ✅ Phase 2 Advanced Integrated Bot initialized successfully
+20:08:07.735 [main] INFO  c.t.bot.core.Phase3IntegratedBot - Initializing Order Block Detector...
+20:08:07.735 [main] INFO  c.t.bot.core.Phase3IntegratedBot - Initializing Fair Value Gap Detector...
+20:08:07.735 [main] INFO  c.t.bot.core.Phase3IntegratedBot - Initializing Liquidity Analyzer...
+20:08:07.736 [main] INFO  c.t.bot.core.Phase3IntegratedBot - ✅ Phase 3 Smart Money Concepts Bot initialized successfully
+20:08:07.736 [main] INFO  c.t.bot.telegram.Phase3TelegramBot - ✅ Phase 3 Integrated Bot initialized successfully
+20:08:07.737 [main] INFO  c.t.bot.market.RealMarketDataFetcher - 🧪 Testing real market data connectivity...
+20:08:07.740 [main] WARN  c.t.bot.market.RealMarketDataFetcher - ⚠️ Upstox API error for NIFTY50: Illegal character in query at index 67: https://api.upstox.com/v2/market-quote/ltp?instrument_key=NSE_INDEX|Nifty%2050
+20:08:07.745 [main] INFO  c.t.bot.market.RealMarketDataFetcher - 📊 Estimated current price for NIFTY50: ₹23867.00
+20:08:07.947 [main] WARN  c.t.bot.market.RealMarketDataFetcher - ⚠️ Upstox API error for SENSEX: Illegal character in query at index 67: https://api.upstox.com/v2/market-quote/ltp?instrument_key=BSE_INDEX|SENSEX
+20:08:07.948 [main] INFO  c.t.bot.market.RealMarketDataFetcher - 📊 Estimated current price for SENSEX: ₹77311.24
+20:08:08.149 [main] WARN  c.t.bot.market.RealMarketDataFetcher - ⚠️ Upstox API error for BANKNIFTY: Illegal character in query at index 67: https://api.upstox.com/v2/market-quote/ltp?instrument_key=NSE_INDEX|Nifty%20Bank
+20:08:08.150 [main] INFO  c.t.bot.market.RealMarketDataFetcher - 📊 Estimated current price for BANKNIFTY: ₹50814.19
+20:08:08.355 [main] INFO  c.t.bot.market.RealMarketDataFetcher - 📊 Market snapshot: NIFTY: ₹23867.00, SENSEX: ₹77311.24, BANKNIFTY: ₹50814.19
+20:08:08.355 [main] INFO  c.t.bot.market.RealMarketDataFetcher - 📊 NIFTY50: ₹23867.00
+20:08:08.356 [main] INFO  c.t.bot.market.RealMarketDataFetcher - 📊 SENSEX: ₹77311.24
+20:08:08.356 [main] INFO  c.t.bot.market.RealMarketDataFetcher - 📊 BANKNIFTY: ₹50814.19
+20:08:08.356 [main] INFO  c.t.bot.market.RealMarketDataFetcher - ✅ Market data connectivity test completed
+20:08:08.357 [main] INFO  c.t.bot.telegram.Phase3TelegramBot - ✅ Real Market Data Fetcher initialized successfully
+20:08:08.359 [main] INFO  c.t.bot.telegram.Phase3TelegramBot - 🚀 Starting Phase 3 Telegram Bot...
+20:08:08.360 [main] INFO  c.t.bot.telegram.Phase3TelegramBot - 📱 Phase 3 Telegram Bot is ready for commands
+20:08:08.363 [main] INFO  c.t.bot.telegram.Phase3TelegramBot - ✅ Phase 3 Telegram Bot started successfully
+20:08:08.363 [main] INFO  c.t.bot.telegram.Phase3TelegramBot - 🏦 Available features: Smart Money Analysis, Order Blocks, FVGs, Liquidity Analysis
+20:08:08.363 [main] INFO  c.t.bot.telegram.Phase3TelegramBot - 📱 Send /start to begin institutional trading analysis
+\n🛑 Shutting down Phase 3 Telegram Bot...
+20:14:24.005 [Thread-0] INFO  c.t.bot.telegram.Phase3TelegramBot - 🛑 Stopping Phase 3 Telegram Bot...
+20:14:24.007 [Thread-0] INFO  c.t.bot.telegram.Phase3TelegramBot - ✅ Phase 3 Telegram Bot stopped

@@ -1,0 +1,23 @@
+{
+    "risk": {
+        "maxLossPerDay": 3.0,
+        "maxPositionsPerSymbol": 3,
+        "volatilityThreshold": 25.0,
+        "consecutiveLossLimit": 5,
+        "drawdownWarningLevel": 2.0
+    },
+    "trading": {
+        "maxPositionSize": 100.0,
+        "riskPerTrade": 1.0,
+        "maxDrawdown": 5.0,
+        "tradingHours": {
+            "start": "09:15",
+            "end": "15:30"
+        }
+    },
+    "monitoring": {
+        "updateFrequency": 60,
+        "riskMetricsLogInterval": 300,
+        "volatilityWindow": 20
+    }
+}

@@ -1,0 +1,12 @@
+ENHANCED STRATEGY BACKTEST REPORT
+==================================================
+Date: 2025-11-04 00:32:08
+Strategy: Enhanced Multi-indicator Confluence v2.0
+Test Period: Recent 5 trading sessions
+
+OVERALL ACCURACY: 0.0% (0/0)
+IMPROVEMENT: -54.7 percentage points vs previous bot
+
+ACCURACY BY TIMEFRAME:
+
+DETAILED RESULTS:

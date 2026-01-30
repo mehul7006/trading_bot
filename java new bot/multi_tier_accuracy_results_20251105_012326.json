@@ -1,0 +1,398 @@
+{
+  "timestamp": "20251105_012326",
+  "system": "Multi-Tier Accuracy System",
+  "all_levels_achieved": false,
+  "tier_configurations": {
+    "market_average": {
+      "target_accuracy": [
+        50,
+        55
+      ],
+      "confidence_threshold": 45.0,
+      "signal_threshold": 1,
+      "risk_level": "conservative"
+    },
+    "professional": {
+      "target_accuracy": [
+        60,
+        65
+      ],
+      "confidence_threshold": 55.0,
+      "signal_threshold": 2,
+      "risk_level": "moderate"
+    },
+    "top_algorithm": {
+      "target_accuracy": [
+        70,
+        75
+      ],
+      "confidence_threshold": 65.0,
+      "signal_threshold": 3,
+      "risk_level": "aggressive"
+    }
+  },
+  "performance_analysis": {
+    "market_average": {
+      "total_tests": 812,
+      "accuracy": 54.92610837438424,
+      "target_range": [
+        50,
+        55
+      ],
+      "target_achieved": true,
+      "scenario_accuracy": {
+        "normal": 53.79310344827586,
+        "bullish": 52.20125786163522,
+        "bearish": 53.70370370370371,
+        "volatile": 56.353591160220994,
+        "trending": 58.18181818181818
+      },
+      "sample_results": [
+        {
+          "test_num": 1,
+          "symbol": "NIFTY",
+          "tier": "market_average",
+          "scenario": "volatile",
+          "signal": "BUY",
+          "confidence": 58.0,
+          "expected_accuracy": 52.0,
+          "actual_correct": false,
+          "factors": [
+            "MA_ABOVE_20",
+            "GOOD_VOLUME"
+          ]
+        },
+        {
+          "test_num": 1,
+          "symbol": "BANKNIFTY",
+          "tier": "market_average",
+          "scenario": "volatile",
+          "signal": "BUY",
+          "confidence": 58.0,
+          "expected_accuracy": 52.0,
+          "actual_correct": true,
+          "factors": [
+            "MA_ABOVE_20",
+            "GOOD_VOLUME"
+          ]
+        },
+        {
+          "test_num": 1,
+          "symbol": "FINNIFTY",
+          "tier": "market_average",
+          "scenario": "volatile",
+          "signal": "SELL",
+          "confidence": 54.0,
+          "expected_accuracy": 52.0,
+          "actual_correct": true,
+          "factors": [
+            "MA_BEARISH"
+          ]
+        },
+        {
+          "test_num": 1,
+          "symbol": "SENSEX",
+          "tier": "market_average",
+          "scenario": "volatile",
+          "signal": "BUY",
+          "confidence": 58.0,
+          "expected_accuracy": 52.0,
+          "actual_correct": false,
+          "factors": [
+            "MA_ABOVE_20",
+            "HIGH_VOLUME"
+          ]
+        },
+        {
+          "test_num": 2,
+          "symbol": "NIFTY",
+          "tier": "market_average",
+          "scenario": "normal",
+          "signal": "BUY",
+          "confidence": 58.0,
+          "expected_accuracy": 52.0,
+          "actual_correct": false,
+          "factors": [
+            "MA_BULLISH",
+            "GOOD_VOLUME"
+          ]
+        },
+        {
+          "test_num": 2,
+          "symbol": "BANKNIFTY",
+          "tier": "market_average",
+          "scenario": "normal",
+          "signal": "BUY",
+          "confidence": 58.0,
+          "expected_accuracy": 52.0,
+          "actual_correct": false,
+          "factors": [
+            "MA_BULLISH",
+            "GOOD_VOLUME"
+          ]
+        },
+        {
+          "test_num": 2,
+          "symbol": "FINNIFTY",
+          "tier": "market_average",
+          "scenario": "normal",
+          "signal": "SELL",
+          "confidence": 54.0,
+          "expected_accuracy": 52.0,
+          "actual_correct": true,
+          "factors": [
+            "MA_BELOW_20"
+          ]
+        },
+        {
+          "test_num": 2,
+          "symbol": "SENSEX",
+          "tier": "market_average",
+          "scenario": "normal",
+          "signal": "BUY",
+          "confidence": 58.0,
+          "expected_accuracy": 52.0,
+          "actual_correct": true,
+          "factors": [
+            "MA_ABOVE_20",
+            "HIGH_VOLUME"
+          ]
+        },
+        {
+          "test_num": 3,
+          "symbol": "NIFTY",
+          "tier": "market_average",
+          "scenario": "bearish",
+          "signal": "BUY",
+          "confidence": 58.0,
+          "expected_accuracy": 52.0,
+          "actual_correct": true,
+          "factors": [
+            "MA_BULLISH",
+            "GOOD_VOLUME"
+          ]
+        },
+        {
+          "test_num": 3,
+          "symbol": "BANKNIFTY",
+          "tier": "market_average",
+          "scenario": "bearish",
+          "signal": "BUY",
+          "confidence": 58.0,
+          "expected_accuracy": 52.0,
+          "actual_correct": false,
+          "factors": [
+            "MA_ABOVE_20",
+            "GOOD_VOLUME"
+          ]
+        }
+      ]
+    },
+    "professional": {
+      "total_tests": 162,
+      "accuracy": 61.72839506172839,
+      "target_range": [
+        60,
+        65
+      ],
+      "target_achieved": true,
+      "scenario_accuracy": {
+        "normal": 67.56756756756756,
+        "bullish": 42.857142857142854,
+        "bearish": 54.54545454545454,
+        "volatile": 69.6969696969697,
+        "trending": 70.37037037037037
+      },
+      "sample_results": [
+        {
+          "test_num": 1,
+          "symbol": "SENSEX",
+          "tier": "professional",
+          "scenario": "bullish",
+          "signal": "BUY",
+          "confidence": 63.0,
+          "expected_accuracy": 62.0,
+          "actual_correct": false,
+          "factors": [
+            "MA_ABOVE_20",
+            "HIGH_VOLUME"
+          ]
+        },
+        {
+          "test_num": 2,
+          "symbol": "SENSEX",
+          "tier": "professional",
+          "scenario": "volatile",
+          "signal": "BUY",
+          "confidence": 66.0,
+          "expected_accuracy": 62.0,
+          "actual_correct": true,
+          "factors": [
+            "MA_BULLISH",
+            "HIGH_VOLUME"
+          ]
+        },
+        {
+          "test_num": 5,
+          "symbol": "SENSEX",
+          "tier": "professional",
+          "scenario": "normal",
+          "signal": "BUY",
+          "confidence": 63.0,
+          "expected_accuracy": 62.0,
+          "actual_correct": true,
+          "factors": [
+            "MA_ABOVE_20",
+            "HIGH_VOLUME"
+          ]
+        },
+        {
+          "test_num": 6,
+          "symbol": "SENSEX",
+          "tier": "professional",
+          "scenario": "volatile",
+          "signal": "BUY",
+          "confidence": 63.0,
+          "expected_accuracy": 62.0,
+          "actual_correct": false,
+          "factors": [
+            "MA_ABOVE_20",
+            "HIGH_VOLUME"
+          ]
+        },
+        {
+          "test_num": 8,
+          "symbol": "SENSEX",
+          "tier": "professional",
+          "scenario": "normal",
+          "signal": "BUY",
+          "confidence": 63.0,
+          "expected_accuracy": 62.0,
+          "actual_correct": true,
+          "factors": [
+            "MA_ABOVE_20",
+            "HIGH_VOLUME"
+          ]
+        },
+        {
+          "test_num": 9,
+          "symbol": "BANKNIFTY",
+          "tier": "professional",
+          "scenario": "bullish",
+          "signal": "SELL",
+          "confidence": 67.0,
+          "expected_accuracy": 62.0,
+          "actual_correct": true,
+          "factors": [
+            "MA_BEARISH",
+            "GOOD_VOLUME",
+            "NEAR_RESISTANCE"
+          ]
+        },
+        {
+          "test_num": 9,
+          "symbol": "SENSEX",
+          "tier": "professional",
+          "scenario": "bullish",
+          "signal": "BUY",
+          "confidence": 63.0,
+          "expected_accuracy": 62.0,
+          "actual_correct": false,
+          "factors": [
+            "MA_ABOVE_20",
+            "HIGH_VOLUME"
+          ]
+        },
+        {
+          "test_num": 10,
+          "symbol": "SENSEX",
+          "tier": "professional",
+          "scenario": "bearish",
+          "signal": "BUY",
+          "confidence": 66.0,
+          "expected_accuracy": 62.0,
+          "actual_correct": false,
+          "factors": [
+            "MA_BULLISH",
+            "HIGH_VOLUME"
+          ]
+        },
+        {
+          "test_num": 11,
+          "symbol": "SENSEX",
+          "tier": "professional",
+          "scenario": "bearish",
+          "signal": "BUY",
+          "confidence": 66.0,
+          "expected_accuracy": 62.0,
+          "actual_correct": true,
+          "factors": [
+            "MA_BULLISH",
+            "HIGH_VOLUME"
+          ]
+        },
+        {
+          "test_num": 12,
+          "symbol": "SENSEX",
+          "tier": "professional",
+          "scenario": "volatile",
+          "signal": "BUY",
+          "confidence": 66.0,
+          "expected_accuracy": 62.0,
+          "actual_correct": false,
+          "factors": [
+            "MA_BULLISH",
+            "HIGH_VOLUME"
+          ]
+        }
+      ]
+    },
+    "top_algorithm": {
+      "total_tests": 1,
+      "accuracy": 100.0,
+      "target_range": [
+        70,
+        75
+      ],
+      "target_achieved": false,
+      "scenario_accuracy": {
+        "bearish": 100.0
+      },
+      "sample_results": [
+        {
+          "test_num": 8,
+          "symbol": "SENSEX",
+          "tier": "top_algorithm",
+          "scenario": "bearish",
+          "signal": "BUY",
+          "confidence": 72.0,
+          "expected_accuracy": 72.0,
+          "actual_correct": true,
+          "factors": [
+            "MA_BULLISH",
+            "HIGH_VOLUME",
+            "NEAR_SUPPORT"
+          ]
+        }
+      ]
+    }
+  },
+  "market_data": {
+    "NIFTY": {
+      "price": 25597.65,
+      "volume": 83425
+    },
+    "BANKNIFTY": {
+      "price": 57827.05,
+      "volume": 49552
+    },
+    "FINNIFTY": {
+      "price": 27195.8,
+      "volume": 20865
+    },
+    "SENSEX": {
+      "price": 83459.15,
+      "volume": 52176
+    }
+  }
+}

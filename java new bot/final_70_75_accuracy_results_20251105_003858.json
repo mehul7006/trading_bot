@@ -1,0 +1,197 @@
+{
+  "timestamp": "20251105_003858",
+  "target_accuracy_range": {
+    "min": 70.0,
+    "max": 75.0
+  },
+  "achieved_accuracy": 52.63157894736842,
+  "target_achieved": false,
+  "optimization_parameters": {
+    "min_confidence": 62.0,
+    "target_confidence_range": [
+      70,
+      78
+    ],
+    "signal_generation_threshold": 2,
+    "accuracy_calibration_factor": 0.88
+  },
+  "validation_results": {
+    "total_tests": 19,
+    "overall_accuracy": 52.63157894736842,
+    "target_achieved": false,
+    "range_accuracy": {
+      "62-70%": 47.05882352941176,
+      "70-75%": 100.0
+    },
+    "scenario_accuracy": {
+      "normal": 20.0,
+      "bullish": 75.0,
+      "bearish": 66.66666666666666,
+      "volatile": 50.0
+    },
+    "sample_results": [
+      {
+        "test_num": 2,
+        "symbol": "SENSEX",
+        "scenario": "bearish",
+        "signal": "BUY",
+        "confidence": 62.9,
+        "expected_accuracy": 65.0,
+        "actual_correct": true,
+        "components": [
+          "RSI_NEUTRAL",
+          "MACD_NEUTRAL",
+          "MA_BULLISH",
+          "VOLUME_HIGH",
+          "RESISTANCE_ZONE"
+        ]
+      },
+      {
+        "test_num": 20,
+        "symbol": "FINNIFTY",
+        "scenario": "normal",
+        "signal": "BUY",
+        "confidence": 64.6,
+        "expected_accuracy": 65.0,
+        "actual_correct": true,
+        "components": [
+          "RSI_OVERBOUGHT",
+          "MACD_NEUTRAL",
+          "MA_BULLISH",
+          "VOLUME_LOW",
+          "SUPPORT_ZONE"
+        ]
+      },
+      {
+        "test_num": 26,
+        "symbol": "FINNIFTY",
+        "scenario": "bullish",
+        "signal": "BUY",
+        "confidence": 71.28,
+        "expected_accuracy": 71.256,
+        "actual_correct": true,
+        "components": [
+          "RSI_OVERSOLD",
+          "MACD_NEUTRAL",
+          "MA_PERFECT_BEARISH",
+          "VOLUME_LOW",
+          "SUPPORT_ZONE"
+        ]
+      },
+      {
+        "test_num": 30,
+        "symbol": "SENSEX",
+        "scenario": "bullish",
+        "signal": "BUY",
+        "confidence": 62.9,
+        "expected_accuracy": 65.0,
+        "actual_correct": true,
+        "components": [
+          "RSI_NEUTRAL",
+          "MACD_NEUTRAL",
+          "MA_BEARISH",
+          "VOLUME_HIGH",
+          "SUPPORT_ZONE"
+        ]
+      },
+      {
+        "test_num": 35,
+        "symbol": "BANKNIFTY",
+        "scenario": "normal",
+        "signal": "BUY",
+        "confidence": 62.05,
+        "expected_accuracy": 65.0,
+        "actual_correct": false,
+        "components": [
+          "RSI_OVERSOLD",
+          "MACD_NEUTRAL",
+          "MA_BELOW_20",
+          "VOLUME_HIGH",
+          "MID_RANGE"
+        ]
+      },
+      {
+        "test_num": 37,
+        "symbol": "SENSEX",
+        "scenario": "volatile",
+        "signal": "SELL",
+        "confidence": 62.9,
+        "expected_accuracy": 65.0,
+        "actual_correct": true,
+        "components": [
+          "RSI_NEUTRAL",
+          "MACD_NEUTRAL",
+          "MA_BEARISH",
+          "VOLUME_HIGH",
+          "RESISTANCE_ZONE"
+        ]
+      },
+      {
+        "test_num": 41,
+        "symbol": "BANKNIFTY",
+        "scenario": "normal",
+        "signal": "BUY",
+        "confidence": 62.9,
+        "expected_accuracy": 65.0,
+        "actual_correct": false,
+        "components": [
+          "RSI_NEUTRAL",
+          "MACD_NEUTRAL",
+          "MA_BEARISH",
+          "VOLUME_HIGH",
+          "SUPPORT_ZONE"
+        ]
+      },
+      {
+        "test_num": 50,
+        "symbol": "SENSEX",
+        "scenario": "bearish",
+        "signal": "BUY",
+        "confidence": 62.9,
+        "expected_accuracy": 65.0,
+        "actual_correct": false,
+        "components": [
+          "RSI_NEUTRAL",
+          "MACD_NEUTRAL",
+          "MA_BULLISH",
+          "VOLUME_HIGH",
+          "RESISTANCE_ZONE"
+        ]
+      },
+      {
+        "test_num": 51,
+        "symbol": "SENSEX",
+        "scenario": "bearish",
+        "signal": "BUY",
+        "confidence": 62.9,
+        "expected_accuracy": 65.0,
+        "actual_correct": true,
+        "components": [
+          "RSI_NEUTRAL",
+          "MACD_NEUTRAL",
+          "MA_BULLISH",
+          "VOLUME_HIGH",
+          "SUPPORT_ZONE"
+        ]
+      },
+      {
+        "test_num": 81,
+        "symbol": "NIFTY",
+        "scenario": "bullish",
+        "signal": "BUY",
+        "confidence": 62.9,
+        "expected_accuracy": 65.0,
+        "actual_correct": false,
+        "components": [
+          "RSI_NEUTRAL",
+          "MACD_NEUTRAL",
+          "MA_BEARISH",
+          "VOLUME_HIGH",
+          "SUPPORT_ZONE"
+        ]
+      }
+    ]
+  },
+  "performance_level": "NEEDS_ADJUSTMENT",
+  "deployment_ready": false
+}

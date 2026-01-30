@@ -1,0 +1,14 @@
+INTEGRATED HONEST OPTIONS TRADING REPORT
+========================================
+Date: 2025-10-28
+Confidence Threshold: 75%+
+Total Calls: 31
+Overall Win Rate: 54.84%
+Average P&L: ₹3.42
+
+WIN RATE BY CALL TYPE:
+=====================
+SENSEX_PE: 80.00% (4/5 calls)
+SENSEX_CE: 50.00% (4/8 calls)
+NIFTY_PE: 57.14% (4/7 calls)
+NIFTY_CE: 45.45% (5/11 calls)

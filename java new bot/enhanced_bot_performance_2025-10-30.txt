@@ -1,0 +1,10 @@
+🎯 ENHANCED BOT PERFORMANCE REPORT - 2025-10-30
+============================================================
+15-min Accuracy: 0.00%
+30-min Accuracy: 0.00%
+Total Calls: 0
+CE Options: 0
+PE Options: 0
+Avg Confidence: 0.0%
+15-min P&L: 0.00%
+30-min P&L: 0.00%

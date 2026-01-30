@@ -1,0 +1,38 @@
+{
+    "marketData": {
+        "websocket": {
+            "url": "wss://your-market-data-provider/ws",
+            "apiKey": "YOUR_API_KEY",
+            "reconnectDelay": 5000,
+            "heartbeatInterval": 30000
+        },
+        "symbols": [
+            "NIFTY",
+            "BANKNIFTY"
+        ],
+        "intervals": [
+            "1m",
+            "5m",
+            "15m"
+        ],
+        "validation": {
+            "maxPriceChange": 5.0,
+            "minVolume": 100,
+            "maxDataAge": 5000
+        },
+        "backupSources": [
+            {
+                "type": "rest",
+                "url": "https://backup-market-data/api/v1",
+                "priority": 1
+            }
+        ]
+    },
+    "logging": {
+        "marketData": {
+            "level": "INFO",
+            "invalidDataLog": true,
+            "reconnectionLog": true
+        }
+    }
+}

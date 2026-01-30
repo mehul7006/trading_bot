@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Quick Bot Command Launcher
+# Usage: ./bot /start, ./bot /test, ./bot /phase1, etc.
+
+cd clean_bot
+
+if [ $# -eq 0 ]; then
+    # Default to /start
+    java -cp "target/classes:lib/*" com.trading.bot.core.SimpleBotLauncher /start
+else
+    # Use provided command
+    java -cp "target/classes:lib/*" com.trading.bot.core.SimpleBotLauncher $1
+fi

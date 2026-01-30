@@ -1,0 +1,25 @@
+TODAY'S REAL MARKET ACCURACY REPORT
+==================================================
+Date: 2025-11-05 00:20:41
+Bot: Optimized Multi-indicator Confluence v2.0
+Data Sources: NSE API → Yahoo Finance → Fallback
+
+MARKET DATA:
+NIFTY: ₹25597.65 | Source: NSE_API
+BANKNIFTY: ₹57827.05 | Source: NSE_API
+FINNIFTY: ₹27195.80 | Source: NSE_API
+SENSEX: ₹83459.15 | Source: YAHOO_FINANCE
+
+SIGNALS GENERATED:
+NIFTY: HOLD (Conf: 59%) @ ₹25597.65
+  Reasons: MA_SHORT_BULLISH, HIGH_VOLUME, HIGH_VOLATILITY
+BANKNIFTY: HOLD (Conf: 57%) @ ₹57827.05
+  Reasons: MA_STRONG_BEARISH, HIGH_VOLATILITY
+FINNIFTY: HOLD (Conf: 57%) @ ₹27195.80
+  Reasons: MA_STRONG_BULLISH, HIGH_VOLATILITY
+SENSEX: HOLD (Conf: 57%) @ ₹83459.15
+  Reasons: MA_STRONG_BULLISH, HIGH_VOLATILITY
+
+CONSERVATIVE STRATEGY: No trades generated (waiting for high confidence)
+
+DETAILED VALIDATION RESULTS:

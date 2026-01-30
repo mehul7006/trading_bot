@@ -1,0 +1,9 @@
+PAPER TRADING SESSION - 2025-10-30
+==================================================
+Starting Capital: ₹100000
+Final Capital: ₹97872
+Total P&L: ₹-2128
+Total Trades: 0
+Active Trades: 1
+
+Completed Trades:

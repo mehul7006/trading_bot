@@ -1,0 +1,10 @@
+LIVE TRADING PERFORMANCE REPORT
+===============================
+Date: 2025-10-29
+Capital: ₹100000
+Today's P&L: ₹0.00
+Trades executed: 0
+Win rate: 0.00%
+
+COMPLETED TRADES:
+================

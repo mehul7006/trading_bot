@@ -1,0 +1,91 @@
+🏆 STARTING MASTER INTEGRATED BOT (PHASES 1-4)
+===============================================
+✅ Phase 1: Enhanced Technical + Machine Learning
+✅ Phase 2: Multi-Timeframe + Advanced Indicators
+✅ Phase 3: Smart Money Concepts + Institutional Analysis
+✅ Phase 4: Portfolio Optimization + Risk Management + Algorithmic Execution
+📊 Real Market Data: Upstox API Integration
+🏦 Features: Complete Quantitative Trading System
+
+20:47:08.750 [main] INFO  c.trading.bot.ml.MLSignalValidator - Initializing advanced ML signal validator...
+20:47:08.752 [main] INFO  c.t.bot.ml.SimplifiedMarketPredictor - Initializing simplified ML model...
+20:47:08.752 [main] INFO  c.t.bot.ml.SimplifiedMarketPredictor - Simplified ML model initialized successfully
+20:47:08.752 [main] INFO  c.trading.bot.ml.MLSignalValidator - Advanced ML signal validator initialized successfully
+20:47:08.754 [main] INFO  c.t.bot.core.Phase4QuantSystemBot - === Initializing Phase 4 Quantitative & Algorithmic Trading System ===
+20:47:08.754 [main] INFO  c.t.bot.core.Phase4QuantSystemBot - Initializing Phase 3 Smart Money foundation...
+20:47:08.754 [main] INFO  c.t.bot.core.Phase3IntegratedBot - === Initializing Phase 3 Smart Money Concepts Bot ===
+20:47:08.754 [main] INFO  c.t.bot.core.Phase3IntegratedBot - Initializing Phase 2 foundation...
+20:47:08.754 [main] INFO  c.t.bot.core.Phase2IntegratedBot - === Initializing Phase 2 Advanced Integrated Bot ===
+20:47:08.754 [main] INFO  c.t.bot.core.Phase2IntegratedBot - Initializing technical analyzer...
+20:47:08.755 [main] INFO  c.t.bot.core.Phase2IntegratedBot - Initializing multi-timeframe analyzer...
+20:47:08.755 [main] INFO  c.t.bot.core.Phase2IntegratedBot - Initializing advanced indicators engine...
+20:47:08.755 [main] INFO  c.t.bot.core.Phase2IntegratedBot - Initializing ML signal validator...
+20:47:08.755 [main] INFO  c.t.bot.core.Phase2IntegratedBot - ✅ Phase 2 Advanced Integrated Bot initialized successfully
+20:47:08.755 [main] INFO  c.t.bot.core.Phase3IntegratedBot - Initializing Order Block Detector...
+20:47:08.755 [main] INFO  c.t.bot.core.Phase3IntegratedBot - Initializing Fair Value Gap Detector...
+20:47:08.756 [main] INFO  c.t.bot.core.Phase3IntegratedBot - Initializing Liquidity Analyzer...
+20:47:08.756 [main] INFO  c.t.bot.core.Phase3IntegratedBot - ✅ Phase 3 Smart Money Concepts Bot initialized successfully
+20:47:08.756 [main] INFO  c.t.bot.core.Phase4QuantSystemBot - Initializing Portfolio Manager...
+20:47:08.756 [main] INFO  c.trading.bot.quant.PortfolioManager - ✅ Portfolio Manager initialized with ${:.2f}
+20:47:08.758 [main] INFO  c.t.bot.core.Phase4QuantSystemBot - Initializing Risk Optimizer...
+20:47:08.758 [main] INFO  com.trading.bot.quant.RiskOptimizer - ✅ Risk Optimizer initialized
+20:47:08.758 [main] INFO  c.t.bot.core.Phase4QuantSystemBot - Initializing Algorithmic Executor...
+20:47:08.758 [main] INFO  c.t.bot.quant.AlgorithmicExecutor - ✅ Algorithmic Executor initialized
+20:47:08.759 [main] INFO  c.t.bot.core.Phase4QuantSystemBot - Initializing Quantitative Analyzer...
+20:47:08.759 [main] INFO  c.t.bot.quant.QuantitativeAnalyzer - ✅ Quantitative Analyzer initialized
+20:47:08.759 [main] INFO  c.t.bot.core.Phase4QuantSystemBot - ✅ Phase 4 Quantitative System initialized successfully
+20:47:08.759 [main] INFO  c.t.b.market.HonestMarketDataFetcher - 🧪 Testing HONEST market data connectivity...
+20:47:08.761 [main] INFO  c.t.b.market.HonestMarketDataFetcher - 🌐 API URL: https://api.upstox.com/v2/market-quote/ltp?instrument_key=NSE_INDEX%7CNifty+50
+20:47:22.553 [main] ERROR c.t.b.market.HonestMarketDataFetcher - ❌ Upstox API exception for NIFTY50: HTTP connect timed out
+java.net.http.HttpConnectTimeoutException: HTTP connect timed out
+	at java.net.http/jdk.internal.net.http.HttpClientImpl.send(HttpClientImpl.java:917)
+	at java.net.http/jdk.internal.net.http.HttpClientFacade.send(HttpClientFacade.java:133)
+	at com.trading.bot.market.HonestMarketDataFetcher.fetchRealPriceFromUpstox(HonestMarketDataFetcher.java:91)
+	at com.trading.bot.market.HonestMarketDataFetcher.getHonestMarketSnapshot(HonestMarketDataFetcher.java:222)
+	at com.trading.bot.market.HonestMarketDataFetcher.testHonestConnectivity(HonestMarketDataFetcher.java:258)
+	at MasterIntegratedTelegramBot.<init>(MasterIntegratedTelegramBot.java:48)
+	at MasterIntegratedTelegramBot.main(MasterIntegratedTelegramBot.java:573)
+Caused by: java.net.http.HttpConnectTimeoutException: HTTP connect timed out
+	at java.net.http/jdk.internal.net.http.MultiExchange.toTimeoutException(MultiExchange.java:615)
+	at java.net.http/jdk.internal.net.http.MultiExchange.getExceptionalCF(MultiExchange.java:558)
+	at java.net.http/jdk.internal.net.http.MultiExchange.lambda$responseAsyncImpl$2(MultiExchange.java:477)
+	at java.base/java.util.concurrent.CompletableFuture.uniHandle(CompletableFuture.java:980)
+	at java.base/java.util.concurrent.CompletableFuture.uniHandleStage(CompletableFuture.java:996)
+	at java.base/java.util.concurrent.CompletableFuture.handle(CompletableFuture.java:2424)
+	at java.net.http/jdk.internal.net.http.MultiExchange.responseAsyncImpl(MultiExchange.java:469)
+	at java.net.http/jdk.internal.net.http.MultiExchange.lambda$responseAsync0$0(MultiExchange.java:357)
+	at java.base/java.util.concurrent.CompletableFuture$UniCompose.tryFire(CompletableFuture.java:1196)
+	at java.base/java.util.concurrent.CompletableFuture.postComplete(CompletableFuture.java:556)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1819)
+	at java.net.http/jdk.internal.net.http.HttpClientImpl$DelegatingExecutor.execute(HttpClientImpl.java:168)
+	at java.base/java.util.concurrent.CompletableFuture.completeAsync(CompletableFuture.java:2789)
+	at java.net.http/jdk.internal.net.http.MultiExchange.responseAsync(MultiExchange.java:310)
+	at java.net.http/jdk.internal.net.http.HttpClientImpl.sendAsync(HttpClientImpl.java:1015)
+	at java.net.http/jdk.internal.net.http.HttpClientImpl.send(HttpClientImpl.java:901)
+	... 6 common frames omitted
+Caused by: java.net.ConnectException: HTTP connect timed out
+	at java.net.http/jdk.internal.net.http.MultiExchange.toTimeoutException(MultiExchange.java:616)
+	... 21 common frames omitted
+20:47:22.559 [main] ERROR c.t.b.market.HonestMarketDataFetcher - ❌ Failed to get REAL price for NIFTY50
+20:47:23.060 [main] INFO  c.t.b.market.HonestMarketDataFetcher - 🌐 API URL: https://api.upstox.com/v2/market-quote/ltp?instrument_key=BSE_INDEX%7CSENSEX
+20:47:23.829 [main] INFO  c.t.b.market.HonestMarketDataFetcher - 📡 API Response Status: 200 for SENSEX
+20:47:23.830 [main] INFO  c.t.b.market.HonestMarketDataFetcher - 📄 API Response Body: {"status":"success","data":{"BSE_INDEX:SENSEX":{"last_price":84478.67,"instrument_token":"BSE_INDEX|SENSEX"}}}
+20:47:23.833 [main] INFO  c.t.b.market.HonestMarketDataFetcher - ✅ Parsed REAL price for SENSEX: ₹84478.67
+20:47:23.834 [main] INFO  c.t.b.market.HonestMarketDataFetcher - ✅ REAL LIVE PRICE for SENSEX: ₹84478.67
+20:47:23.835 [main] INFO  c.t.b.market.HonestMarketDataFetcher - ✅ REAL price for SENSEX: ₹84478.67
+20:47:24.340 [main] INFO  c.t.b.market.HonestMarketDataFetcher - 🌐 API URL: https://api.upstox.com/v2/market-quote/ltp?instrument_key=NSE_INDEX%7CNifty+Bank
+20:47:24.433 [main] INFO  c.t.b.market.HonestMarketDataFetcher - 📡 API Response Status: 200 for BANKNIFTY
+20:47:24.434 [main] INFO  c.t.b.market.HonestMarketDataFetcher - 📄 API Response Body: {"status":"success","data":{"NSE_INDEX:Nifty Bank":{"last_price":58381.95,"instrument_token":"NSE_INDEX|Nifty Bank"}}}
+20:47:24.435 [main] INFO  c.t.b.market.HonestMarketDataFetcher - ✅ Parsed REAL price for BANKNIFTY: ₹58381.95
+20:47:24.435 [main] INFO  c.t.b.market.HonestMarketDataFetcher - ✅ REAL LIVE PRICE for BANKNIFTY: ₹58381.95
+20:47:24.435 [main] INFO  c.t.b.market.HonestMarketDataFetcher - ✅ REAL price for BANKNIFTY: ₹58381.95
+20:47:24.941 [main] WARN  c.t.b.market.HonestMarketDataFetcher - ⚠️ Failed to get prices for: NIFTY50
+20:47:24.942 [main] INFO  c.t.b.market.HonestMarketDataFetcher - ✅ HONEST CONNECTIVITY TEST RESULTS:
+20:47:24.942 [main] INFO  c.t.b.market.HonestMarketDataFetcher - 📊 SENSEX REAL PRICE: ₹84478.67
+20:47:24.942 [main] INFO  c.t.b.market.HonestMarketDataFetcher - 📊 BANKNIFTY REAL PRICE: ₹58381.95
+✅ Master Integrated Bot initialized successfully
+🚀 Starting Master Integrated Bot (Phases 1-4)...
+✅ Master Bot started successfully
+🏆 Features: Phase 1-4 + Smart Money + Portfolio + Risk + Algo Execution
+📱 Send /start to begin complete trading analysis
+\n🛑 Shutting down Master Integrated Bot...

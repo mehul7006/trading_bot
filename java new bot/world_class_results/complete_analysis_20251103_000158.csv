@@ -1,0 +1,2 @@
+Symbol,Timestamp,Signal,Confidence,CurrentPrice,TargetPrice,StopLoss,TakeProfit1,TakeProfit2,TakeProfit3,Strategy,ProbabilityOfSuccess,RiskReward,SupportingIndicators,MarketRegime,Volatility,InstitutionalGrade
+BANKNIFTY,2025-11-03T00:01:55.422445,BUY,95.0,54989.56,58288.93,52789.98,56089.35,57189.14,59388.72,COMPREHENSIVE,80.8,1.50,BULLISH_TREND_ALIGNMENT|BULLISH_MOMENTUM|STRONG_TREND_ADX,TRENDING,7.4,true
