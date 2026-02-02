@@ -25,22 +25,16 @@ public class BacktestRunner {
     private static void runBacktestForSymbol(String symbol, HonestMarketDataFetcher fetcher) {
         AIPredictor predictor = new AIPredictor();
         
-        // 1. Fetch 120 Days of Data (Split into chunks to avoid API limits)
+        // 1. Fetch Data (Enough history for indicators)
         System.out.println("\n📥 Fetching data for " + symbol + " (History needed for indicators)...");
         
         List<SimpleMarketData> allData = new ArrayList<>();
         
-        // Chunk 1: Last 60 Days (Most recent)
+        // Chunk 1: Last 150 Days (Covers 120 day test + history)
         String toDate1 = LocalDate.now().plusDays(1).toString();
-        String fromDate1 = LocalDate.now().minusDays(60).toString();
+        String fromDate1 = LocalDate.now().minusDays(150).toString();
         List<SimpleMarketData> chunk1 = fetcher.fetchHistoricalCandles(symbol, "30minute", fromDate1, toDate1);
         allData.addAll(chunk1);
-        
-        // Chunk 2: Previous 60 Days
-        String toDate2 = LocalDate.now().minusDays(60).toString();
-        String fromDate2 = LocalDate.now().minusDays(120).toString();
-        List<SimpleMarketData> chunk2 = fetcher.fetchHistoricalCandles(symbol, "30minute", fromDate2, toDate2);
-        allData.addAll(chunk2);
         
         // Sort by timestamp
         allData.sort((d1, d2) -> d1.timestamp.compareTo(d2.timestamp));

@@ -1,6 +1,8 @@
 com\trading\bot\technical\AdvancedTechnicalAnalyzer$BollingerBands.class
 com\trading\bot\core\Phase2IntegratedBot.class
 com\trading\bot\ml\SimplifiedMarketPredictor.class
+com\trading\bot\test\HonestAudit.class
+com\trading\bot\test\StabilityAudit.class
 com\trading\bot\technical\AdvancedIndicatorsEngine.class
 com\trading\bot\ai\AIPredictor$AIPrediction.class
 com\trading\bot\CloudLauncher.class
@@ -12,6 +14,7 @@ com\trading\bot\util\MarketHours.class
 com\trading\bot\smartmoney\OrderBlockDetector$OrderBlockAnalysis.class
 com\trading\bot\smartmoney\OrderBlockDetector.class
 com\trading\bot\ml\MLSignalValidator$ValidationResult.class
+com\trading\bot\test\SimpleTest.class
 com\trading\bot\test\CheckCurrentPrices.class
 com\trading\bot\smartmoney\FairValueGapDetector$FVGType.class
 com\trading\bot\technical\AdvancedTechnicalAnalyzer.class
@@ -28,6 +31,7 @@ com\trading\bot\technical\MultiTimeframeAnalyzer.class
 com\trading\bot\smartmoney\LiquidityAnalyzer$LiquidityStatus.class
 com\trading\bot\technical\AdvancedIndicatorsEngine$AdvancedIndicatorsResult.class
 com\trading\bot\smartmoney\FairValueGapDetector.class
+com\trading\bot\test\StabilityAudit$MonthStats.class
 com\trading\bot\test\StrategyOptimizer$OptimizationResult.class
 com\trading\bot\test\BacktestRunner.class
 com\trading\bot\smartmoney\FairValueGapDetector$FVGStatus.class
@@ -36,6 +40,7 @@ com\trading\bot\smartmoney\FairValueGapDetector$FVGAnalysis.class
 com\trading\bot\test\DebugPrices.class
 com\trading\bot\telegram\Phase3TelegramBot.class
 com\trading\bot\core\Phase3IntegratedBot.class
+com\trading\bot\test\OneOffBacktest.class
 com\trading\bot\ai\ScanningService.class
 com\trading\bot\core\Phase2IntegratedBot$AdvancedTradingCall.class
 com\trading\bot\ml\MLSignalValidator$AdvancedMLFeatures.class
@@ -49,4 +54,5 @@ com\trading\bot\technical\AdvancedIndicatorsEngine$WilliamsRResult.class
 com\trading\bot\technical\MultiTimeframeAnalyzer$TimeframeAnalysis.class
 com\trading\bot\technical\AdvancedIndicatorsEngine$ADXResult.class
 com\trading\bot\smartmoney\LiquidityAnalyzer.class
+com\trading\bot\test\ManualScanRunner.class
 com\trading\bot\test\StrategyOptimizer.class

@@ -115,40 +115,64 @@ public class AIPredictor {
         }
     }
 
-    // --- STRATEGY 1: NIFTY 50 (Balanced Trend - High Win Rate Optimization) ---
-    // Logic: Triple Confluence (10>20>50) + RSI > 50 + ADX > 25
-    // Optimization: Wider SL (2.0 ATR) for 73% Win Rate
+    // --- STRATEGY 1: NIFTY 50 (Gamma Squeeze + Momentum - High Win Rate Optimization) ---
+    // Logic: Bollinger Band Breakout + RSI Momentum (Option Buying Proxy)
+    // Concept: Catch "Gamma" moves where Price expands rapidly away from mean
     private AIPrediction predictNiftyStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema50, double rsi, double adx, double atr, SimpleMarketData latest, double avgVol) {
         double ema10 = calculateEMA(data, 10);
         double ema20 = calculateEMA(data, 20);
         
+        // Bollinger Bands (20, 2.0)
+        double[] bb = calculateBollingerBands(data, 20, 2.0);
+        double upperBB = bb[0];
+        double lowerBB = bb[1];
+        double midBB = bb[2]; // SMA 20
+        
         String direction = "NEUTRAL";
         double confidence = 0.0;
         String reasoning = "";
-        double target = atr * 1.0; // Easy Target
-        double sl = atr * 2.0;     // Wide SL to survive volatility (ML Optimized)
+        double target = atr * 1.0; // Optimized for High Win Rate (Quick Scalp)
+        double sl = atr * 2.0;     // Wide SL to survive volatility noise
 
-        boolean alignmentUp = (ema10 > ema20) && (ema20 > ema50);
-        boolean alignmentDown = (ema10 < ema20) && (ema20 < ema50);
+        // 1. Momentum Check (Gamma Proxy)
+        boolean breakoutUp = currentPrice > upperBB; 
+        boolean breakoutDown = currentPrice < lowerBB; 
         
-        // Optimized Thresholds from Training
-        boolean rsiBullish = rsi > 50; // Was 55
-        boolean rsiBearish = rsi < 50; // Was 45
+        // 2. Trend Confirmation (Delta Proxy) - STRICTER
+        boolean strongUptrend = rsi > 60 && ema10 > ema20; // RSI was 55
+        boolean strongDowntrend = rsi < 40 && ema10 < ema20; // RSI was 45
         
-        // ADX Check (Stricter than before)
-        boolean trendExists = adx > 25; // Was 20
+        // 3. Volatility Check (Vega Proxy) - STRICTER
+        boolean volatilityExpanding = adx > 25; // Was 20
 
-        if (alignmentUp && rsiBullish && trendExists && currentPrice > ema20) {
+        // GAMMA BLAST STRATEGY
+        if (breakoutUp && strongUptrend && volatilityExpanding) {
             direction = "UP";
-            confidence = 90.0;
-            reasoning = "NIFTY: EMA Align (10>20>50) + RSI>50 + ADX>25 [ML Optimized]";
-        } else if (alignmentDown && rsiBearish && trendExists && currentPrice < ema20) {
+            confidence = 92.0; 
+            reasoning = "NIFTY: Gamma Blast (Price > Upper BB) + RSI>60 + ADX>25";
+        } else if (breakoutDown && strongDowntrend && volatilityExpanding) {
             direction = "DOWN";
-            confidence = 90.0;
-            reasoning = "NIFTY: EMA Align (10<20<50) + RSI<50 + ADX>25 [ML Optimized]";
+            confidence = 92.0;
+            reasoning = "NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25";
+        }
+        // FALLBACK: Standard Trend Following (Optimized for Safety)
+        else {
+             boolean alignmentUp = (ema10 > ema20) && (ema20 > ema50);
+             boolean alignmentDown = (ema10 < ema20) && (ema20 < ema50);
+             
+             // Stricter Fallback
+             if (alignmentUp && rsi > 55 && adx > 30 && currentPrice > midBB) { // RSI 55, ADX 30
+                 direction = "UP";
+                 confidence = 88.0; 
+                 reasoning = "NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30";
+             } else if (alignmentDown && rsi < 45 && adx > 30 && currentPrice < midBB) { // RSI 45, ADX 30
+                 direction = "DOWN";
+                 confidence = 88.0;
+                 reasoning = "NIFTY: Strong Trend (EMA Align) + RSI<45 + ADX>30";
+             }
         }
         
-        return new AIPrediction(direction, confidence, confidence/100.0, adx, rsi, atr/currentPrice, 80, "NIFTY_SCALPER_PRO_ML", reasoning, target, sl, false);
+        return new AIPrediction(direction, confidence, confidence/100.0, adx, rsi, atr/currentPrice, 80, "NIFTY_GAMMA_SCALP_V3", reasoning, target, sl, false);
     }
 
     // --- STRATEGY 2: SENSEX (High Momentum - High Win Rate Optimization) ---

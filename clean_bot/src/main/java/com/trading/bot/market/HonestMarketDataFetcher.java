@@ -26,7 +26,7 @@ public class HonestMarketDataFetcher {
     private final Map<String, LocalDateTime> lastValidTimes;
     
     // Upstox API configuration
-    private static String UPSTOX_ACCESS_TOKEN = "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OTc2ZmU1Y2M0YjUzNzUwMGYwMWVkOGYiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2OTQwNjA0NCwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzY5NDY0ODAwfQ.ojGoQS7fTKK4rtOYmBa1qhS7RgbaGNQWRCGpFSKVN10";
+    private static String UPSTOX_ACCESS_TOKEN = System.getenv("UPSTOX_ACCESS_TOKEN") != null ? System.getenv("UPSTOX_ACCESS_TOKEN") : "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OTc2ZmU1Y2M0YjUzNzUwMGYwMWVkOGYiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2OTQwNjA0NCwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzY5NDY0ODAwfQ.ojGoQS7fTKK4rtOYmBa1qhS7RgbaGNQWRCGpFSKVN10";
     
     // Token File Path
     private static final String TOKEN_FILE_PATH = "upstox_token.txt";
@@ -53,7 +53,7 @@ public class HonestMarketDataFetcher {
         if (token != null && !token.trim().isEmpty()) {
             UPSTOX_ACCESS_TOKEN = token.trim();
             saveTokenToFile(token.trim());
-            System.out.println("✅ Upstox Access Token updated successfully");
+            // System.out.println("✅ Upstox Access Token updated successfully"); // Silenced
         }
     }
     
@@ -68,7 +68,7 @@ public class HonestMarketDataFetcher {
                 String token = java.nio.file.Files.readString(file.toPath()).trim();
                 if (!token.isEmpty()) {
                     UPSTOX_ACCESS_TOKEN = token;
-                    System.out.println("✅ Loaded Upstox Access Token from file");
+                    // System.out.println("✅ Loaded Upstox Access Token from file");
                 }
             }
         } catch (Exception e) {
@@ -79,7 +79,7 @@ public class HonestMarketDataFetcher {
     private static void saveTokenToFile(String token) {
         try {
             java.nio.file.Files.writeString(java.nio.file.Path.of(TOKEN_FILE_PATH), token);
-            System.out.println("✅ Saved Upstox Access Token to file");
+            // System.out.println("✅ Saved Upstox Access Token to file");
         } catch (Exception e) {
             System.err.println("⚠️ Could not save token to file: " + e.getMessage());
         }
