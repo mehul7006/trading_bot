@@ -1,29 +1,35 @@
-# Use Maven image to build the project
+# ==========================================
+# 🐳 Dockerfile for Render / Heroku Deployment
+# ==========================================
+
+# 1️⃣ Build Stage
 FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
 
-# Copy project files
+# Copy Maven Project Files
 COPY pom.xml .
 COPY src ./src
 
-# Build the application (skip tests to speed up)
+# Build the shaded jar (includes all dependencies)
+# -DskipTests speeds up deployment
 RUN mvn clean package -DskipTests
 
-# Use a lightweight JRE image for running the app (Eclipse Temurin is recommended over OpenJDK)
+# 2️⃣ Runtime Stage (Lightweight Image)
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 
-# Copy the built jar from the build stage
-# The shade plugin creates the original jar and the shaded jar. Usually the shaded one replaces the original or has a suffix.
-# By default, shade replaces the original artifact.
+# Copy the built jar from build stage
+# The shade plugin in pom.xml ensures CloudLauncher is the Main-Class
 COPY --from=build /app/target/telegram-stock-bot-1.0.0.jar bot.jar
 
-# Copy token file if it exists locally (optional, better to use ENV vars)
-# COPY upstox_token.txt . 
+# 🌍 Environment Variables (Set these in Render Dashboard)
+# ENV TELEGRAM_BOT_TOKEN=your_token_here
+# ENV UPSTOX_ACCESS_TOKEN=your_token_here
+# ENV PORT=8080
 
-# Expose port 8080 (standard for Render/Cloud Run)
+# Expose Port (Render sets $PORT automatically, we default to 8080)
 EXPOSE 8080
 
-# Run the application
-# CloudLauncher is set as Main-Class in pom.xml, so -jar works directly
+# 🚀 Start Command
+# Runs CloudLauncher which starts HTTP Server (for health check) + Telegram Bot
 CMD ["java", "-jar", "bot.jar"]
