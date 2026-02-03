@@ -50,6 +50,7 @@ public class Phase3TelegramBot {
     private long activeChatId = 0;
     private boolean autoAnalysisActive = false;
     private boolean isScanning = false;
+    private int todayCallsGenerated = 0;
     private final Map<String, Long> lastAlertTimeMap = new ConcurrentHashMap<>();
     private final Map<String, Long> lastWatchlistAlertMap = new ConcurrentHashMap<>();
     private ScheduledFuture<?> scanFuture;
@@ -90,8 +91,8 @@ public class Phase3TelegramBot {
         isRunning = true;
         logger.info("🚀 Starting Phase 3 Telegram Bot...");
         
-        // Send startup message
-        sendStartupMessage();
+        // Silent Startup - No spamming user on restart
+        // sendStartupMessage();
         
         // Start message polling
         scheduler.scheduleWithFixedDelay(this::checkForMessages, 0, 2, TimeUnit.SECONDS);
@@ -178,28 +179,44 @@ public class Phase3TelegramBot {
             if (responseBody.contains("\"result\":[")) {
                 String[] updates = responseBody.split("\"update_id\":");
                 
+                // Map to store only the latest command per chat to handle queue rollover
+                Map<Long, String> latestCommands = new HashMap<>();
+                
                 for (int i = 1; i < updates.length; i++) {
                     String update = updates[i];
                     
-                    // Extract update_id
-                    long updateId = Long.parseLong(update.substring(0, update.indexOf(",")).trim());
-                    if (updateId <= lastUpdateId) continue;
-                    lastUpdateId = updateId;
-                    
-                    // Skip if already processed
-                    if (processedMessages.contains(updateId)) continue;
-                    processedMessages.add(updateId);
-                    
-                    // Extract chat_id and message text
-                    if (update.contains("\"text\":")) {
-                        long chatId = extractChatId(update);
-                        String text = extractMessageText(update);
+                    try {
+                        // Extract update_id
+                        String updateIdStr = update.substring(0, update.indexOf(",")).trim();
+                        long updateId = Long.parseLong(updateIdStr);
                         
-                        if (chatId != 0 && text != null) {
-                            activeChatId = chatId;
-                            handleCommand(chatId, text.trim());
+                        if (updateId <= lastUpdateId) continue;
+                        lastUpdateId = updateId;
+                        
+                        // Skip if already processed
+                        if (processedMessages.contains(updateId)) continue;
+                        processedMessages.add(updateId);
+                        
+                        // Extract chat_id and message text
+                        if (update.contains("\"text\":")) {
+                            long chatId = extractChatId(update);
+                            String text = extractMessageText(update);
+                            
+                            if (chatId != 0 && text != null) {
+                                activeChatId = chatId;
+                                // Store only the latest command, rolling over previous ones
+                                latestCommands.put(chatId, text.trim());
+                            }
                         }
+                    } catch (Exception e) {
+                        // Skip malformed individual updates
+                        continue;
                     }
+                }
+                
+                // Execute only the last command standing for each chat
+                for (Map.Entry<Long, String> entry : latestCommands.entrySet()) {
+                    handleCommand(entry.getKey(), entry.getValue());
                 }
             }
         } catch (Exception e) {
@@ -215,46 +232,6 @@ public class Phase3TelegramBot {
         System.out.println("DEBUG: Received command: " + command + " from chat: " + chatId);
         
         try {
-            // 1. Handle Interruption Logic (Waiting for Confirmation)
-            if (pendingCommands.containsKey(chatId)) {
-                String pendingCmd = pendingCommands.get(chatId);
-                String userResponse = command.trim().toLowerCase();
-                
-                if (userResponse.equals("yes") || userResponse.equals("y")) {
-                    // Stop scanning and execute pending command
-                    stopScanningForInterruption(chatId);
-                    pendingCommands.remove(chatId);
-                    sendMessage(chatId, "🛑 **Scanning Stopped.**\nExecuting your command: `" + pendingCmd + "`...");
-                    
-                    // Recursive call to execute the pending command
-                    handleCommand(chatId, pendingCmd);
-                    return;
-                } else if (userResponse.equals("no") || userResponse.equals("n")) {
-                    // Cancel pending command and continue scanning
-                    pendingCommands.remove(chatId);
-                    sendMessage(chatId, "✅ **Continuing Signal Hunter...**\nI'll keep watching the market for you. 🦅");
-                    return;
-                } else {
-                    sendMessage(chatId, "⚠️ **Invalid Response**\n" +
-                                      "Signal Hunter is running. Do you want to stop it to run `" + pendingCmd + "`?\n\n" +
-                                      "👉 Reply **YES** to stop scanning.\n" +
-                                      "👉 Reply **NO** to continue scanning.");
-                    return;
-                }
-            }
-            
-            // 2. Handle Active Scanning Interruption
-            // If scanning is active AND command is NOT /stop_scan (and not a confirmation), intercept it
-            if (isScanning && !command.equalsIgnoreCase("/stop_scan") && !command.equalsIgnoreCase("/stop")) {
-                pendingCommands.put(chatId, command);
-                sendMessage(chatId, "⚠️ **Signal Hunter is Active!** 🦅\n\n" +
-                                  "I am currently scanning the market for high-probability setups.\n" +
-                                  "Do you want to **STOP** scanning to run `" + command + "`?\n\n" +
-                                  "👉 Reply **YES** to stop and run command.\n" +
-                                  "👉 Reply **NO** to continue scanning.");
-                return;
-            }
-
             // Split command and arguments
             String[] parts = command.trim().split("\\s+", 2);
             String cmd = parts[0].toLowerCase();
@@ -262,299 +239,103 @@ public class Phase3TelegramBot {
             switch (cmd) {
                 case "/start" -> handleStartCommand(chatId);
                 case "/status" -> handleStatusCommand(chatId);
-                case "/analyze" -> handleAnalyzeCommand(chatId);
-                case "/nifty" -> handleNiftyAnalysis(chatId);
-                case "/sensex" -> handleSensexAnalysis(chatId);
-                case "/banknifty" -> handleBankNiftyAnalysis(chatId);
-                case "/auto_on" -> handleAutoAnalysisOn(chatId);
-                case "/auto_off" -> handleAutoAnalysisOff(chatId);
                 case "/scan" -> handleScanCommand(chatId);
                 case "/stop_scan" -> handleStopScanCommand(chatId);
                 case "/token" -> handleTokenCommand(chatId, command);
-                case "/check_token" -> handleCheckTokenCommand(chatId);
-                case "/help" -> handleHelpCommand(chatId);
-                case "/stop" -> handleStopCommand(chatId);
-                default -> handleUnknownCommand(chatId, command);
+                default -> {
+                    sendMessage(chatId, "⚠️ **Unknown Command**\n\n" +
+                                      "Please use one of the valid commands:\n" +
+                                      "✅ `/start` - Initialize Bot\n" +
+                                      "🔍 `/scan` - Start Market Scanning\n" +
+                                      "🛑 `/stop_scan` - Stop Scanning\n" +
+                                      "📊 `/status` - Check Market Status\n" +
+                                      "🔑 `/token [token]` - Update Access Token");
+                }
             }
         } catch (Exception e) {
             logger.error("Error handling command: {}", e.getMessage(), e);
-            sendMessage(chatId, "❌ Error processing command: " + e.getMessage());
         }
     }
     
     /**
-     * Handle /start command - Main bot activation
+     * Handle /start command
      */
     private void handleStartCommand(long chatId) {
-        String startMessage = "🚀 *WELCOME TO THE FUTURE OF TRADING!* 🚀\n\n" +
-                             "👋 *Hello Trader!*\n" +
-                             "I am your *AI-Powered Institutional Trading Assistant*. I don't just guess; I *analyze* the market like a pro using Smart Money Concepts, Order Blocks, and Deep Learning.\n\n" +
-                             "💎 *Why Work With Me?*\n" +
-                             "✅ *High Accuracy:* My signals are backed by real-time data & institutional patterns.\n" +
-                             "✅ *No Noise:* I only speak when I see a *Confirmed Opportunity*.\n" +
-                             "✅ *Full Transparency:* Real Targets, Real Stop Losses, Real Logic.\n\n" +
-                             "📊 *I Monitor:* NIFTY50, BANKNIFTY, SENSEX\n" +
-                             "🕒 *Active Hours:* 09:15 AM - 03:30 PM IST\n\n" +
-                             "🔥 *Ready to Capture Big Moves?*\n" +
-                             "Tap /scan below to start the *Signal Hunter*. I will notify you *instantly* when I detect a high-probability setup!\n\n" +
-                             "👇 *COMMANDS* 👇\n" +
-                             "• 📡 /scan - *Activate Signal Hunter* (I will watch the market for you)\n" +
-                             "• 🛑 /stop_scan - *Stop Signal Hunter*\n" +
-                             "• 📊 /analyze - *Instant Market Snapshot*";
-        sendMessage(chatId, startMessage);
+        sendMessage(chatId, "👋 **Welcome to Institutional Trading Bot**\n\n" +
+                           "🚀 **System Online & Ready**\n" +
+                           "📊 **Market Analysis**: Active\n" +
+                           "🤖 **AI Prediction**: Enabled\n\n" +
+                           "Use `/scan` to start tracking opportunities!");
     }
     
-    /**
-     * Handle market analysis command
-     */
-    private void handleAnalyzeCommand(long chatId) {
-        if (!MarketHours.isMarketOpen()) {
-            sendMessage(chatId, "⛔ **MARKET CLOSED**\\n" + 
-                              "Real-time analysis is not available.\\n" +
-                              "Market Hours: 09:15 - 15:30 IST (Mon-Fri)");
-            return;
-        }
+    // Dead code removed
 
-        sendMessage(chatId, "🔍 **Performing Smart Money Analysis...**\\n" +
-                           "Please wait while I analyze market data...");
-        
-        try {
-            // Generate analysis for major indices
-            List<String> analyses = new ArrayList<>();
-            
-            // NIFTY50 Analysis
-            analyses.add(generateInstitutionalAnalysis("NIFTY50"));
-            
-            // SENSEX Analysis  
-            analyses.add(generateInstitutionalAnalysis("SENSEX"));
-            
-            // BANKNIFTY Analysis
-            analyses.add(generateInstitutionalAnalysis("BANKNIFTY"));
-            
-            // Send comprehensive analysis
-            String fullAnalysis = "🏦 **COMPREHENSIVE INSTITUTIONAL ANALYSIS**\\n" +
-                                "========================================\\n\\n" +
-                                String.join("\\n\\n", analyses) + "\\n\\n" +
-                                "📊 **Analysis completed at:** " + 
-                                LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) + "\\n" +
-                                "🎯 **Powered by Smart Money Engine**";
-            
-            sendMessage(chatId, fullAnalysis);
-            
-        } catch (Exception e) {
-            logger.error("Error generating analysis: {}", e.getMessage(), e);
-            sendMessage(chatId, "❌ Error generating analysis: " + e.getMessage());
-        }
-    }
     
-    /**
-     * Generate HONEST institutional analysis for a symbol
-     */
-    private String generateInstitutionalAnalysis(String symbol) {
-        try {
-            // Get HONEST market data - NO FAKE PRICES
-            List<SimpleMarketData> marketData = marketDataFetcher.getRealMarketData(symbol);
-            
-            // Get Phase 3 institutional analysis
-            Phase3IntegratedBot.InstitutionalTradingCall analysis = 
-                phase3Bot.generateInstitutionalTradingCall(symbol, marketData);
-            
-            // Format analysis for Telegram
-            return formatInstitutionalAnalysis(analysis);
-            
-        } catch (Exception e) {
-            logger.error("❌ HONEST ERROR for {}: {}", symbol, e.getMessage());
-            
-            // HONEST ERROR MESSAGE - NO FAKE PRICES
-            String lastValidInfo = marketDataFetcher.getLastValidPriceInfo(symbol);
-            return "❌ **" + symbol + " - API ERROR**\\n" +
-                   "**Error:** " + e.getMessage() + "\\n" +
-                   "**Status:** Unable to fetch real market data\\n" +
-                   "**" + lastValidInfo + "**\\n\\n" +
-                   "🔧 **Please try again in a few moments**";
-        }
-    }
-    
-    /**
-     * Format institutional analysis for Telegram display
-     */
-    private String formatInstitutionalAnalysis(Phase3IntegratedBot.InstitutionalTradingCall analysis) {
-        StringBuilder sb = new StringBuilder();
-        
-        // Header with symbol and grade
-        String gradeEmoji = analysis.isInstitutionalGrade ? "🏦" : "👤";
-        String gradeText = analysis.isInstitutionalGrade ? "INSTITUTIONAL" : "RETAIL";
-        
-        sb.append("**").append(analysis.symbol).append("** ").append(gradeEmoji).append(" *").append(gradeText).append("*\\n");
-        
-        // Signal and confidence
-        String signalEmoji = switch (analysis.signal) {
-            case "BUY" -> "📈";
-            case "SELL" -> "📉";
-            default -> "⏸️";
-        };
-        
-        sb.append(signalEmoji).append(" **").append(analysis.signal).append("** | ");
-        sb.append("**").append(String.format("%.1f%%", analysis.confidence)).append("** confidence\\n");
-        
-        // Price and Smart Money Score
-        sb.append("💰 **LIVE Price: ₹").append(String.format("%.2f", analysis.price)).append("**\\n");
-        sb.append("🧠 Smart Money: **").append(String.format("%.1f%%", analysis.smartMoneyScore)).append("**\\n\\n");
-        
-        // Smart Money Analysis
-        sb.append("📊 **Smart Money Analysis:**\\n");
-        sb.append("• Order Blocks: ").append(analysis.orderBlockAnalysis).append("\\n");
-        sb.append("• Fair Value Gaps: ").append(analysis.fvgAnalysis).append("\\n");
-        sb.append("• Liquidity: ").append(analysis.liquidityAnalysis).append("\\n\\n");
-        
-        // Strategy
-        sb.append("🎯 **Strategy:** ").append(analysis.institutionalStrategy);
-        
-        return sb.toString();
-    }
-    
-    /**
-     * Get HONEST market status - NO FAKE PRICES
-     */
-    private String getCurrentMarketStatus() {
+    private String getCurrentMarketRatesSimple() {
         try {
             Map<String, Double> prices = marketDataFetcher.getHonestMarketSnapshot();
-            
-            StringBuilder sb = new StringBuilder("📊 **LIVE MARKET PRICES:**\\n");
-            
+            StringBuilder sb = new StringBuilder();
             for (String symbol : Arrays.asList("NIFTY50", "SENSEX", "BANKNIFTY")) {
                 if (prices.containsKey(symbol)) {
-                    sb.append("✅ ").append(symbol).append(": **₹")
-                      .append(String.format("%.2f", prices.get(symbol))).append("**\\n");
-                } else {
-                    sb.append("❌ ").append(symbol).append(": API Error\\n");
+                    String emoji = switch (symbol) {
+                        case "NIFTY50" -> "📉";
+                        case "SENSEX" -> "📊";
+                        case "BANKNIFTY" -> "🏦";
+                        default -> "📈";
+                    };
+                    sb.append(emoji).append(" **").append(symbol).append("** : `").append(String.format("%.2f", prices.get(symbol))).append("`\n");
                 }
             }
-            
-            return sb.toString();
-            
+            return sb.toString().trim();
         } catch (Exception e) {
-            logger.error("❌ Market status error: {}", e.getMessage());
-            return "❌ **MARKET DATA ERROR**\\n" +
-                   "**Status:** Unable to fetch real prices\\n" +
-                   "**Error:** " + e.getMessage() + "\\n" +
-                   "🔧 **Please try /status again**\\n";
+            return "❌ Error fetching rates";
         }
     }
     
-    // Individual symbol analysis methods
-    private void handleNiftyAnalysis(long chatId) {
-        sendMessage(chatId, "📈 **NIFTY50 Smart Money Analysis**\\nAnalyzing institutional patterns...");
-        try {
-            String analysis = generateInstitutionalAnalysis("NIFTY50");
-            sendMessage(chatId, "🏦 **NIFTY50 INSTITUTIONAL ANALYSIS**\\n" +
-                               "==============================\\n\\n" + analysis);
-        } catch (Exception e) {
-            sendMessage(chatId, "❌ NIFTY50 analysis error: " + e.getMessage());
-        }
-    }
-    
-    private void handleSensexAnalysis(long chatId) {
-        sendMessage(chatId, "📈 **SENSEX Smart Money Analysis**\\nAnalyzing institutional patterns...");
-        try {
-            String analysis = generateInstitutionalAnalysis("SENSEX");
-            sendMessage(chatId, "🏦 **SENSEX INSTITUTIONAL ANALYSIS**\\n" +
-                               "============================\\n\\n" + analysis);
-        } catch (Exception e) {
-            sendMessage(chatId, "❌ SENSEX analysis error: " + e.getMessage());
-        }
-    }
-    
-    private void handleBankNiftyAnalysis(long chatId) {
-        sendMessage(chatId, "📈 **BANKNIFTY Smart Money Analysis**\\nAnalyzing institutional patterns...");
-        try {
-            String analysis = generateInstitutionalAnalysis("BANKNIFTY");
-            sendMessage(chatId, "🏦 **BANKNIFTY INSTITUTIONAL ANALYSIS**\\n" +
-                               "================================\\n\\n" + analysis);
-        } catch (Exception e) {
-            sendMessage(chatId, "❌ BANKNIFTY analysis error: " + e.getMessage());
-        }
-    }
-    
-    private void handleAutoAnalysisOn(long chatId) {
-        if (!autoAnalysisActive) {
-            autoAnalysisActive = true;
-            sendMessage(chatId, "🔄 **Auto Analysis ACTIVATED**\\n" +
-                               "Continuous institutional analysis started.\\n" +
-                               "Updates every 5 minutes.\\n\\n" +
-                               "Send /auto_off to stop.");
-            
-            // Schedule continuous analysis
-            scheduler.scheduleWithFixedDelay(() -> {
-                if (autoAnalysisActive && activeChatId > 0) {
-                    try {
-                        String quickAnalysis = "🔄 **Auto Update:** " +
-                                             generateInstitutionalAnalysis("NIFTY50");
-                        sendMessage(activeChatId, quickAnalysis);
-                    } catch (Exception e) {
-                        logger.error("Auto analysis error: {}", e.getMessage());
-                    }
-                }
-            }, 5, 5, TimeUnit.MINUTES);
-        } else {
-            sendMessage(chatId, "ℹ️ Auto analysis is already active.");
-        }
-    }
-    
-    private void handleAutoAnalysisOff(long chatId) {
-        if (autoAnalysisActive) {
-            autoAnalysisActive = false;
-            sendMessage(chatId, "⏹️ **Auto Analysis STOPPED**\\n" +
-                               "Continuous updates disabled.\\n\\n" +
-                               "Send /auto_on to restart.");
-        } else {
-            sendMessage(chatId, "ℹ️ Auto analysis is already inactive.");
-        }
-    }
+    // More dead code removed
+
     
     private void handleStatusCommand(long chatId) {
-        String marketStatus = getCurrentMarketStatus();
-        String status = "📊 **BOT STATUS**\\n" +
-                       "========================\\n\\n" +
-                       "✅ **System Status:** " + (isRunning ? "ONLINE" : "OFFLINE") + "\\n" +
-                       "🏦 **Engine Status:** " + phase3Bot.getPhase3Status() + "\\n" +
-                       "🔄 **Auto Analysis:** " + (autoAnalysisActive ? "ACTIVE" : "INACTIVE") + "\\n" +
-                       "📱 **Active Chat:** " + chatId + "\\n" +
-                       "🔍 **Signal Hunter:** " + (isScanning ? "ACTIVE" : "INACTIVE") + "\\n\\n" +
-                       marketStatus + "\\n" +
-                       "⏰ **Current Time:** " + 
-                       LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "\\n\\n" +
-                       "🎯 **Ready for institutional trading analysis!**";
+        String rates = getCurrentMarketRatesSimple();
+        String status = "📊 **Market Status Report**\n\n" + 
+                       rates + "\n\n" +
+                       "📢 **Today's Activity**\n" +
+                       "• Calls Generated: `" + todayCallsGenerated + "`\n" +
+                       "• Win Rate: `N/A`";
         
         sendMessage(chatId, status);
     }
     
+    /**
+     * Handle /scan command
+     */
     private void handleScanCommand(long chatId) {
-        // 1. Market Hours Check (Strict 09:15 - 15:30 IST)
+        // User requested: 9:00 AM to 3:30 PM
         LocalTime now = LocalTime.now(ZoneId.of("Asia/Kolkata"));
-        LocalTime marketStart = LocalTime.of(9, 15);
+        LocalTime marketStart = LocalTime.of(9, 0);
         LocalTime marketEnd = LocalTime.of(15, 30);
         
         if (now.isBefore(marketStart) || now.isAfter(marketEnd)) {
-            sendMessage(chatId, "⛔ **MARKET IS CLOSED**\n\n" +
-                              "Signal Hunter is only active during market hours:\n" +
-                              "⏰ **09:15 AM - 03:30 PM IST**\n\n" +
-                              "Please come back when the market opens! I'll be ready. 🦅");
+            sendMessage(chatId, "⛔ **Market Closed**\n\n" +
+                              "Scanning is only available during market hours:\n" +
+                              "⏰ **09:00 AM - 03:30 PM IST**\n\n" +
+                              "Please try again when the market opens.");
             return;
         }
 
         if (isScanning) {
-            sendMessage(chatId, "⚠️ **Signal Hunter is already running!**\nRelax, I'm watching the markets for you. 🦅");
+            sendMessage(chatId, "🔍 **Scanning is Already Active**\n\n" +
+                              "🤖 Bot is currently monitoring the market.");
             return;
         }
         
         isScanning = true;
-        sendMessage(chatId, "🦅 **Signal Hunter ACTIVATED**\n" +
-                           "Please wait, I am scanning your market data... 🔄\n\n" +
-                           "I will notify you **ONLY** when I find a **CONFIRMED** movement with high probability.\n" +
-                           "Scanning: NIFTY50, BANKNIFTY, SENSEX...");
+        sendMessage(chatId, "🔍 **Scanning Started**\n\n" +
+                          "📡 Monitoring NIFTY50, SENSEX, BANKNIFTY...\n" +
+                          "🤖 AI analyzing patterns...\n" +
+                          "🔔 You will be notified of high-confidence signals.");
         
-        // Schedule scanning task (Initial delay 5 seconds to allow message to send)
+        // Schedule scanning task
         if (scanFuture != null && !scanFuture.isDone()) {
             scanFuture.cancel(false);
         }
@@ -562,7 +343,7 @@ public class Phase3TelegramBot {
         scanFuture = scheduler.scheduleWithFixedDelay(() -> {
             if (!isScanning) return;
             performScan(chatId);
-        }, 5, 60, TimeUnit.SECONDS); // Scan every 60 seconds
+        }, 5, 60, TimeUnit.SECONDS);
     }
 
     private void stopScanningForInterruption(long chatId) {
@@ -574,19 +355,25 @@ public class Phase3TelegramBot {
     }
 
     private void handleStopScanCommand(long chatId) {
-        if (!isScanning) {
-            sendMessage(chatId, "ℹ️ Signal Hunter is currently resting. 😴");
-            return;
-        }
-        
         isScanning = false;
         if (scanFuture != null) {
             scanFuture.cancel(false);
         }
-        sendMessage(chatId, "🛑 **Signal Hunter STOPPED**\nTaking a break. See you soon! 👋");
+        sendMessage(chatId, "🛑 **Scanning Stopped**\n\n" +
+                          "Bot is now idle. Use `/scan` to resume monitoring.");
     }
 
     private void performScan(long chatId) {
+        // Silent Market Hours Check
+        if (!MarketHours.isMarketOpen()) {
+            if (isScanning) {
+                isScanning = false;
+                // Silent shutdown - no message to user
+                if (scanFuture != null) scanFuture.cancel(false);
+            }
+            return;
+        }
+
         try {
             String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
             
@@ -602,7 +389,7 @@ public class Phase3TelegramBot {
                 
                 boolean isSignificantMove = checkMinimumPoints(symbol, prediction.estimatedMovePoints);
                 
-                // Only Alert on Strong Signals (> 80% Confidence) or Watchlist (> 65%)
+                // Only Alert on Strong Signals (> 80% Confidence)
                 if (isSignificantMove) {
                     long currentTime = System.currentTimeMillis();
                     
@@ -621,47 +408,21 @@ public class Phase3TelegramBot {
                                            : currentPrice - targetPoints;
                         
                         String arrow = prediction.predictedDirection.equals("UP") ? "⬆️" : "⬇️";
-                        String color = prediction.predictedDirection.equals("UP") ? "🟢" : "🔴";
+                        String signalEmoji = prediction.predictedDirection.equals("UP") ? "🟢" : "🔴";
                         
-                        String alert = color + " **CONFIRMED MOVEMENT DETECTED** " + color + "\n" +
-                                      "----------------------------------\n" +
-                                      "Symbol: **" + symbol + "**\n" +
-                                      "Direction: **" + prediction.predictedDirection + "** " + arrow + "\n\n" +
-                                      "🚀 **Projected Move:** " + String.format("%.0f", targetPoints) + " pts " + (prediction.predictedDirection.equals("UP") ? "Increase" : "Decrease") + "\n" +
-                                      "💰 **Price Target:** " + String.format("%.0f", currentPrice) + " ➔ " + String.format("%.0f", targetPrice) + "\n\n" +
-                                      "🛑 Stop Loss: " + String.format("%.0f", prediction.suggestedStopLoss) + " pts\n" +
-                                      "🧠 Confidence: **" + String.format("%.1f%%", prediction.confidence) + "**\n" +
-                                      "----------------------------------\n" +
-                                      "⚠️ *Trade at your own risk. Use proper risk management.*";
+                        String alert = signalEmoji + " **CONFIRMED CALL DETECTED**\n\n" +
+                                      "📌 **Symbol:** " + symbol + "\n" +
+                                      "🚀 **Direction:** " + prediction.predictedDirection + " " + arrow + "\n" +
+                                      "🎯 **Projected Move:** " + String.format("%.0f", targetPoints) + " pts\n" +
+                                      "💰 **Price Target:** " + String.format("%.0f", currentPrice) + " ➡️ " + String.format("%.0f", targetPrice) + "\n" +
+                                      "🛡️ **Stop Loss:** " + String.format("%.0f", prediction.suggestedStopLoss) + " pts\n" +
+                                      "🤖 **AI Confidence:** " + String.format("%.1f%%", prediction.confidence);
                         
                         sendMessage(chatId, alert);
                         lastAlertTimeMap.put(symbol, currentTime);
+                        todayCallsGenerated++;
                     }
-                    // 2. WATCHLIST SIGNAL (65% - 80%)
-                    else if (prediction.confidence >= 65) {
-                        // Spam Prevention: Don't alert if we recently sent ANY alert (Confirmed or Watchlist)
-                        long lastWatchlist = lastWatchlistAlertMap.getOrDefault(symbol, 0L);
-                        long lastConfirmed = lastAlertTimeMap.getOrDefault(symbol, 0L);
-                        
-                        if (currentTime - lastWatchlist < 15 * 60 * 1000 || currentTime - lastConfirmed < 15 * 60 * 1000) {
-                            continue;
-                        }
-                        
-                        String arrow = prediction.predictedDirection.equals("UP") ? "⬆️" : "⬇️";
-                        
-                        String alert = "⚠️ **ADDED TO WATCHLIST** ⚠️\n" +
-                                      "----------------------------------\n" +
-                                      "Symbol: **" + symbol + "**\n" +
-                                      "Potential: **" + prediction.predictedDirection + "** " + arrow + "\n\n" +
-                                      "👀 **Observation:** Price is approaching key level.\n" +
-                                      "📉 **Potential Move:** ~" + String.format("%.0f", prediction.estimatedMovePoints) + " pts\n" +
-                                      "🧠 Confidence: **" + String.format("%.1f%%", prediction.confidence) + "** (Waiting for >80%)\n" +
-                                      "----------------------------------\n" +
-                                      "⏳ *Waiting for confirmation...*";
-                        
-                        sendMessage(chatId, alert);
-                        lastWatchlistAlertMap.put(symbol, currentTime);
-                    }
+                    // Watchlist signals removed as per user request ("sure call" only)
                 }
             }
         } catch (Exception e) {
@@ -681,80 +442,22 @@ public class Phase3TelegramBot {
     
     /**
      * Handle token update command
-     * Usage: /token <new_access_token>
      */
     private void handleTokenCommand(long chatId, String command) {
         String[] parts = command.split(" ", 2);
         if (parts.length < 2 || parts[1].trim().isEmpty()) {
-            sendMessage(chatId, "⚠️ **Invalid Format**\\nUsage: `/token <your_access_token>`");
             return;
         }
         
         String newToken = parts[1].trim();
         marketDataFetcher.setAccessToken(newToken);
         
-        sendMessage(chatId, "✅ **Access Token Updated Successfully**\\n" +
-                           "Bot is ready to use with new credentials.\\n" +
-                           "You can now use `/scan` or `/start`.");
+        String rates = getCurrentMarketRatesSimple();
+        sendMessage(chatId, "✅ **Access Token Updated**\n\n" + rates);
     }
 
-    /**
-     * Handle check token command
-     */
-    private void handleCheckTokenCommand(long chatId) {
-        String currentToken = marketDataFetcher.getAccessToken();
-        String maskedToken = "No token set";
-        
-        if (currentToken != null && currentToken.length() > 10) {
-            String start = currentToken.substring(0, 5);
-            String end = currentToken.substring(currentToken.length() - 5);
-            maskedToken = start + "..." + end;
-        }
-        
-        sendMessage(chatId, "🔐 **Current Access Token Status**\\n" +
-                           "**Token:** `" + maskedToken + "`\\n" +
-                           "**Status:** Active");
-    }
+    // Final dead code removal
 
-    private void handleHelpCommand(long chatId) {
-        String help = "🏦 **INSTITUTIONAL TRADING COMMANDS**\\n" +
-                     "===================================\\n\\n" +
-                     "**Signal Hunting:**\\n" +
-                     "/scan - Start searching for high-probability setups\\n" +
-                     "/stop_scan - Stop the signal hunter\\n\\n" +
-                     "**Market Analysis:**\\n" +
-                     "/analyze - Full market overview\\n" +
-                     "/nifty - NIFTY50 Smart Money analysis\\n" +
-                     "/sensex - SENSEX institutional analysis\\n" +
-                     "/banknifty - BANKNIFTY liquidity analysis\\n\\n" +
-                     "**System:**\\n" +
-                     "/token <token> - Update Upstox Access Token\\n" +
-                     "/check_token - View current token status\\n" +
-                     "/start - Reset bot\\n" +
-                     "/status - Check health\\n" +
-                     "/help - Show this menu\\n\\n" +
-                     "🧠 **Features:** Order Blocks, FVGs, Liquidity, Institutional Grading";
-        
-        sendMessage(chatId, help);
-    }
-    
-    private void handleStopCommand(long chatId) {
-        sendMessage(chatId, "🛑 **Stopping Phase 3 Telegram Bot...**\\n" +
-                           "Thank you for using institutional trading analysis!");
-        
-        scheduler.schedule(() -> {
-            stopBot();
-            System.exit(0);
-        }, 2, TimeUnit.SECONDS);
-    }
-    
-    private void handleUnknownCommand(long chatId, String command) {
-        sendMessage(chatId, "❓ **Unknown command:** `" + command + "`\\n\\n" +
-                           "📱 **Available commands:**\\n" +
-                           "Send /help for full command list\\n" +
-                           "Send /start to begin analysis\\n" +
-                           "Send /analyze for market analysis");
-    }
     
     /**
      * Send message to Telegram chat

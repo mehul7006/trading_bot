@@ -53,7 +53,7 @@ public class HonestMarketDataFetcher {
         if (token != null && !token.trim().isEmpty()) {
             UPSTOX_ACCESS_TOKEN = token.trim();
             saveTokenToFile(token.trim());
-            System.out.println("✅ Upstox Access Token updated successfully");
+            // System.out.println("✅ Upstox Access Token updated successfully"); // Silenced
         }
     }
     
@@ -68,7 +68,7 @@ public class HonestMarketDataFetcher {
                 String token = java.nio.file.Files.readString(file.toPath()).trim();
                 if (!token.isEmpty()) {
                     UPSTOX_ACCESS_TOKEN = token;
-                    System.out.println("✅ Loaded Upstox Access Token from file");
+                    // System.out.println("✅ Loaded Upstox Access Token from file");
                 }
             }
         } catch (Exception e) {
@@ -79,7 +79,7 @@ public class HonestMarketDataFetcher {
     private static void saveTokenToFile(String token) {
         try {
             java.nio.file.Files.writeString(java.nio.file.Path.of(TOKEN_FILE_PATH), token);
-            System.out.println("✅ Saved Upstox Access Token to file");
+            // System.out.println("✅ Saved Upstox Access Token to file");
         } catch (Exception e) {
             System.err.println("⚠️ Could not save token to file: " + e.getMessage());
         }
