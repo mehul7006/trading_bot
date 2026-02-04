@@ -380,8 +380,8 @@ public class Phase3TelegramBot {
             for (String symbol : symbols) {
                 if (!isScanning) break;
                 
-                // Fetch real data
-                List<SimpleMarketData> data = marketDataFetcher.getRealMarketData(symbol);
+                // Fetch real data (Switching to 5-Minute Resampled Data for Higher Accuracy)
+                List<SimpleMarketData> data = marketDataFetcher.getRealMarketData5Min(symbol);
                 if (data == null || data.isEmpty()) continue;
                 
                 double currentPrice = data.get(data.size() - 1).price;

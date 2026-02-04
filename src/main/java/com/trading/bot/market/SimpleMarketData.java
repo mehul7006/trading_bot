@@ -7,14 +7,18 @@ import java.time.LocalDateTime;
  * Contains only essential fields needed for Phase 1 testing
  */
 public class SimpleMarketData {
-    public final String symbol;
-    public final double price; // Close price
-    public final double open;
-    public final double high;
-    public final double low;
-    public final long volume;
-    public final LocalDateTime timestamp;
+    public String symbol;
+    public double price; // Close price
+    public double open;
+    public double high;
+    public double low;
+    public long volume;
+    public LocalDateTime timestamp;
     
+    public SimpleMarketData() {
+        // Default constructor for JSON deserialization
+    }
+
     public SimpleMarketData(String symbol, double price, double open, double high, double low, long volume, LocalDateTime timestamp) {
         this.symbol = symbol;
         this.price = price;

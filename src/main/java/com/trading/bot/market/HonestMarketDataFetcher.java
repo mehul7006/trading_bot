@@ -4,6 +4,10 @@ import com.trading.bot.market.SimpleMarketData;
 import com.trading.bot.util.MarketHours;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -24,12 +28,14 @@ public class HonestMarketDataFetcher {
     private final ObjectMapper objectMapper;
     private final Map<String, Double> lastValidPrices;
     private final Map<String, LocalDateTime> lastValidTimes;
+    private final Map<String, List<SimpleMarketData>> dataCache; // Cache for 5-min resampled data
     
     // Upstox API configuration
     private static String UPSTOX_ACCESS_TOKEN = System.getenv("UPSTOX_ACCESS_TOKEN") != null ? System.getenv("UPSTOX_ACCESS_TOKEN") : "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OTc2ZmU1Y2M0YjUzNzUwMGYwMWVkOGYiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2OTQwNjA0NCwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzY5NDY0ODAwfQ.ojGoQS7fTKK4rtOYmBa1qhS7RgbaGNQWRCGpFSKVN10";
     
     // Token File Path
     private static final String TOKEN_FILE_PATH = "upstox_token.txt";
+    private static final String CACHE_DIR = "market_data_cache";
     
     // CORRECT Symbol mappings (tested and verified)
     private static final Map<String, String> SYMBOL_MAPPING = Map.of(
@@ -41,8 +47,14 @@ public class HonestMarketDataFetcher {
     public HonestMarketDataFetcher() {
         this.httpClient = HttpClient.newHttpClient();
         this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule());
         this.lastValidPrices = new HashMap<>();
         this.lastValidTimes = new HashMap<>();
+        this.dataCache = new java.util.concurrent.ConcurrentHashMap<>();
+        
+        // Create cache directory
+        new File(CACHE_DIR).mkdirs();
+        
         loadTokenFromFile();
     }
     
@@ -288,6 +300,190 @@ public class HonestMarketDataFetcher {
         return candles;
     }
     
+    /**
+     * Get REAL market data resampled to 5-Minute Candles (Better Stability)
+     * Includes Smart Caching & Persistence: Fetches 120 days history once, saves to disk, then appends live data with rollover.
+     */
+    public List<SimpleMarketData> getRealMarketData5Min(String symbol) throws Exception {
+        System.out.println("🔍 Fetching HONEST market data (5-Min Resampled) for: " + symbol);
+        
+        // 1. Check Memory Cache
+        List<SimpleMarketData> cachedData = dataCache.get(symbol);
+        
+        // 2. If Memory Cache Empty, Try Disk Cache
+        if (cachedData == null) {
+            cachedData = loadCacheFromDisk(symbol);
+            if (cachedData != null && !cachedData.isEmpty()) {
+                System.out.println("📂 Loaded " + cachedData.size() + " candles from disk cache for " + symbol);
+                dataCache.put(symbol, cachedData);
+            }
+        }
+        
+        // 3. If Still Empty -> First Time Fetch (120 Days)
+        if (cachedData == null || cachedData.isEmpty()) {
+            System.out.println("📥 Initializing 120-Day History for " + symbol + " (First Run)...");
+            List<SimpleMarketData> deepHistory = fetch120DaysData(symbol);
+            if (deepHistory.isEmpty()) {
+                throw new Exception("❌ Failed to fetch initial 120-day history for " + symbol);
+            }
+            // Resample to 5-min
+            cachedData = resampleTo5Minute(deepHistory);
+            dataCache.put(symbol, cachedData);
+            saveCacheToDisk(symbol, cachedData); // SAVE TO DISK
+            return cachedData;
+        } 
+        
+        // 4. Update Existing Cache (Smart Update & Rollover)
+        System.out.println("🔄 Updating live data for " + symbol + "...");
+        
+        // Find last timestamp in cache
+        SimpleMarketData lastCandle = cachedData.get(cachedData.size() - 1);
+        
+        // Fetch data from last cached timestamp to NOW
+        // We look back 1 day just to be safe and ensure overlap/no gaps
+        int lookbackDays = 1;
+        if (lastCandle.timestamp.isBefore(LocalDateTime.now().minusDays(1))) {
+            lookbackDays = (int) java.time.temporal.ChronoUnit.DAYS.between(lastCandle.timestamp.toLocalDate(), LocalDate.now()) + 1;
+        }
+        
+        List<SimpleMarketData> recentData = fetchRecentHistory(symbol, lookbackDays);
+        
+        if (!recentData.isEmpty()) {
+             List<SimpleMarketData> recent5Min = resampleTo5Minute(recentData);
+             
+             // Smart Merge: Use Map to handle duplicates by timestamp
+             java.util.TreeMap<LocalDateTime, SimpleMarketData> mergedMap = new java.util.TreeMap<>();
+             for (SimpleMarketData c : cachedData) mergedMap.put(c.timestamp, c);
+             for (SimpleMarketData c : recent5Min) mergedMap.put(c.timestamp, c); // Overwrite with newer data
+             
+             // Convert back to list
+             cachedData = new ArrayList<>(mergedMap.values());
+             
+             // ROLLOVER: Keep only last 120 days
+             LocalDateTime cutoff = LocalDateTime.now().minusDays(120);
+             cachedData.removeIf(c -> c.timestamp.isBefore(cutoff));
+             
+             // Update Caches
+             dataCache.put(symbol, cachedData);
+             saveCacheToDisk(symbol, cachedData); // SAVE TO DISK
+             System.out.println("✅ Cache updated & saved. Size: " + cachedData.size() + " candles.");
+        } else {
+             System.out.println("⚠️ No new data fetched. Using cached data.");
+        }
+        
+        // Check Data Freshness
+        if (!cachedData.isEmpty()) {
+            SimpleMarketData latest = cachedData.get(cachedData.size() - 1);
+            LocalDateTime now = LocalDateTime.now();
+            boolean isFresh = latest.timestamp.isAfter(now.minusMinutes(15)) || latest.timestamp.toLocalDate().isEqual(now.toLocalDate());
+            
+            if (!isFresh) {
+                 System.out.println("⚠️ 5-Min Data might be stale! Latest data from: " + latest.timestamp);
+            }
+            lastValidPrices.put(symbol, latest.price);
+            lastValidTimes.put(symbol, LocalDateTime.now());
+        }
+        
+        return cachedData;
+    }
+
+    private void saveCacheToDisk(String symbol, List<SimpleMarketData> data) {
+        try {
+            File file = new File(CACHE_DIR, symbol + "_120days.json");
+            objectMapper.writeValue(file, data);
+            // System.out.println("💾 Saved cache to disk: " + file.getAbsolutePath());
+        } catch (IOException e) {
+            System.err.println("❌ Failed to save cache to disk: " + e.getMessage());
+        }
+    }
+
+    private List<SimpleMarketData> loadCacheFromDisk(String symbol) {
+        try {
+            File file = new File(CACHE_DIR, symbol + "_120days.json");
+            if (file.exists()) {
+                return objectMapper.readValue(file, new TypeReference<List<SimpleMarketData>>(){});
+            }
+        } catch (IOException e) {
+            System.err.println("❌ Failed to load cache from disk: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Fetch 120 Days of 1-Minute Data (Chunked)
+     */
+    private List<SimpleMarketData> fetch120DaysData(String symbol) {
+        List<SimpleMarketData> allData = new ArrayList<>();
+        LocalDate end = LocalDate.now();
+        LocalDate start = end.minusDays(120); 
+        
+        // Fetch in 5-day chunks to avoid limits
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(5)) {
+            LocalDate chunkEnd = date.plusDays(4);
+            if (chunkEnd.isAfter(end)) chunkEnd = end;
+            
+            List<SimpleMarketData> chunk = fetchHistoricalCandles(symbol, "1minute", date.toString(), chunkEnd.toString());
+            if (chunk != null) {
+                allData.addAll(chunk);
+            }
+            
+            // Rate limit prevention
+            try { Thread.sleep(200); } catch (Exception e) {} 
+        }
+        // Sort just in case
+        allData.sort(Comparator.comparing(d -> d.timestamp));
+        return allData;
+    }
+    
+    /**
+     * Fetch Recent History (e.g. last N days)
+     */
+    private List<SimpleMarketData> fetchRecentHistory(String symbol, int days) {
+        String toDate = LocalDate.now().toString();
+        String fromDate = LocalDate.now().minusDays(days).toString();
+        return fetchHistoricalCandles(symbol, "1minute", fromDate, toDate);
+    }
+
+    private List<SimpleMarketData> resampleTo5Minute(List<SimpleMarketData> data1Min) {
+        List<SimpleMarketData> data5Min = new ArrayList<>();
+        if (data1Min.isEmpty()) return data5Min;
+
+        SimpleMarketData current5Min = null;
+        LocalDateTime candleStartTime = null;
+
+        for (SimpleMarketData candle : data1Min) {
+            // Round down to nearest 5 minutes
+            int minute = candle.timestamp.getMinute();
+            int minuteMod5 = minute % 5;
+            LocalDateTime periodStart = candle.timestamp.minusMinutes(minuteMod5).withSecond(0).withNano(0);
+
+            if (current5Min == null || !periodStart.equals(candleStartTime)) {
+                // New 5-min candle
+                if (current5Min != null) {
+                    data5Min.add(current5Min);
+                }
+                candleStartTime = periodStart;
+                current5Min = new SimpleMarketData(candle.symbol, candle.price, candle.open, candle.high, candle.low, candle.volume, periodStart);
+            } else {
+                // Update existing 5-min candle
+                current5Min = new SimpleMarketData(
+                    current5Min.symbol, 
+                    candle.price, // Close updates to latest
+                    current5Min.open, 
+                    Math.max(current5Min.high, candle.high), 
+                    Math.min(current5Min.low, candle.low), 
+                    current5Min.volume + candle.volume, 
+                    current5Min.timestamp
+                );
+            }
+        }
+        // Add last one
+        if (current5Min != null) {
+            data5Min.add(current5Min);
+        }
+        return data5Min;
+    }
+
     /**
      * Helper to get single real price
      */
