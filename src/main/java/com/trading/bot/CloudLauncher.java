@@ -9,10 +9,17 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 /**
  * Cloud Launcher for PaaS (Render, Koyeb, Heroku)
  * Starts a dummy HTTP server to satisfy port binding requirements
  * and then launches the main Telegram Bot.
+ * Includes a Self-Ping Keep-Alive mechanism to prevent Free Tier spin-down.
  */
 public class CloudLauncher {
 
@@ -30,6 +37,10 @@ public class CloudLauncher {
             server.setExecutor(null); // creates a default executor
             server.start();
             System.out.println("🌍 Cloud Health Server started on port " + port);
+            
+            // Start Keep-Alive Pinger (Every 14 minutes)
+            startKeepAlivePinger(port);
+            
         } catch (Exception e) {
             System.err.println("⚠️ Could not start HTTP server (might be local test): " + e.getMessage());
         }
@@ -42,10 +53,34 @@ public class CloudLauncher {
         Phase3TelegramBot.main(args);
     }
     
-    /**
-     * Responds with 200 OK to any request.
-     * Used by UptimeRobot or platform health checks to keep the bot alive.
-     */
+    private static void startKeepAlivePinger(int port) {
+        String appUrl = System.getenv("RENDER_EXTERNAL_URL");
+        if (appUrl == null) {
+            appUrl = "http://localhost:" + port;
+        }
+        
+        final String targetUrl = appUrl;
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        
+        System.out.println("⏰ Starting Keep-Alive Pinger for: " + targetUrl);
+        
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                URL url = new URL(targetUrl);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(5000);
+                connection.setReadTimeout(5000);
+                
+                int responseCode = connection.getResponseCode();
+                System.out.println("💓 Keep-Alive Ping: " + responseCode + " | URL: " + targetUrl);
+                connection.disconnect();
+            } catch (Exception e) {
+                System.err.println("⚠️ Keep-Alive Ping Failed: " + e.getMessage());
+            }
+        }, 5, 14 * 60, TimeUnit.SECONDS); // Initial delay 5s, repeat every 14 mins (840s)
+    }
+
     static class HealthHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange t) throws IOException {

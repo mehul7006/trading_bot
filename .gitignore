@@ -7,3 +7,4 @@ target/
 upstox_token.txt
 cp.txt
 .vscode/
+.env
