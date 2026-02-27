@@ -1,0 +1,332 @@
+🚀 STARTING COMPREHENSIVE BACKTEST (Last 120 Days)...
+
+📥 Fetching data for NIFTY50 (History needed for indicators)...
+📊 Total Candles Fetched: 1302
+🗓️ Data Range: 2025-09-05T09:15 to 2026-02-01T15:15
+✅ [2025-10-06T09:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 47.1 | SL: 94.3 | Result: WIN | Reason: NIFTY: Gamma Blast (Price > Upper BB) + RSI>60 + ADX>25
+✅ [2025-10-06T12:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 38.8 | SL: 77.7 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+❌ [2025-10-07T09:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 41.8 | SL: 83.7 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+❌ [2025-10-07T13:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 46.3 | SL: 92.6 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-10-09T11:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 55.8 | SL: 111.7 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-10-09T14:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 54.1 | SL: 108.1 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+❌ [2025-10-10T11:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 48.2 | SL: 96.3 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+❌ [2025-10-10T15:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 41.0 | SL: 81.9 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-10-14T11:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 53.0 | SL: 106.1 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+❌ [2025-10-14T15:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 61.3 | SL: 122.5 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI<45 + ADX>30
+✅ [2025-10-15T12:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 57.7 | SL: 115.4 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-10-16T09:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 50.1 | SL: 100.2 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-10-16T12:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 38.6 | SL: 77.1 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-10-17T09:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 49.7 | SL: 99.3 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-10-17T13:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 66.0 | SL: 132.1 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-10-20T13:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 61.4 | SL: 122.8 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+❌ [2025-10-23T09:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 66.5 | SL: 133.0 | Result: LOSS | Reason: NIFTY: Gamma Blast (Price > Upper BB) + RSI>60 + ADX>25
+❌ [2025-10-23T13:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 67.4 | SL: 134.8 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-10-27T10:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 58.3 | SL: 116.6 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-10-27T13:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 49.6 | SL: 99.3 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+❌ [2025-10-29T10:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 66.7 | SL: 133.4 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+❌ [2025-10-29T13:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 52.1 | SL: 104.3 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-10-31T09:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 52.7 | SL: 105.4 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI<45 + ADX>30
+✅ [2025-10-31T13:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 56.2 | SL: 112.4 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI<45 + ADX>30
+✅ [2025-11-03T10:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 53.4 | SL: 106.8 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI<45 + ADX>30
+✅ [2025-11-04T10:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 41.7 | SL: 83.5 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI<45 + ADX>30
+✅ [2025-11-04T14:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 42.0 | SL: 84.0 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI<45 + ADX>30
+✅ [2025-11-06T11:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 45.2 | SL: 90.3 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI<45 + ADX>30
+✅ [2025-11-06T14:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 51.2 | SL: 102.5 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI<45 + ADX>30
+❌ [2025-11-07T11:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 60.8 | SL: 121.5 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI<45 + ADX>30
+❌ [2025-11-11T10:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 46.9 | SL: 93.9 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI<45 + ADX>30
+✅ [2025-11-11T15:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 52.9 | SL: 105.8 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+❌ [2025-11-12T12:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 46.3 | SL: 92.5 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-11-13T09:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 44.1 | SL: 88.2 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+❌ [2025-11-13T12:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 40.8 | SL: 81.5 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+❌ [2025-11-14T10:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 58.9 | SL: 117.8 | Result: LOSS | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+❌ [2025-11-17T12:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 49.8 | SL: 99.5 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-11-19T10:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 43.1 | SL: 86.1 | Result: WIN | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+❌ [2025-11-20T14:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 34.5 | SL: 69.0 | Result: LOSS | Reason: NIFTY: Strong Trend (EMA Align) + RSI>55 + ADX>30
+✅ [2025-11-24T14:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 46.0 | SL: 91.9 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+❌ [2025-11-25T14:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 58.2 | SL: 116.3 | Result: LOSS | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+✅ [2025-11-26T11:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 57.5 | SL: 115.0 | Result: WIN | Reason: NIFTY: Gamma Blast (Price > Upper BB) + RSI>60 + ADX>25
+❌ [2025-12-01T09:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 42.0 | SL: 83.9 | Result: LOSS | Reason: NIFTY: Gamma Blast (Price > Upper BB) + RSI>60 + ADX>25
+✅ [2025-12-02T09:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 51.1 | SL: 102.1 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+✅ [2025-12-03T09:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 46.5 | SL: 93.0 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+❌ [2025-12-04T10:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 44.6 | SL: 89.1 | Result: LOSS | Reason: NIFTY: Gamma Blast (Price > Upper BB) + RSI>60 + ADX>25
+✅ [2025-12-05T11:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 53.3 | SL: 106.6 | Result: WIN | Reason: NIFTY: Gamma Blast (Price > Upper BB) + RSI>60 + ADX>25
+✅ [2025-12-08T13:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 48.7 | SL: 97.4 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+✅ [2025-12-10T13:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 56.1 | SL: 112.2 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+❌ [2025-12-18T09:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 47.9 | SL: 95.9 | Result: LOSS | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+✅ [2025-12-22T09:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 56.1 | SL: 112.2 | Result: WIN | Reason: NIFTY: Gamma Blast (Price > Upper BB) + RSI>60 + ADX>25
+❌ [2025-12-24T09:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 38.6 | SL: 77.3 | Result: LOSS | Reason: NIFTY: Gamma Blast (Price > Upper BB) + RSI>60 + ADX>25
+✅ [2025-12-26T09:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 35.1 | SL: 70.3 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+✅ [2025-12-29T12:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 31.2 | SL: 62.4 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+✅ [2025-12-31T10:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 39.0 | SL: 78.1 | Result: WIN | Reason: NIFTY: Gamma Blast (Price > Upper BB) + RSI>60 + ADX>25
+✅ [2026-01-02T09:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 43.5 | SL: 87.0 | Result: WIN | Reason: NIFTY: Gamma Blast (Price > Upper BB) + RSI>60 + ADX>25
+✅ [2026-01-06T09:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 48.6 | SL: 97.3 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+✅ [2026-01-07T12:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 42.1 | SL: 84.2 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+✅ [2026-01-08T10:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 44.3 | SL: 88.6 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+✅ [2026-01-09T12:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 55.0 | SL: 109.9 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+✅ [2026-01-12T09:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 64.1 | SL: 128.2 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+❌ [2026-01-16T10:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 62.0 | SL: 124.0 | Result: LOSS | Reason: NIFTY: Gamma Blast (Price > Upper BB) + RSI>60 + ADX>25
+✅ [2026-01-19T09:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 67.6 | SL: 135.2 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+✅ [2026-01-20T12:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 55.4 | SL: 110.9 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+✅ [2026-01-21T10:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 71.1 | SL: 142.2 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+✅ [2026-01-23T13:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 72.9 | SL: 145.7 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+❌ [2026-01-29T13:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 70.8 | SL: 141.5 | Result: LOSS | Reason: NIFTY: Gamma Blast (Price > Upper BB) + RSI>60 + ADX>25
+✅ [2026-02-01T12:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 124.2 | SL: 248.5 | Result: WIN | Reason: NIFTY: Gamma Blast (Price < Lower BB) + RSI<40 + ADX>25
+===========================================
+🚀 120-DAY PERFORMANCE AUDIT: NIFTY50
+===========================================
+👀 Watchlist Opportunities: 0
+🚀 Strong Signals (Tradeable): 73
+✅ Wins: 45
+❌ Losses: 23
+🎯 REAL WIN RATE: 66.18%
+💰 Total Points Captured: -13.73 pts
+===========================================
+
+📥 Fetching data for SENSEX (History needed for indicators)...
+📊 Total Candles Fetched: 1302
+🗓️ Data Range: 2025-09-05T09:15 to 2026-02-01T15:15
+✅ [2025-10-06T09:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 158.1 | SL: 316.1 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-10-06T12:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 128.2 | SL: 256.4 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-10-07T09:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 132.2 | SL: 264.4 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-10-07T13:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 143.6 | SL: 287.2 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-10-08T12:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 176.8 | SL: 353.6 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-10-09T09:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 184.2 | SL: 368.4 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-10-09T12:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 179.1 | SL: 358.3 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-10-10T09:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 187.5 | SL: 375.1 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-10-10T13:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 162.0 | SL: 323.9 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-10-13T11:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 144.1 | SL: 288.2 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-10-13T14:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 162.2 | SL: 324.4 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-10-14T11:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 184.6 | SL: 369.2 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-10-14T15:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 207.4 | SL: 414.8 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-10-15T12:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 194.1 | SL: 388.2 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-10-16T09:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 178.3 | SL: 356.6 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-10-16T12:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 138.7 | SL: 277.4 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-10-17T09:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 180.8 | SL: 361.5 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-10-17T13:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 235.9 | SL: 471.7 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-10-20T13:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 196.7 | SL: 393.4 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-10-23T09:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 223.9 | SL: 447.8 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-10-23T13:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 244.1 | SL: 488.3 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-10-24T10:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 211.5 | SL: 423.1 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-10-24T13:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 226.1 | SL: 452.3 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-10-27T10:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 190.8 | SL: 381.5 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-10-27T14:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 168.6 | SL: 337.2 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-10-28T11:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 194.5 | SL: 389.1 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-10-29T10:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 225.0 | SL: 449.9 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-10-29T13:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 177.8 | SL: 355.7 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-10-30T10:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 165.0 | SL: 329.9 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-10-30T14:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 170.1 | SL: 340.2 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-10-31T11:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 186.0 | SL: 371.9 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-10-31T14:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 186.6 | SL: 373.1 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-11-03T11:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 158.9 | SL: 317.8 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-11-04T09:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 165.3 | SL: 330.5 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-11-04T12:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 129.0 | SL: 258.1 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-11-06T09:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 160.3 | SL: 320.6 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-11-06T13:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 167.7 | SL: 335.4 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-11-07T10:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 194.2 | SL: 388.4 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-11-07T13:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 214.6 | SL: 429.2 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-11-10T10:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 177.9 | SL: 355.8 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-11-10T14:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 144.5 | SL: 289.0 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-11-11T11:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 148.0 | SL: 296.0 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-11-11T14:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 172.2 | SL: 344.3 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-11-12T11:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 164.5 | SL: 329.1 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-11-12T15:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 143.2 | SL: 286.3 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-11-13T12:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 137.8 | SL: 275.5 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-11-14T10:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 204.3 | SL: 408.7 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-11-14T13:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 225.9 | SL: 451.8 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-11-17T10:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 194.2 | SL: 388.4 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-11-17T14:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 157.1 | SL: 314.2 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-11-18T11:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 141.3 | SL: 282.5 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-11-19T09:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 144.1 | SL: 288.3 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-11-19T13:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 139.2 | SL: 278.4 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-11-20T10:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 132.8 | SL: 265.6 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-11-20T13:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 122.3 | SL: 244.6 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-11-24T09:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 156.8 | SL: 313.6 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-11-24T12:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 147.6 | SL: 295.1 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-11-25T09:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 177.2 | SL: 354.3 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-11-25T13:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 175.7 | SL: 351.5 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-11-26T10:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 196.6 | SL: 393.1 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-11-26T14:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 189.7 | SL: 379.4 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-11-27T11:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 154.5 | SL: 309.0 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-11-27T14:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 188.0 | SL: 375.9 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-11-28T13:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 155.4 | SL: 310.8 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-12-01T10:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 128.6 | SL: 257.1 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-12-01T14:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 143.2 | SL: 286.3 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-02T11:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 145.8 | SL: 291.7 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-02T14:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 129.5 | SL: 259.1 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-03T11:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 144.7 | SL: 289.4 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-12-04T10:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 148.6 | SL: 297.1 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-12-04T14:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 170.7 | SL: 341.4 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-12-05T11:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 186.3 | SL: 372.5 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-12-05T15:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 174.7 | SL: 349.5 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-12-08T12:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 141.4 | SL: 282.8 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-12-09T09:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 194.6 | SL: 389.1 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-09T12:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 214.4 | SL: 428.8 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-10T11:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 174.1 | SL: 348.3 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-10T14:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 187.6 | SL: 375.1 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-11T13:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 211.6 | SL: 423.2 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-12-12T10:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 214.7 | SL: 429.4 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2025-12-12T13:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 166.3 | SL: 332.5 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-12-15T10:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 130.3 | SL: 260.7 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-12-16T13:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 124.8 | SL: 249.6 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-17T10:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 124.3 | SL: 248.7 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-17T13:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 137.6 | SL: 275.3 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-18T10:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 154.8 | SL: 309.5 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-12-18T14:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 169.9 | SL: 339.8 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-19T11:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 176.6 | SL: 353.2 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-12-19T14:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 157.5 | SL: 314.9 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-12-22T11:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 130.2 | SL: 260.4 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-12-22T15:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 120.6 | SL: 241.1 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-12-23T12:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 130.6 | SL: 261.2 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-12-24T14:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 123.9 | SL: 247.8 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-26T11:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 108.6 | SL: 217.2 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-29T10:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 100.8 | SL: 201.6 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-29T13:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 107.4 | SL: 214.8 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-30T10:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 105.8 | SL: 211.7 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2025-12-30T14:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 120.9 | SL: 241.7 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2025-12-31T11:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 124.5 | SL: 249.0 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2025-12-31T14:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 141.9 | SL: 283.8 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2026-01-01T11:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 147.6 | SL: 295.1 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2026-01-02T09:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 164.2 | SL: 328.3 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2026-01-02T12:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 128.6 | SL: 257.2 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+❌ [2026-01-05T09:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 121.9 | SL: 243.8 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2026-01-05T14:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 155.3 | SL: 310.7 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-06T11:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 167.6 | SL: 335.2 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-06T15:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 149.0 | SL: 298.0 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-07T12:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 154.0 | SL: 308.0 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-08T09:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 175.4 | SL: 350.9 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-08T12:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 151.8 | SL: 303.5 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-09T09:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 172.6 | SL: 345.2 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-09T13:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 179.9 | SL: 359.8 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-12T10:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 185.1 | SL: 370.3 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-12T15:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 232.7 | SL: 465.4 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2026-01-14T09:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 233.0 | SL: 466.0 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2026-01-14T13:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 224.3 | SL: 448.7 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2026-01-16T10:15] STRONG SIGNAL: UP | Conf: 88.0% | Target: 223.5 | SL: 446.9 | Result: LOSS | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2026-01-19T09:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 223.7 | SL: 447.5 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-19T12:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 189.9 | SL: 379.8 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-20T09:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 185.9 | SL: 371.8 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-20T13:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 171.8 | SL: 343.7 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-21T10:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 216.6 | SL: 433.2 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2026-01-21T13:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 294.6 | SL: 589.1 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-23T11:45] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 230.6 | SL: 461.2 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-23T15:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 201.2 | SL: 402.5 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+❌ [2026-01-27T12:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 292.0 | SL: 584.0 | Result: LOSS | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+✅ [2026-01-28T12:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 248.1 | SL: 496.1 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2026-01-29T12:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 236.9 | SL: 473.9 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2026-01-30T09:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 231.8 | SL: 463.7 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2026-02-01T09:45] STRONG SIGNAL: UP | Conf: 88.0% | Target: 201.9 | SL: 403.8 | Result: WIN | Reason: SENSEX: Momentum (Pr>20) + RSI>50 + ADX>20 [ML Optimized]
+✅ [2026-02-01T13:15] STRONG SIGNAL: DOWN | Conf: 88.0% | Target: 451.6 | SL: 903.2 | Result: WIN | Reason: SENSEX: Momentum (Pr<20) + RSI<50 + ADX>20 [ML Optimized]
+===========================================
+🚀 120-DAY PERFORMANCE AUDIT: SENSEX
+===========================================
+👀 Watchlist Opportunities: 0
+🚀 Strong Signals (Tradeable): 138
+✅ Wins: 94
+❌ Losses: 37
+🎯 REAL WIN RATE: 71.76%
+💰 Total Points Captured: 2342.97 pts
+===========================================
+
+📥 Fetching data for BANKNIFTY (History needed for indicators)...
+📊 Total Candles Fetched: 1302
+🗓️ Data Range: 2025-09-05T09:15 to 2026-02-01T15:15
+✅ [2025-10-06T09:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 139.4 | SL: 278.9 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-06T12:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 108.3 | SL: 216.6 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-07T09:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 109.0 | SL: 218.1 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-10-07T13:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 119.0 | SL: 238.0 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-09T11:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 146.1 | SL: 292.2 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-09T15:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 138.4 | SL: 276.9 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-10-10T12:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 126.6 | SL: 253.1 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-13T09:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 125.1 | SL: 250.2 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-15T10:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 145.3 | SL: 290.6 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-15T13:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 132.2 | SL: 264.3 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-16T10:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 123.9 | SL: 247.9 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-10-16T14:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 123.6 | SL: 247.1 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-10-17T11:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 140.3 | SL: 280.6 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-17T15:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 184.4 | SL: 368.8 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-20T12:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 184.3 | SL: 368.5 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-21T13:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 151.1 | SL: 302.3 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-10-23T11:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 155.6 | SL: 311.2 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-27T10:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 155.5 | SL: 311.0 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-27T14:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 133.1 | SL: 266.2 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-10-29T10:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 171.4 | SL: 342.7 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-10-29T13:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 142.9 | SL: 285.7 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-10-31T10:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 141.8 | SL: 283.5 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2025-10-31T14:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 158.4 | SL: 316.8 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2025-11-03T15:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 124.2 | SL: 248.5 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-11-04T12:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 124.0 | SL: 248.1 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2025-11-06T09:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 145.6 | SL: 291.2 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2025-11-06T12:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 135.5 | SL: 270.9 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2025-11-07T09:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 141.0 | SL: 281.9 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2025-11-10T10:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 155.2 | SL: 310.4 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-11-10T14:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 106.3 | SL: 212.6 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-11-11T11:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 121.6 | SL: 243.3 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2025-11-11T15:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 140.2 | SL: 280.5 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-11-12T12:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 128.0 | SL: 256.1 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-11-13T09:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 129.0 | SL: 258.1 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-11-18T10:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 84.1 | SL: 168.1 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-11-19T14:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 120.5 | SL: 240.9 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-11-20T11:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 101.3 | SL: 202.6 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-11-20T15:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 90.0 | SL: 180.0 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-11-24T10:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 124.5 | SL: 249.0 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-11-25T10:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 151.0 | SL: 302.1 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2025-11-26T09:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 190.4 | SL: 380.8 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-11-26T13:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 161.6 | SL: 323.2 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-11-27T10:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 113.8 | SL: 227.7 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-11-27T13:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 131.9 | SL: 263.9 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-11-28T13:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 109.7 | SL: 219.4 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-12-01T10:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 105.9 | SL: 211.7 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-12-02T13:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 132.4 | SL: 264.9 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2025-12-03T10:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 112.5 | SL: 225.0 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2025-12-03T14:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 125.1 | SL: 250.2 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2025-12-05T12:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 168.1 | SL: 336.1 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-12-08T09:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 171.3 | SL: 342.5 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-12-08T13:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 139.8 | SL: 279.5 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2025-12-09T10:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 159.1 | SL: 318.1 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2025-12-10T11:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 138.1 | SL: 276.2 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2025-12-10T14:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 142.8 | SL: 285.6 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2025-12-12T09:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 160.0 | SL: 320.1 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-12-12T14:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 119.9 | SL: 239.9 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-12-16T11:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 123.0 | SL: 246.0 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2025-12-16T14:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 118.4 | SL: 236.8 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2025-12-17T12:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 110.9 | SL: 221.7 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2025-12-18T09:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 120.8 | SL: 241.6 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2025-12-19T12:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 113.6 | SL: 227.2 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2025-12-22T13:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 100.8 | SL: 201.6 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2025-12-24T09:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 99.4 | SL: 198.8 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2025-12-26T10:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 78.0 | SL: 156.0 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2025-12-26T14:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 75.4 | SL: 150.9 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2025-12-29T11:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 84.4 | SL: 168.9 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2025-12-30T09:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 101.1 | SL: 202.2 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2025-12-31T09:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 132.0 | SL: 263.9 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2026-01-01T10:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 117.9 | SL: 235.7 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2026-01-01T15:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 82.5 | SL: 165.0 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2026-01-02T12:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 89.8 | SL: 179.5 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2026-01-05T09:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 117.8 | SL: 235.6 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2026-01-08T11:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 133.7 | SL: 267.5 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2026-01-08T14:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 142.4 | SL: 284.8 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2026-01-09T11:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 135.5 | SL: 271.0 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2026-01-09T15:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 123.9 | SL: 247.8 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2026-01-14T13:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 162.3 | SL: 324.5 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2026-01-16T10:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 160.1 | SL: 320.3 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2026-01-16T13:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 150.8 | SL: 301.5 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2026-01-20T13:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 128.8 | SL: 257.5 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2026-01-21T10:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 182.6 | SL: 365.2 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2026-01-21T14:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 243.8 | SL: 487.5 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2026-01-23T09:45] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 212.5 | SL: 425.0 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2026-01-23T13:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 194.9 | SL: 389.8 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+❌ [2026-01-27T10:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 229.3 | SL: 458.6 | Result: LOSS | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+✅ [2026-01-28T14:15] STRONG SIGNAL: UP | Conf: 92.0% | Target: 191.9 | SL: 383.8 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2026-01-29T12:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 163.1 | SL: 326.2 | Result: WIN | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+❌ [2026-01-30T09:45] STRONG SIGNAL: UP | Conf: 92.0% | Target: 169.5 | SL: 338.9 | Result: LOSS | Reason: BANKNIFTY: Golden Cross (20>50) + ADX>25 [High Acc]
+✅ [2026-02-01T13:15] STRONG SIGNAL: DOWN | Conf: 92.0% | Target: 314.3 | SL: 628.5 | Result: WIN | Reason: BANKNIFTY: Death Cross (20<50) + ADX>25 [High Acc]
+===========================================
+🚀 120-DAY PERFORMANCE AUDIT: BANKNIFTY
+===========================================
+👀 Watchlist Opportunities: 0
+🚀 Strong Signals (Tradeable): 95
+✅ Wins: 56
+❌ Losses: 34
+🎯 REAL WIN RATE: 62.22%
+💰 Total Points Captured: -1522.96 pts
+===========================================
