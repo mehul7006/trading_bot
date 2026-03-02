@@ -1,0 +1,24 @@
+services:
+  # 🤖 Telegram Bot Service
+  - type: web
+    name: telegram-stock-bot
+    env: docker
+    plan: free
+    region: singapore
+    branch: main
+    
+    # Health Check (CloudLauncher listens on /)
+    healthCheckPath: /
+    
+    # Environment Variables to be set in Dashboard
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false # User must enter this manually in dashboard
+      - key: UPSTOX_ACCESS_TOKEN
+        sync: false # User must enter this manually in dashboard
+      - key: PORT
+        value: 10000
+
+    # Docker Build Context
+    dockerContext: .
+    dockerfilePath: Dockerfile

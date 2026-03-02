@@ -1,0 +1,9 @@
+src/main/java/com/trading/bot/core/TradingBot.java
+src/main/java/com/trading/bot/core/ConfigurationManager.java
+src/main/java/com/trading/bot/core/BotLauncher.java
+src/main/java/com/trading/bot/ml/MarketPredictor.java
+src/main/java/com/trading/bot/market/MarketDataEvent.java
+src/main/java/com/trading/bot/market/RealTimeDataCollector.java
+src/main/java/com/trading/bot/market/MarketData.java
+src/main/java/com/trading/bot/monitoring/PerformanceMonitor.java
+src/main/java/com/trading/bot/risk/RiskManager.java

@@ -1,0 +1,58 @@
+{
+    "trading": {
+        "maxPositionSize": 100,
+        "riskPerTrade": 1.0,
+        "maxDrawdown": 5.0,
+        "minConfidence": 75.0,
+        "profitTarget": 2.0,
+        "stopLoss": 1.0,
+        "tradingHours": {
+            "start": "09:15",
+            "end": "15:30"
+        }
+    },
+    "marketData": {
+        "sources": ["NSE", "BSE", "YAHOO"],
+        "updateInterval": 1000,
+        "symbols": ["NIFTY", "BANKNIFTY", "FINNIFTY"],
+        "historicalDataDays": 100
+    },
+    "ml": {
+        "modelUpdateInterval": 3600000,
+        "minTrainingData": 1000,
+        "confidenceThreshold": 0.75,
+        "features": [
+            "price",
+            "volume",
+            "volatility",
+            "vwap",
+            "sentiment"
+        ]
+    },
+    "options": {
+        "strikeSelectionRange": 5.0,
+        "expiryPreference": "WEEKLY",
+        "greeksThresholds": {
+            "minDelta": 0.3,
+            "maxDelta": 0.7,
+            "minTheta": -0.2,
+            "maxVega": 0.4
+        }
+    },
+    "risk": {
+        "maxLossPerDay": 3.0,
+        "maxPositionsPerSymbol": 3,
+        "correlationThreshold": 0.7,
+        "volatilityThreshold": 25.0
+    },
+    "monitoring": {
+        "logLevel": "INFO",
+        "metricsInterval": 60000,
+        "alertThresholds": {
+            "profitWarning": -1.0,
+            "profitDanger": -2.0,
+            "drawdownWarning": 3.0,
+            "drawdownDanger": 4.0
+        }
+    }
+}
