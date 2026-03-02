@@ -58,7 +58,7 @@ public class AuditAgent implements Agent {
             if (data == null || data.size() < 200) return res;
 
             long lastSignalTime = 0;
-            long fifteenMinMillis = 15 * 60 * 1000;
+            long tenMinMillis = 10 * 60 * 1000;
             Set<LocalDate> tradingDaysSet = new HashSet<>();
             Set<LocalDate> allDaysWithData = new HashSet<>();
 
@@ -67,7 +67,7 @@ public class AuditAgent implements Agent {
                 LocalDateTime currentTimestamp = latest.timestamp;
                 allDaysWithData.add(currentTimestamp.toLocalDate());
 
-                if (currentTimestamp.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() - lastSignalTime < fifteenMinMillis) continue;
+                if (currentTimestamp.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() - lastSignalTime < tenMinMillis) continue;
 
                 java.time.LocalTime time = currentTimestamp.toLocalTime();
                 if (time.isBefore(java.time.LocalTime.of(9, 15)) || time.isAfter(java.time.LocalTime.of(15, 25))) continue;
