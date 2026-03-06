@@ -48,7 +48,7 @@ public class Phase3TelegramBot {
     // Bot state
     private long lastUpdateId = 0;
     private boolean isRunning = false;
-    private final Set<Long> processedMessages = new HashSet<>();
+    private final Set<Long> processedMessages = java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
     private long activeChatId = 0;
     private boolean autoAnalysisActive = false;
     private boolean isScanning = false;
@@ -57,6 +57,13 @@ public class Phase3TelegramBot {
     private final Map<String, Long> lastWatchlistAlertMap = new ConcurrentHashMap<>();
     private final Map<Long, String> lastSentMessageByChat = new ConcurrentHashMap<>();
     private final Map<Long, Long> lastSentMessageTime = new ConcurrentHashMap<>();
+    private final Map<Long, DedupCommand> lastCommandByChat = new ConcurrentHashMap<>();
+    
+    private static class DedupCommand {
+        final String cmd;
+        final long at;
+        DedupCommand(String cmd, long at) { this.cmd = cmd; this.at = at; }
+    }
     
     private static class ActiveSignal {
         String symbol;
@@ -246,6 +253,7 @@ public class Phase3TelegramBot {
                 
                 // Map to store only the latest command per chat to handle queue rollover
                 Map<Long, String> latestCommands = new HashMap<>();
+                long maxUpdateId = lastUpdateId;
                 
                 for (int i = 1; i < updates.length; i++) {
                     String update = updates[i];
@@ -256,7 +264,7 @@ public class Phase3TelegramBot {
                         long updateId = Long.parseLong(updateIdStr);
                         
                         if (updateId <= lastUpdateId) continue;
-                        lastUpdateId = updateId;
+                        if (updateId > maxUpdateId) maxUpdateId = updateId;
                         
                         // Skip if already processed
                         if (processedMessages.contains(updateId)) continue;
@@ -279,6 +287,9 @@ public class Phase3TelegramBot {
                     }
                 }
                 
+                // Advance offset once per batch
+                lastUpdateId = maxUpdateId;
+                
                 // Execute only the last command standing for each chat
                 for (Map.Entry<Long, String> entry : latestCommands.entrySet()) {
                     handleCommand(entry.getKey(), entry.getValue());
@@ -297,6 +308,14 @@ public class Phase3TelegramBot {
         System.out.println("DEBUG: Received command: " + command + " from chat: " + chatId);
         
         try {
+            // Dedup identical commands quickly repeated (e.g., double taps)
+            long now = System.currentTimeMillis();
+            DedupCommand last = lastCommandByChat.get(chatId);
+            if (last != null && last.cmd.equalsIgnoreCase(command.trim()) && (now - last.at) < 1500) {
+                return;
+            }
+            lastCommandByChat.put(chatId, new DedupCommand(command.trim(), now));
+            
             // Split command and arguments
             String[] parts = command.trim().split("\\s+", 2);
             String cmd = parts[0].toLowerCase();
