@@ -24,6 +24,8 @@ import java.util.*;
  */
 public class HonestMarketDataFetcher {
     
+    private static HonestMarketDataFetcher instance;
+
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final Map<String, Double> lastValidPrices;
@@ -45,7 +47,7 @@ public class HonestMarketDataFetcher {
         "BANKNIFTY", "NSE_INDEX|Nifty Bank"
     ));
     
-    public HonestMarketDataFetcher() {
+    private HonestMarketDataFetcher() {
         this.httpClient = HttpClient.newHttpClient();
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
@@ -57,6 +59,13 @@ public class HonestMarketDataFetcher {
         new File(CACHE_DIR).mkdirs();
         
         loadTokenFromFile();
+    }
+
+    public static synchronized HonestMarketDataFetcher getInstance() {
+        if (instance == null) {
+            instance = new HonestMarketDataFetcher();
+        }
+        return instance;
     }
     
     /**

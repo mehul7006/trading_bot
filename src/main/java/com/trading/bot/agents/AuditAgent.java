@@ -1,5 +1,6 @@
 package com.trading.bot.agents;
 
+import com.trading.bot.market.HonestMarketDataFetcher;
 import com.trading.bot.market.SimpleMarketData;
 import com.trading.bot.ai.AIPredictor;
 import java.time.LocalDate;
@@ -45,7 +46,7 @@ public class AuditAgent implements Agent {
     }
 
     public AuditAgent() {
-        this.marketDataAgent = new MarketDataAgent();
+        this.marketDataAgent = new MarketDataAgent(HonestMarketDataFetcher.getInstance());
         this.predictionAgent = new PredictionAgent();
     }
 

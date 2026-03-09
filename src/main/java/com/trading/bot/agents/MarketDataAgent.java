@@ -13,8 +13,8 @@ import java.util.Set;
 public class MarketDataAgent implements Agent {
     private final HonestMarketDataFetcher fetcher;
 
-    public MarketDataAgent() {
-        this.fetcher = new HonestMarketDataFetcher();
+    public MarketDataAgent(HonestMarketDataFetcher fetcher) {
+        this.fetcher = fetcher;
     }
 
     public List<SimpleMarketData> getHistoricalData(String symbol, int days) throws Exception {

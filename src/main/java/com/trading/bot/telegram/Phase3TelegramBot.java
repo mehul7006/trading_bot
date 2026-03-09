@@ -129,7 +129,7 @@ public class Phase3TelegramBot {
         this.httpClient = HttpClient.newHttpClient();
         this.scheduler = Executors.newScheduledThreadPool(2);
         this.phase3Bot = new Phase3IntegratedBot();
-        this.marketDataFetcher = new HonestMarketDataFetcher();
+        this.marketDataFetcher = HonestMarketDataFetcher.getInstance();
         this.aiPredictor = new AIPredictor();
         
         try {
