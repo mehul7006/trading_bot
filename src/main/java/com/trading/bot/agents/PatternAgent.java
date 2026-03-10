@@ -5,7 +5,7 @@ import com.trading.bot.market.SimpleMarketData;
 import java.util.*;
 
 public class PatternAgent implements Agent {
-    private final HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+    private final HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
     public Set<String> topics() { return Set.of("REQUEST_PATTERN"); }
     public void onMessage(AgentMessage message, AgentBus bus) {
         String symbol = (String) message.payload.get("symbol");

@@ -20,7 +20,7 @@ public class TodayAudit {
         System.out.println("--------------------------------------------------");
         System.out.println("Fetching REAL DATA from Upstox for TODAY...");
 
-        HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+        HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         AIPredictor predictor = new AIPredictor();
         
         String[] symbols = {"NIFTY50", "SENSEX"};

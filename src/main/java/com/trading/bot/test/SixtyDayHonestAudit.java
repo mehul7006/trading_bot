@@ -52,7 +52,7 @@ public class SixtyDayHonestAudit {
         System.out.println("--------------------------------------------------------------------------------------");
         System.out.println("Fetching REAL DATA from Upstox... (Last 120 Days)");
 
-        HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+        HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         AIPredictor predictor = new AIPredictor();
         
         String[] symbols = {"NIFTY50", "SENSEX"};

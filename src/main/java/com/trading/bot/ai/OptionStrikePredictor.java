@@ -28,7 +28,7 @@ public class OptionStrikePredictor {
     private final AIPredictor underlyingPredictor;
     
     public OptionStrikePredictor() {
-        this.fetcher = new HonestMarketDataFetcher();
+        this.fetcher = HonestMarketDataFetcher.getInstance();
         this.underlyingPredictor = new AIPredictor();
         this.underlyingPredictor.initialize();
     }

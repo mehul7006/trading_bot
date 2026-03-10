@@ -20,7 +20,7 @@ public class StabilityAudit {
         System.out.println("🕵️ STARTING STABILITY & CONSISTENCY CHECK (120 Days)...");
         System.out.println("==========================================================");
 
-        HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+        HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         AIPredictor predictor = new AIPredictor();
         predictor.initialize();
 

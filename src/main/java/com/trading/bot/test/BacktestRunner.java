@@ -13,7 +13,7 @@ public class BacktestRunner {
     public static void main(String[] args) {
         System.out.println("🚀 STARTING COMPREHENSIVE BACKTEST (Last 120 Days)...");
         
-        HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+        HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
 
         for (String symbol : symbols) {

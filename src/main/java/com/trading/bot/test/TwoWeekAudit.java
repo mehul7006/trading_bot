@@ -27,7 +27,7 @@ public class TwoWeekAudit {
         System.out.println("🗓️ STARTING 2-WEEK DAILY AUDIT...");
         System.out.println("=============================================");
 
-        HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+        HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         AIPredictor predictor = new AIPredictor();
         predictor.initialize();
 

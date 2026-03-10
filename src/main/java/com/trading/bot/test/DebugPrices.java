@@ -9,7 +9,7 @@ public class DebugPrices {
     public static void main(String[] args) {
         System.out.println("🔍 DEBUG: Fetching latest candle details...");
         
-        HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+        HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
         java.util.Map<String, String> symbolMap = java.util.Map.of(
             "NIFTY50", "NSE_INDEX|Nifty 50",

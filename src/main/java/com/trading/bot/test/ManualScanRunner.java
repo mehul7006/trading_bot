@@ -16,7 +16,7 @@ public class ManualScanRunner {
         System.out.println("🔍 Scanning NIFTY50, BANKNIFTY, SENSEX...");
         System.out.println("==================================================\n");
 
-        HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+        HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         AIPredictor predictor = new AIPredictor();
         predictor.initialize();
 

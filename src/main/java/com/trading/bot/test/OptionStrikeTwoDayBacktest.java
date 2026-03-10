@@ -39,7 +39,7 @@ public class OptionStrikeTwoDayBacktest {
     }
     
     public static void main(String[] args) {
-        HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+        HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         for (String symbol : new String[] {"NIFTY50", "SENSEX"}) {
             runSymbol(fetcher, symbol);
         }

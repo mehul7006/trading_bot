@@ -16,7 +16,7 @@ public class ScanningService {
     private boolean isScanning = false;
 
     public ScanningService() {
-        this.marketDataFetcher = new HonestMarketDataFetcher();
+        this.marketDataFetcher = HonestMarketDataFetcher.getInstance();
         this.aiPredictor = new AIPredictor();
         this.aiPredictor.initialize();
     }

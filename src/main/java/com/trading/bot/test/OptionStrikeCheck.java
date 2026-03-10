@@ -7,7 +7,7 @@ import java.util.List;
 
 public class OptionStrikeCheck {
     public static void main(String[] args) {
-        HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+        HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         try {
             checkStrike("NIFTY50", 25100, "CE", fetcher);
             checkStrike("SENSEX", 83000, "CE", fetcher);

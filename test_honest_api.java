@@ -6,7 +6,7 @@ public class test_honest_api {
         System.out.println("🧪 TESTING HONEST MARKET DATA FETCHER");
         System.out.println("=====================================");
         
-        HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+        HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         
         try {
             System.out.println("📊 Testing honest market snapshot...");

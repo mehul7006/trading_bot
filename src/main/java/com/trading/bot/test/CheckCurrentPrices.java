@@ -7,7 +7,7 @@ public class CheckCurrentPrices {
     public static void main(String[] args) {
         System.out.println("🔍 Fetching latest closing prices from Upstox API...");
         
-        HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+        HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         
         try {
             // This fetches the latest available data point (Real Time or Last Close)

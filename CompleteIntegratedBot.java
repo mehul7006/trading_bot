@@ -44,7 +44,7 @@ public class CompleteIntegratedBot {
         this.phase2Bot = new Phase2IntegratedBot();
         this.phase3Bot = new Phase3IntegratedBot();
         this.phase4Bot = new Phase4QuantSystemBot();
-        this.marketDataFetcher = new HonestMarketDataFetcher();
+        this.marketDataFetcher = HonestMarketDataFetcher.getInstance();
         
         System.out.println("✅ Complete Integrated Bot (Phases 1-4) initialized");
     }

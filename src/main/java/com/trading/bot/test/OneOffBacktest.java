@@ -17,7 +17,7 @@ public class OneOffBacktest {
             writer.println("🚀 STARTING COMPREHENSIVE BACKTEST (Last 120 Days)...");
             System.out.println("🚀 STARTING COMPREHENSIVE BACKTEST (Last 120 Days)...");
             
-            HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+            HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
             String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
 
             for (String symbol : symbols) {

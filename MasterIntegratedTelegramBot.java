@@ -40,7 +40,7 @@ public class MasterIntegratedTelegramBot {
         this.httpClient = HttpClient.newHttpClient();
         this.scheduler = Executors.newScheduledThreadPool(3);
         this.phase4Bot = new Phase4QuantSystemBot();
-        this.marketDataFetcher = new HonestMarketDataFetcher();
+        this.marketDataFetcher = HonestMarketDataFetcher.getInstance();
         
         // Initialize all systems
         try {

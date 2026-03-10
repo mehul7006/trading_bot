@@ -14,7 +14,7 @@ public class HonestAudit {
         System.out.println("🕵️ STARTING HONEST BOT AUDIT (120 Days)...");
         System.out.println("=============================================");
 
-        HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+        HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         AIPredictor predictor = new AIPredictor();
         predictor.initialize();
 

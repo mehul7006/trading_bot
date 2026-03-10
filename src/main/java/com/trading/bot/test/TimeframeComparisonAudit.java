@@ -37,7 +37,7 @@ public class TimeframeComparisonAudit {
         System.out.println("--------------------------------------------------------------------------------------");
         System.out.println("Fetching REAL DATA from Upstox... This may take a few minutes due to data volume.");
 
-        HonestMarketDataFetcher fetcher = new HonestMarketDataFetcher();
+        HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         AIPredictor predictor = new AIPredictor();
         
         String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
