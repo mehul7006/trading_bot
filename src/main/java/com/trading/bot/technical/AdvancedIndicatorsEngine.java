@@ -82,7 +82,7 @@ public class AdvancedIndicatorsEngine {
         vals.put("williamsR", wr.williamsR);
         
         // Volume-based analysis (MFI, OBV, etc.)
-        vals.put("vwap", vwap(data));
+        vals.put("vwap", calculateVWAP(data));
         vals.put("volumeEMA20", data.stream().skip(Math.max(0, data.size()-20)).mapToLong(x->x.volume).average().orElse(0));
         
         // Momentum & Volatility
@@ -142,7 +142,7 @@ public class AdvancedIndicatorsEngine {
         return ((current - old) / old) * 100;
     }
 
-    private double vwap(List<SimpleMarketData> d) {
+    public double calculateVWAP(List<SimpleMarketData> d) {
         double tpv = 0, tv = 0;
         for(SimpleMarketData x : d) {
             double tp = (x.high + x.low + x.price) / 3;

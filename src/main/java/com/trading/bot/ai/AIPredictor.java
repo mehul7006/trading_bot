@@ -83,73 +83,127 @@ public class AIPredictor {
         SimpleMarketData latest = data.get(data.size() - 1);
         double currentPrice = latest.price;
 
-        // 1. Major Trend Filter (EMA 200)
+        // Common metrics used across strategies
+        double ema20 = calculateEMA(data, 20);
+        double ema50 = calculateEMA(data, 50);
         double ema200 = calculateEMA(data, 200);
+        
+        AdvancedIndicatorsEngine.AdvancedIndicatorsResult indicators = new AdvancedIndicatorsEngine().analyze50Plus(data);
+        double rsi = indicators.values.getOrDefault("rsi14", 50.0);
+        double adx = indicators.values.getOrDefault("adx", 25.0);
+        double atr = calculateATR(data, 14);
+        double avgVol = data.stream().skip(Math.max(0, data.size() - 20)).mapToLong(d -> d.volume).average().orElse(0);
+
+        // SYMBOL-SPECIFIC STRATEGY ROUTING (V19.8 - Live Market Optimization)
+        if ("NIFTY50".equals(symbol)) {
+            return predictNiftyStrategy(symbol, data, currentPrice, ema50, rsi, adx, atr, latest, avgVol, optionData);
+        } else if ("SENSEX".equals(symbol)) {
+            return predictSensexStrategy(symbol, data, currentPrice, ema20, rsi, adx, atr, latest, avgVol, optionData);
+        } else if ("BANKNIFTY".equals(symbol)) {
+            return predictBankNiftyStrategy(symbol, data, currentPrice, ema50, rsi, adx, atr, latest, avgVol, optionData);
+        }
+
+        // Generic Strategy for other symbols
+        return genericStrategy(symbol, data, currentPrice, ema200, indicators, rsi, adx, atr, optionData);
+    }
+
+    private AIPrediction predictBankNiftyStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema50, double rsi, double adx, double atr, SimpleMarketData latest, double avgVol, OptionData optionData) {
+        // BankNifty is highly volatile and respects VWAP and Institutional Levels
+        AIPrediction trend = bankNiftyTrendStrategy(symbol, data, currentPrice, ema50, rsi, adx, atr, optionData);
+        AIPrediction vwap = bankNiftyVWAPStrategy(symbol, data, currentPrice, atr);
+        AIPrediction scalper = bankNiftyOptionScalperStrategy(symbol, data, currentPrice, rsi, adx, atr, optionData);
+        
+        int bullishCount = 0;
+        int bearishCount = 0;
+        List<String> reasoningList = new ArrayList<>();
+
+        AIPrediction[] all = {trend, vwap, scalper};
+        for (AIPrediction p : all) {
+            if (p.predictedDirection.equals("UP")) { bullishCount++; reasoningList.add(p.predictionReasoning); }
+            else if (p.predictedDirection.equals("DOWN")) { bearishCount++; reasoningList.add(p.predictionReasoning); }
+        }
+
+        String finalDirection = "NEUTRAL";
+        double finalConfidence = 0;
+        
+        // BankNifty needs high confluence (2+) OR very strong institutional delta
+        if (bullishCount >= 2 || (scalper.predictedDirection.equals("UP") && scalper.confidence > 90)) {
+            finalDirection = "UP";
+            finalConfidence = 87 + (bullishCount * 2);
+        } else if (bearishCount >= 2 || (scalper.predictedDirection.equals("DOWN") && scalper.confidence > 90)) {
+            finalDirection = "DOWN";
+            finalConfidence = 87 + (bearishCount * 2);
+        }
+
+        return new AIPrediction(finalDirection, finalConfidence, finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, "BANKNIFTY_VOL_V1", "BankNifty Multi-Factor: " + String.join(" + ", reasoningList), atr * 1.2, atr * 1.2, false);
+    }
+
+    private AIPrediction bankNiftyTrendStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema50, double rsi, double adx, double atr, OptionData optionData) {
+        double ema20 = calculateEMA(data, 20);
+        boolean up = currentPrice > ema20 && ema20 > ema50 && adx > 25 && rsi > 55;
+        boolean down = currentPrice < ema20 && ema20 < ema50 && adx > 25 && rsi < 45;
+        
+        String dir = up ? "UP" : (down ? "DOWN" : "NEUTRAL");
+        double score = up || down ? 85 : 0;
+        return new AIPrediction(dir, score, score/100.0, adx, rsi, atr/currentPrice, 80, "BN_TREND", "BankNifty Trend Alignment", atr * 1.0, atr * 1.0, false);
+    }
+
+    private AIPrediction bankNiftyVWAPStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double atr) {
+        double vwap = new AdvancedIndicatorsEngine().calculateVWAP(data);
+        String dir = "NEUTRAL";
+        double score = 0;
+        
+        // Buy if price pulls back to VWAP and holds (Mean Reversion / Trend Continuation)
+        if (currentPrice > vwap && currentPrice < vwap + (atr * 0.2)) {
+            dir = "UP";
+            score = 82;
+        } else if (currentPrice < vwap && currentPrice > vwap - (atr * 0.2)) {
+            dir = "DOWN";
+            score = 82;
+        }
+        return new AIPrediction(dir, score, score/100.0, 0, 0, 0, 80, "BN_VWAP", "VWAP Pullback/Support", atr * 1.0, atr * 0.8, false);
+    }
+
+    private AIPrediction bankNiftyOptionScalperStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double rsi, double adx, double atr, OptionData optionData) {
+        if (optionData == null) return createDefaultAIPrediction("No Option Data");
+        String dir = "NEUTRAL";
+        double score = 0;
+        if (optionData.putOIChange > optionData.callOIChange * 2.8 && rsi > 55) { dir = "UP"; score = 91; }
+        else if (optionData.callOIChange > optionData.putOIChange * 2.8 && rsi < 45) { dir = "DOWN"; score = 91; }
+        return new AIPrediction(dir, score, score/100.0, adx, rsi, atr/currentPrice, 80, "BN_INST", "Institutional Delta Shift (Extreme)", atr * 1.0, atr * 1.0, true);
+    }
+
+    private AIPrediction genericStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema200, AdvancedIndicatorsEngine.AdvancedIndicatorsResult indicators, double rsi, double adx, double atr, OptionData optionData) {
         boolean isMajorUptrend = currentPrice > ema200;
         boolean isMajorDowntrend = currentPrice < ema200;
-
-        // 2. Agent-Level Technical Analysis (50+ Indicators)
-        AdvancedIndicatorsEngine.AdvancedIndicatorsResult indicators = new AdvancedIndicatorsEngine().analyze50Plus(data);
-        
-        // 3. Agent-Level Pattern Detection (46+ Patterns)
         java.util.Set<String> patterns = com.trading.bot.technical.AdvancedCandlestickDetector.detectAll(data);
-        
-        // 4. Smart Money (FVG / OB) Analysis
         boolean hasFVG = detectFVG(data);
         
-        // Confluence Building
         int bullishCount = 0;
         int bearishCount = 0;
         java.util.List<String> bullishReasoning = new java.util.ArrayList<>();
         java.util.List<String> bearishReasoning = new java.util.ArrayList<>();
 
-        // Major Trend Alignment
         if (isMajorUptrend) { bullishCount++; bullishReasoning.add("Trend: Bullish (Above EMA200)"); }
         else if (isMajorDowntrend) { bearishCount++; bearishReasoning.add("Trend: Bearish (Below EMA200)"); }
 
-        // Indicators Confluence
-        if (indicators.overallSignal.equals("BULLISH")) { 
-            bullishCount += 2; 
-            bullishReasoning.add("Ind: " + indicators.reasoning); 
-        } else if (indicators.overallSignal.equals("BEARISH")) { 
-            bearishCount += 2; 
-            bearishReasoning.add("Ind: " + indicators.reasoning); 
-        }
+        if (indicators.overallSignal.equals("BULLISH")) { bullishCount += 2; bullishReasoning.add("Ind: " + indicators.reasoning); }
+        else if (indicators.overallSignal.equals("BEARISH")) { bearishCount += 2; bearishReasoning.add("Ind: " + indicators.reasoning); }
 
-        // Candlestick Confluence
         for (String p : patterns) {
-            if (p.contains("Bullish") || p.equals("Hammer") || p.equals("Morning Star") || p.equals("Bullish Engulfing")) {
-                bullishCount++; bullishReasoning.add("Pattern: " + p);
-            } else if (p.contains("Bearish") || p.equals("Shooting Star") || p.equals("Evening Star") || p.equals("Bearish Engulfing")) {
-                bearishCount++; bearishReasoning.add("Pattern: " + p);
-            }
+            if (p.contains("Bullish") || p.equals("Hammer") || p.equals("Morning Star") || p.equals("Bullish Engulfing")) { bullishCount++; bullishReasoning.add("Pattern: " + p); }
+            else if (p.contains("Bearish") || p.equals("Shooting Star") || p.equals("Evening Star") || p.equals("Bearish Engulfing")) { bearishCount++; bearishReasoning.add("Pattern: " + p); }
         }
 
-        // SMC Confluence
         if (hasFVG) { 
             if (isMajorUptrend) { bullishCount++; bullishReasoning.add("SMC: Bullish FVG"); }
             else if (isMajorDowntrend) { bearishCount++; bearishReasoning.add("SMC: Bearish FVG"); }
         }
 
-        // Greeks Analysis
-        if (optionData != null && optionData.greeks != null) {
-            double delta = optionData.greeks.getOrDefault("delta", 0.5);
-            double theta = optionData.greeks.getOrDefault("theta", -0.05);
-            if (Math.abs(delta) > 0.45 && theta > -0.1) {
-                if (delta > 0) { bullishCount++; bullishReasoning.add("Greeks: Bullish Delta/Theta"); }
-                else { bearishCount++; bearishReasoning.add("Greeks: Bearish Delta/Theta"); }
-            }
-        }
-
-        // Final Signal Logic
         String finalDirection = "NEUTRAL";
         double finalConfidence = 0;
         String finalReasoning = "No strong signal";
         
-        double adx = indicators.values.getOrDefault("adx", 25.0);
-        double rsi = indicators.values.getOrDefault("rsi14", 50.0);
-
-        // Requirements for 75%+ Win Rate
         if (isMajorUptrend && bullishCount >= 4 && adx > 22 && rsi < 65) {
             finalDirection = "UP";
             finalConfidence = 85 + (bullishCount * 2);
@@ -160,26 +214,7 @@ public class AIPredictor {
             finalReasoning = String.join(" | ", bearishReasoning);
         }
 
-        double atr = calculateATR(data, 14);
-        double targetPoints;
-        double stopLossPoints;
-        double adxVal = indicators.values.getOrDefault("adx", 25.0);
-        String regime = getMarketRegime(data);
-        if (adxVal > 25) {
-            targetPoints = atr * 1.3;
-            stopLossPoints = atr * 0.9;
-        } else if (adxVal > 22) {
-            targetPoints = atr * 1.2;
-            stopLossPoints = atr * 1.0;
-        } else if ("VOLATILE".equals(regime)) {
-            targetPoints = atr * 0.8;
-            stopLossPoints = atr * 0.8;
-        } else {
-            targetPoints = atr * 0.9;
-            stopLossPoints = atr * 0.9;
-        }
-
-        return new AIPrediction(finalDirection, finalConfidence, finalConfidence/100.0, indicators.values.getOrDefault("adx", 25.0), indicators.values.getOrDefault("rsi14", 50.0), atr/currentPrice, 80, "V19.7_MAS_75PLUS_WIN", finalReasoning, targetPoints, stopLossPoints, false);
+        return new AIPrediction(finalDirection, finalConfidence, finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, "GENERIC_V1", finalReasoning, atr * 1.0, atr * 1.0, false);
     }
 
     private boolean detectFVG(List<SimpleMarketData> data) {
