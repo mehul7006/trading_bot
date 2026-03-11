@@ -69,14 +69,34 @@ public class HonestMarketDataFetcher {
     }
     
     /**
-     * Update Access Token dynamically
+     * Update Access Token dynamically and CLEAR OLD CACHE
      */
     public static void setAccessToken(String token) {
         if (token != null && !token.trim().isEmpty()) {
             UPSTOX_ACCESS_TOKEN = token.trim();
             saveTokenToFile(token.trim());
-            // System.out.println("✅ Upstox Access Token updated successfully"); // Silenced
+            
+            // CRITICAL: Clear old market rates and cached data
+            // This ensures new token fetches FRESH data immediately
+            if (instance != null) {
+                instance.lastValidPrices.clear();
+                instance.lastValidTimes.clear();
+                instance.dataCache.clear();
+                System.out.println("♻️ Access Token Updated: Cleared old market data and cache.");
+            }
         }
+    }
+
+    /**
+     * Daily cleanup: Clear token and cache at 11:59 PM
+     */
+    public void clearDailySession() {
+        UPSTOX_ACCESS_TOKEN = "";
+        saveTokenToFile(""); // Clear file
+        lastValidPrices.clear();
+        lastValidTimes.clear();
+        dataCache.clear();
+        System.out.println("🕛 Daily Reset (11:59 PM): Token and Market Data cleared.");
     }
     
     public static String getAccessToken() {

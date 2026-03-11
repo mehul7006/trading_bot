@@ -169,6 +169,9 @@ public class Phase3TelegramBot {
         // Start message polling
         scheduler.scheduleWithFixedDelay(this::checkForMessages, 0, 2, TimeUnit.SECONDS);
         
+        // Schedule daily cleanup at 11:59 PM
+        scheduleDailyCleanup();
+        
         logger.info("✅ Phase 3 Telegram Bot started successfully");
         logger.info("🏦 Available features: Smart Money Analysis, Order Blocks, FVGs, Liquidity Analysis");
         logger.info("📱 Send /start to begin institutional trading analysis");
@@ -242,9 +245,6 @@ public class Phase3TelegramBot {
         }
     }
     
-    /**
-     * Parse and handle Telegram updates
-     */
     private void parseAndHandleUpdates(String responseBody) {
         try {
             // Simple JSON parsing for updates
@@ -266,38 +266,58 @@ public class Phase3TelegramBot {
                         if (updateId <= lastUpdateId) continue;
                         if (updateId > maxUpdateId) maxUpdateId = updateId;
                         
-                        // Skip if already processed
-                        if (processedMessages.contains(updateId)) continue;
-                        processedMessages.add(updateId);
+                        // Extract chatId and messageText
+                        long chatId = extractChatId(update);
+                        String text = extractMessageText(update);
                         
-                        // Extract chat_id and message text
-                        if (update.contains("\"text\":")) {
-                            long chatId = extractChatId(update);
-                            String text = extractMessageText(update);
-                            
-                            if (chatId != 0 && text != null) {
-                                activeChatId = chatId;
-                                // Store only the latest command, rolling over previous ones
-                                latestCommands.put(chatId, text.trim());
-                            }
+                        if (chatId != 0 && text != null) {
+                            // Filter out messages older than 30 seconds to prevent "re-play" after restart
+                            // Note: Telegram doesn't give timestamp easily in this simple parser, 
+                            // but we can at least ensure we only process each updateId ONCE globally.
+                            latestCommands.put(chatId, text);
                         }
                     } catch (Exception e) {
-                        // Skip malformed individual updates
-                        continue;
+                        // Skip malformed update
                     }
                 }
                 
-                // Advance offset once per batch
                 lastUpdateId = maxUpdateId;
                 
-                // Execute only the last command standing for each chat
-                for (Map.Entry<Long, String> entry : latestCommands.entrySet()) {
-                    handleCommand(entry.getKey(), entry.getValue());
-                }
+                // Process each unique command
+                latestCommands.forEach(this::processCommand);
             }
         } catch (Exception e) {
             logger.error("Error parsing updates: {}", e.getMessage());
         }
+    }
+
+    private synchronized void processCommand(long chatId, String text) {
+        // Prevent duplicate processing of the same command string if sent rapidly
+        String lastCmd = pendingCommands.get(chatId);
+        if (text.equals(lastCmd)) {
+            // Optional: check timestamp if needed
+            return;
+        }
+        pendingCommands.put(chatId, text);
+        
+        // Command Router
+        String command = text.trim();
+        logger.info("📩 Received command from {}: {}", chatId, command);
+        
+        if (command.startsWith("/start")) {
+            handleStartCommand(chatId);
+        } else if (command.startsWith("/token")) {
+            handleTokenCommand(chatId, command);
+        } else if (command.startsWith("/status")) {
+            handleStatusCommand(chatId);
+        } else if (command.startsWith("/scan")) {
+            handleScanCommand(chatId);
+        } else if (command.startsWith("/stop")) {
+            handleStopScanCommand(chatId);
+        }
+        
+        // Clear from pending after processing
+        scheduler.schedule(() -> pendingCommands.remove(chatId), 2, TimeUnit.SECONDS);
     }
     
     /**
@@ -379,12 +399,21 @@ public class Phase3TelegramBot {
 
     
     protected void handleStatusCommand(long chatId) {
+        // Clear slots triggered if it's a new day (Safety check)
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
+        if (!today.equals(lastResetDate)) {
+            todayCallsGenerated = 0;
+            slotsTriggered.clear();
+            lastResetDate = today;
+        }
+
         String rates = getCurrentMarketRatesSimple();
         String status = "📊 **Market Status Report**\n\n" + 
                        rates + "\n\n" +
                        "📢 **Today's Activity**\n" +
                        "• Calls Generated: `" + todayCallsGenerated + "`\n" +
-                       "• Win Rate: `N/A`";
+                       "• Active Slots: `" + slotsTriggered.size() + "/3`\n" +
+                       "• Bot Instance: `V19.8-LIVE`";
         
         sendMessage(chatId, status);
     }
@@ -710,6 +739,21 @@ public class Phase3TelegramBot {
         }
     }
     
+    private void scheduleDailyCleanup() {
+        LocalTime cleanupTime = LocalTime.of(23, 59);
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+        LocalDateTime nextCleanup = now.with(cleanupTime);
+        if (now.isAfter(nextCleanup)) {
+            nextCleanup = nextCleanup.plusDays(1);
+        }
+        
+        long initialDelay = java.time.Duration.between(now, nextCleanup).toSeconds();
+        scheduler.scheduleAtFixedRate(() -> {
+            logger.info("🕛 Executing daily token and market data cleanup...");
+            marketDataFetcher.clearDailySession();
+        }, initialDelay, 24 * 60 * 60, TimeUnit.SECONDS);
+    }
+
     /**
      * Main method to start the Phase 3 Telegram Bot
      */
