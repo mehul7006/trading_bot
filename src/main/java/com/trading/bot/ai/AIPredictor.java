@@ -100,88 +100,64 @@ public class AIPredictor {
         // Confluence Building
         int bullishCount = 0;
         int bearishCount = 0;
-        java.util.List<String> reasoningList = new java.util.ArrayList<>();
+        java.util.List<String> bullishReasoning = new java.util.ArrayList<>();
+        java.util.List<String> bearishReasoning = new java.util.ArrayList<>();
 
-        // Major Trend Alignment (Crucial for 75%+ Win Rate)
-        if (isMajorUptrend) { bullishCount++; reasoningList.add("Trend: Bullish (Above EMA200)"); }
-        else if (isMajorDowntrend) { bearishCount++; reasoningList.add("Trend: Bearish (Below EMA200)"); }
+        // Major Trend Alignment
+        if (isMajorUptrend) { bullishCount++; bullishReasoning.add("Trend: Bullish (Above EMA200)"); }
+        else if (isMajorDowntrend) { bearishCount++; bearishReasoning.add("Trend: Bearish (Below EMA200)"); }
 
-        // Indicators Confluence (30+ factors)
-        if (indicators.overallSignal.equals("BULLISH")) { bullishCount += 2; reasoningList.add("Ind: " + indicators.reasoning); }
-        else if (indicators.overallSignal.equals("BEARISH")) { bearishCount += 2; reasoningList.add("Ind: " + indicators.reasoning); }
+        // Indicators Confluence
+        if (indicators.overallSignal.equals("BULLISH")) { 
+            bullishCount += 2; 
+            bullishReasoning.add("Ind: " + indicators.reasoning); 
+        } else if (indicators.overallSignal.equals("BEARISH")) { 
+            bearishCount += 2; 
+            bearishReasoning.add("Ind: " + indicators.reasoning); 
+        }
 
-        // Candlestick Confluence (46 patterns)
+        // Candlestick Confluence
         for (String p : patterns) {
             if (p.contains("Bullish") || p.equals("Hammer") || p.equals("Morning Star") || p.equals("Bullish Engulfing")) {
-                bullishCount++; reasoningList.add("Pattern: " + p);
+                bullishCount++; bullishReasoning.add("Pattern: " + p);
             } else if (p.contains("Bearish") || p.equals("Shooting Star") || p.equals("Evening Star") || p.equals("Bearish Engulfing")) {
-                bearishCount++; reasoningList.add("Pattern: " + p);
+                bearishCount++; bearishReasoning.add("Pattern: " + p);
             }
         }
 
         // SMC Confluence
         if (hasFVG) { 
-            if (isMajorUptrend) { bullishCount++; reasoningList.add("SMC: Bullish FVG"); }
-            else if (isMajorDowntrend) { bearishCount++; reasoningList.add("SMC: Bearish FVG"); }
+            if (isMajorUptrend) { bullishCount++; bullishReasoning.add("SMC: Bullish FVG"); }
+            else if (isMajorDowntrend) { bearishCount++; bearishReasoning.add("SMC: Bearish FVG"); }
         }
 
-        // Greeks Analysis (V19.3 Option Suitability)
+        // Greeks Analysis
         if (optionData != null && optionData.greeks != null) {
             double delta = optionData.greeks.getOrDefault("delta", 0.5);
             double theta = optionData.greeks.getOrDefault("theta", -0.05);
             if (Math.abs(delta) > 0.45 && theta > -0.1) {
-                bullishCount++; reasoningList.add("Greeks: High Delta/Low Theta");
+                if (delta > 0) { bullishCount++; bullishReasoning.add("Greeks: Bullish Delta/Theta"); }
+                else { bearishCount++; bearishReasoning.add("Greeks: Bearish Delta/Theta"); }
             }
         }
 
-        // Final Signal Logic (V19.7 Ultra Precision & All-Day Frequency)
-        // Aiming for 75%+ win rate by requiring Trend + High Quality Confluence
+        // Final Signal Logic
         String finalDirection = "NEUTRAL";
         double finalConfidence = 0;
+        String finalReasoning = "No strong signal";
         
         double adx = indicators.values.getOrDefault("adx", 25.0);
         double rsi = indicators.values.getOrDefault("rsi14", 50.0);
 
-        // Quality Confluence Weights:
-        // - Major Trend (EMA200): +1
-        // - Indicator Engine (analyze50Plus): +2
-        // - Pattern Detection (AdvancedCandlestickDetector): +1 per strong pattern
-        // - SMC (FVG): +1
-        // - Greeks Suitability: +1
-        
-        int totalScore = 0;
-        if (isMajorUptrend) totalScore++;
-        if (indicators.overallSignal.equals("BULLISH") && indicators.confluenceScore >= 70) totalScore += 2;
-        if (hasFVG && isMajorUptrend) totalScore++;
-        
-        // Count strong bullish patterns
-        for (String p : patterns) {
-            if (p.equals("Bullish Engulfing") || p.equals("Morning Star") || p.equals("Hammer")) totalScore++;
-        }
-
-        // Requirements for 75%+ Win Rate:
-        // 1. Must align with Major Trend (EMA200)
-        // 2. Total Confluence Score >= 4
-        // 3. ADX Trend Strength > 22
-        // 4. RSI in healthy range (35-65)
-        
-        if (isMajorUptrend && totalScore >= 4 && adx > 22 && rsi < 65) {
+        // Requirements for 75%+ Win Rate
+        if (isMajorUptrend && bullishCount >= 4 && adx > 22 && rsi < 65) {
             finalDirection = "UP";
-            finalConfidence = 85 + (totalScore * 2);
-        } else {
-            // Check for Bearish
-            int bearishScore = 0;
-            if (isMajorDowntrend) bearishScore++;
-            if (indicators.overallSignal.equals("BEARISH") && indicators.confluenceScore >= 70) bearishScore += 2;
-            if (hasFVG && isMajorDowntrend) bearishScore++;
-            for (String p : patterns) {
-                if (p.equals("Bearish Engulfing") || p.equals("Evening Star") || p.equals("Shooting Star")) bearishScore++;
-            }
-            
-            if (isMajorDowntrend && bearishScore >= 4 && adx > 22 && rsi > 35) {
-                finalDirection = "DOWN";
-                finalConfidence = 85 + (bearishScore * 2);
-            }
+            finalConfidence = 85 + (bullishCount * 2);
+            finalReasoning = String.join(" | ", bullishReasoning);
+        } else if (isMajorDowntrend && bearishCount >= 4 && adx > 22 && rsi > 35) {
+            finalDirection = "DOWN";
+            finalConfidence = 85 + (bearishCount * 2);
+            finalReasoning = String.join(" | ", bearishReasoning);
         }
 
         double atr = calculateATR(data, 14);
@@ -203,7 +179,7 @@ public class AIPredictor {
             stopLossPoints = atr * 0.9;
         }
 
-        return new AIPrediction(finalDirection, finalConfidence, finalConfidence/100.0, indicators.values.getOrDefault("adx", 25.0), indicators.values.getOrDefault("rsi14", 50.0), atr/currentPrice, 80, "V19.7_MAS_75PLUS_WIN", String.join(" | ", reasoningList), targetPoints, stopLossPoints, false);
+        return new AIPrediction(finalDirection, finalConfidence, finalConfidence/100.0, indicators.values.getOrDefault("adx", 25.0), indicators.values.getOrDefault("rsi14", 50.0), atr/currentPrice, 80, "V19.7_MAS_75PLUS_WIN", finalReasoning, targetPoints, stopLossPoints, false);
     }
 
     private boolean detectFVG(List<SimpleMarketData> data) {

@@ -97,7 +97,10 @@ public class AdvancedIndicatorsEngine {
         double confluence = calculateConfluence(stoch, wr, adx);
         String signal = determineOverallSignal(stoch, wr, adx, confluence);
         
-        return new AdvancedIndicatorsResult(vals, sigs, confluence, signal, "V19.3 (50+ Factors Confluence)", stoch, wr, adx);
+        String dynamicReasoning = String.format("V19.3 (Score: %.1f | ADX: %.1f | RSI: %.1f)", 
+            confluence, adx.adx, vals.getOrDefault("rsi14", 50.0));
+        
+        return new AdvancedIndicatorsResult(vals, sigs, confluence, signal, dynamicReasoning, stoch, wr, adx);
     }
 
     private double currentPriceFibo(List<SimpleMarketData> d, double r) {

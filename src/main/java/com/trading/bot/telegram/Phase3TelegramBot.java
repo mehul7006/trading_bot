@@ -529,7 +529,20 @@ public class Phase3TelegramBot {
                     chosenPrediction.greeks.getOrDefault("gamma", 0.0));
             }
 
-            String alert = signalEmoji + " **CONFIRMED CALL DETECTED**\n\n" +
+            // Check if data is fresh
+            SimpleMarketData latestData = data5 != null && !data5.isEmpty() ? data5.get(data5.size() - 1) : null;
+            LocalDateTime dataTime = latestData != null ? latestData.timestamp : LocalDateTime.now();
+            boolean isFresh = dataTime.isAfter(LocalDateTime.now().minusMinutes(20));
+            
+            if (!isFresh) {
+                logger.warn("⚠️ Skipping alert for {} as data is stale (last update: {})", symbol, dataTime);
+                return;
+            }
+
+            String alertId = "AL-" + (System.currentTimeMillis() % 10000);
+            String timestamp = LocalDateTime.now(ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
+
+            String alert = signalEmoji + " **CONFIRMED CALL DETECTED** [" + alertId + "]\n\n" +
                           "📌 **Symbol:** " + symbol + "\n" +
                           "⏱️ **Timeframe:** " + timeframeLabel + "\n" +
                           "🚀 **Direction:** " + chosenPrediction.predictedDirection + " " + arrow + "\n" +
@@ -542,7 +555,8 @@ public class Phase3TelegramBot {
                           "📊 **Option Metrics:**\n" +
                           "   • Put-Call Ratio (PCR): " + String.format("%.2f", chosenPrediction.pcr) + "\n" +
                           greeksInfo +
-                          "📝 **Reasoning:** " + chosenPrediction.predictionReasoning;
+                          "📝 **Reasoning:** " + chosenPrediction.predictionReasoning + "\n\n" +
+                          "🕒 **Alert Time:** " + timestamp + " IST";
             
             sendMessage(chatId, alert);
             lastAlertTimeMap.put(symbol, currentTime);
