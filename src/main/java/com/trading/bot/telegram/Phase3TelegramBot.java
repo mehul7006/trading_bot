@@ -526,10 +526,10 @@ public class Phase3TelegramBot {
                 logger.error("Error generating 1-min prediction for {}: {}", symbol, ex.getMessage());
             }
             
-            boolean fiveMinEligible = checkMinimumPoints(symbol, prediction5.estimatedMovePoints) && prediction5.confidence >= 80;
+            boolean fiveMinEligible = checkMinimumPoints(symbol, prediction5.estimatedMovePoints) && prediction5.confidence >= 70;
             boolean oneMinEligible = false;
             if (prediction1 != null) {
-                oneMinEligible = checkMinimumPoints(symbol, prediction1.estimatedMovePoints) && prediction1.confidence >= 85;
+                oneMinEligible = checkMinimumPoints(symbol, prediction1.estimatedMovePoints) && prediction1.confidence >= 75;
             }
             
             AIPredictor.AIPrediction chosenPrediction = null;
@@ -624,18 +624,21 @@ public class Phase3TelegramBot {
 
     private boolean checkMinimumPoints(String symbol, double estimatedPoints) {
         double minPoints = switch (symbol) {
-            case "NIFTY50" -> 30.0;
-            case "SENSEX" -> 80.0;
-            case "BANKNIFTY" -> 50.0;
-            default -> 20.0;
+            case "NIFTY50" -> 20.0;
+            case "SENSEX" -> 60.0;
+            case "BANKNIFTY" -> 40.0;
+            default -> 15.0;
         };
         return estimatedPoints >= minPoints;
     }
     
     private int getSlot(LocalTime time) {
-        if (time.isBefore(LocalTime.of(11, 0))) return 0;
-        if (time.isBefore(LocalTime.of(13, 0))) return 1;
-        return 2;
+        // More granular slots for higher frequency
+        int hour = time.getHour();
+        if (hour < 11) return 0; // Morning (09:15 - 11:00)
+        if (hour < 13) return 1; // Noon (11:00 - 13:00)
+        if (hour < 15) return 2; // Afternoon (13:00 - 15:00)
+        return 3; // Closing (15:00+)
     }
     
     /**

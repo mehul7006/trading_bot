@@ -126,26 +126,26 @@ public class AIPredictor {
         String finalDirection = "NEUTRAL";
         double finalConfidence = 0;
         
-        // BankNifty needs high confluence (2+) OR very strong institutional delta
-        if (bullishCount >= 2 || (scalper.predictedDirection.equals("UP") && scalper.confidence > 90)) {
+        // BankNifty needs confluence (2+) OR strong institutional delta
+        if (bullishCount >= 2 || (scalper.predictedDirection.equals("UP") && scalper.confidence >= 80)) {
             finalDirection = "UP";
-            finalConfidence = 87 + (bullishCount * 2);
-        } else if (bearishCount >= 2 || (scalper.predictedDirection.equals("DOWN") && scalper.confidence > 90)) {
+            finalConfidence = 80 + (bullishCount * 3);
+        } else if (bearishCount >= 2 || (scalper.predictedDirection.equals("DOWN") && scalper.confidence >= 80)) {
             finalDirection = "DOWN";
-            finalConfidence = 87 + (bearishCount * 2);
+            finalConfidence = 80 + (bearishCount * 3);
         }
 
-        return new AIPrediction(finalDirection, finalConfidence, finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, "BANKNIFTY_VOL_V1", "BankNifty Multi-Factor: " + String.join(" + ", reasoningList), atr * 1.2, atr * 1.2, false);
+        return new AIPrediction(finalDirection, finalConfidence, finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, "BANKNIFTY_VOL_V1", "BankNifty Multi-Factor: " + String.join(" + ", reasoningList), atr * 1.5, atr * 1.5, false);
     }
 
     private AIPrediction bankNiftyTrendStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema50, double rsi, double adx, double atr, OptionData optionData) {
         double ema20 = calculateEMA(data, 20);
-        boolean up = currentPrice > ema20 && ema20 > ema50 && adx > 25 && rsi > 55;
-        boolean down = currentPrice < ema20 && ema20 < ema50 && adx > 25 && rsi < 45;
+        boolean up = currentPrice > ema20 && ema20 > ema50 && adx > 20 && rsi > 52;
+        boolean down = currentPrice < ema20 && ema20 < ema50 && adx > 20 && rsi < 48;
         
         String dir = up ? "UP" : (down ? "DOWN" : "NEUTRAL");
-        double score = up || down ? 85 : 0;
-        return new AIPrediction(dir, score, score/100.0, adx, rsi, atr/currentPrice, 80, "BN_TREND", "BankNifty Trend Alignment", atr * 1.0, atr * 1.0, false);
+        double score = up || down ? 80 : 0;
+        return new AIPrediction(dir, score, score/100.0, adx, rsi, atr/currentPrice, 80, "BN_TREND", "BankNifty Trend Alignment", atr * 1.2, atr * 1.2, false);
     }
 
     private AIPrediction bankNiftyVWAPStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double atr) {
@@ -154,23 +154,23 @@ public class AIPredictor {
         double score = 0;
         
         // Buy if price pulls back to VWAP and holds (Mean Reversion / Trend Continuation)
-        if (currentPrice > vwap && currentPrice < vwap + (atr * 0.2)) {
+        if (currentPrice > vwap && currentPrice < vwap + (atr * 0.3)) {
             dir = "UP";
-            score = 82;
-        } else if (currentPrice < vwap && currentPrice > vwap - (atr * 0.2)) {
+            score = 78;
+        } else if (currentPrice < vwap && currentPrice > vwap - (atr * 0.3)) {
             dir = "DOWN";
-            score = 82;
+            score = 78;
         }
-        return new AIPrediction(dir, score, score/100.0, 0, 0, 0, 80, "BN_VWAP", "VWAP Pullback/Support", atr * 1.0, atr * 0.8, false);
+        return new AIPrediction(dir, score, score/100.0, 0, 0, 0, 80, "BN_VWAP", "VWAP Pullback/Support", atr * 1.2, atr * 1.0, false);
     }
 
     private AIPrediction bankNiftyOptionScalperStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double rsi, double adx, double atr, OptionData optionData) {
         if (optionData == null) return createDefaultAIPrediction("No Option Data");
         String dir = "NEUTRAL";
         double score = 0;
-        if (optionData.putOIChange > optionData.callOIChange * 2.8 && rsi > 55) { dir = "UP"; score = 91; }
-        else if (optionData.callOIChange > optionData.putOIChange * 2.8 && rsi < 45) { dir = "DOWN"; score = 91; }
-        return new AIPrediction(dir, score, score/100.0, adx, rsi, atr/currentPrice, 80, "BN_INST", "Institutional Delta Shift (Extreme)", atr * 1.0, atr * 1.0, true);
+        if (optionData.putOIChange > optionData.callOIChange * 1.8 && rsi > 50) { dir = "UP"; score = 85; }
+        else if (optionData.callOIChange > optionData.putOIChange * 1.8 && rsi < 50) { dir = "DOWN"; score = 85; }
+        return new AIPrediction(dir, score, score/100.0, adx, rsi, atr/currentPrice, 80, "BN_INST", "Institutional Delta Shift", atr * 1.2, atr * 1.2, true);
     }
 
     private AIPrediction genericStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema200, AdvancedIndicatorsEngine.AdvancedIndicatorsResult indicators, double rsi, double adx, double atr, OptionData optionData) {
@@ -314,38 +314,38 @@ public class AIPredictor {
         // 1. Confluence (2+) AND (Volume OR Pattern)
         // 2. OR Very Strong Scalper (Confidence > 85)
         
-        // V19.2 Rule: Balanced for quality and frequency
-        boolean strongBullish = (bullishCount >= 2 && adx > 25) || (scalper.predictedDirection.equals("UP") && scalper.confidence > 90);
-        boolean strongBearish = (bearishCount >= 2 && adx > 25) || (scalper.predictedDirection.equals("DOWN") && scalper.confidence > 90);
+        // V19.2 Rule: Optimized for higher frequency (Aiming 1-2 calls/day)
+        boolean strongBullish = (bullishCount >= 2 && adx > 20) || (scalper.predictedDirection.equals("UP") && scalper.confidence >= 80);
+        boolean strongBearish = (bearishCount >= 2 && adx > 20) || (scalper.predictedDirection.equals("DOWN") && scalper.confidence >= 80);
 
         if (strongBullish) {
             finalDirection = "UP";
-            finalConfidence = 85 + (bullishCount * 2);
+            finalConfidence = 75 + (bullishCount * 3);
             finalReasoning = "V19 CONFLUENCE: " + String.join(" + ", reasoningList);
         } else if (strongBearish) {
             finalDirection = "DOWN";
-            finalConfidence = 85 + (bearishCount * 2);
+            finalConfidence = 75 + (bearishCount * 3);
             finalReasoning = "V19 CONFLUENCE: " + String.join(" + ", reasoningList);
         }
 
         if (optionData != null && !finalDirection.equals("NEUTRAL")) {
-            boolean alignUp = optionData.pcr < 1.0 && optionData.putOIChange > optionData.callOIChange * 1.2;
-            boolean alignDown = optionData.pcr > 1.0 && optionData.callOIChange > optionData.putOIChange * 1.2;
+            boolean alignUp = optionData.pcr <= 1.1 && optionData.putOIChange > optionData.callOIChange * 1.1;
+            boolean alignDown = optionData.pcr >= 0.9 && optionData.callOIChange > optionData.putOIChange * 1.1;
             if (finalDirection.equals("UP") && !alignUp) {
-                finalConfidence -= 10;
+                finalConfidence -= 5;
             } else if (finalDirection.equals("DOWN") && !alignDown) {
-                finalConfidence -= 10;
+                finalConfidence -= 5;
             }
         }
-        if (finalConfidence < 85) {
+        if (finalConfidence < 70) {
             finalDirection = "NEUTRAL";
             finalConfidence = 0;
         } else {
             finalConfidence = Math.min(98.0, finalConfidence);
         }
         
-        // V19.2 Exit: Target 1.0x ATR, SL 1.5x ATR (Standard)
-        return new AIPrediction(finalDirection, finalConfidence, finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, finalModel, finalReasoning, atr * 1.0, atr * 1.5, false);
+        // V19.2 Exit: Target 1.2x ATR, SL 1.2x ATR (Better Risk/Reward)
+        return new AIPrediction(finalDirection, finalConfidence, finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, finalModel, finalReasoning, atr * 1.2, atr * 1.2, false);
     }
 
     private AIPrediction niftyTrendStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema50, double rsi, double adx, double atr, SimpleMarketData latest, OptionData optionData) {
@@ -358,22 +358,22 @@ public class AIPredictor {
         boolean isBullishTrend = currentPrice > ema20 && ema10 > ema20 && ema20 > ema50;
         boolean isBearishTrend = currentPrice < ema20 && ema10 < ema20 && ema20 < ema50;
         
-        // Tightened RSI/ADX (V19.1 Optimization)
-        boolean rsiOk = (rsi > 60 && isBullishTrend) || (rsi < 40 && isBearishTrend); 
-        boolean adxOk = adx > 22; 
+        // Balanced RSI/ADX (V19.5 Optimization)
+        boolean rsiOk = (rsi > 55 && isBullishTrend) || (rsi < 45 && isBearishTrend); 
+        boolean adxOk = adx > 18; 
 
         boolean optionOk = true;
         if (optionData != null) {
-            if (isBullishTrend && (optionData.pcr < 1.1 || optionData.putOIChange < optionData.callOIChange * 1.8)) optionOk = false;
-            if (isBearishTrend && (optionData.pcr > 0.9 || optionData.callOIChange < optionData.putOIChange * 1.8)) optionOk = false;
+            if (isBullishTrend && (optionData.putOIChange < optionData.callOIChange * 1.3)) optionOk = false;
+            if (isBearishTrend && (optionData.callOIChange < optionData.putOIChange * 1.3)) optionOk = false;
         }
 
         if ((isBullishTrend || isBearishTrend) && rsiOk && adxOk && optionOk) {
             direction = isBullishTrend ? "UP" : "DOWN";
-            score = 85 + (adx / 4);
+            score = 80 + (adx / 3);
         }
 
-        return new AIPrediction(direction, score, score/100.0, adx, rsi, atr/currentPrice, 80, "NIFTY_TREND_V9", "Elite Trend + Institutional Confirmation", atr * 1.2, atr * 1.2, false);
+        return new AIPrediction(direction, score, score/100.0, adx, rsi, atr/currentPrice, 80, "NIFTY_TREND_V9", "Trend + Institutional Confirmation", atr * 1.2, atr * 1.0, false);
     }
 
     private AIPrediction niftyOptionScalperStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double rsi, double adx, double atr, OptionData optionData) {
@@ -382,19 +382,17 @@ public class AIPredictor {
         String direction = "NEUTRAL";
         double score = 0;
         
-        // Institutional "Delta" Scalp Logic (Tightened):
-        // Buy if Put writers are 2.5x Call writers AND RSI > 52
-        if (optionData.putOIChange > optionData.callOIChange * 2.5 && rsi > 52) {
+        // Institutional "Delta" Scalp Logic (Optimized for frequency):
+        if (optionData.putOIChange > optionData.callOIChange * 1.5 && rsi > 50) {
             direction = "UP";
-            score = 88;
+            score = 82;
         }
-        // Sell if Call writers are 2.5x Put writers AND RSI < 48
-        else if (optionData.callOIChange > optionData.putOIChange * 2.5 && rsi < 48) {
+        else if (optionData.callOIChange > optionData.putOIChange * 1.5 && rsi < 50) {
             direction = "DOWN";
-            score = 88;
+            score = 82;
         }
 
-        return new AIPrediction(direction, score, score/100.0, adx, rsi, atr/currentPrice, 80, "NIFTY_INSTITUTIONAL_SCALPER_V2", "Institutional Delta Shift (Tightened)", atr * 1.0, atr * 1.0, true);
+        return new AIPrediction(direction, score, score/100.0, adx, rsi, atr/currentPrice, 80, "NIFTY_INSTITUTIONAL_SCALPER_V2", "Institutional Delta Shift", atr * 1.0, atr * 1.0, true);
     }
 
     private AIPrediction niftyMeanReversionStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double rsi, double atr, SimpleMarketData latest, OptionData optionData) {
@@ -483,31 +481,37 @@ public class AIPredictor {
         String finalReasoning = "No strong signal";
         String finalModel = "SENSEX_CONSISTENT_V19";
 
-        boolean strongBullish = (bullishCount >= 2 && (volumeOk || !pattern.equals("NONE"))) || (scalper.predictedDirection.equals("UP") && scalper.confidence > 85);
-        boolean strongBearish = (bearishCount >= 2 && (volumeOk || !pattern.equals("NONE"))) || (scalper.predictedDirection.equals("DOWN") && scalper.confidence > 85);
+        boolean strongBullish = (bullishCount >= 2 && (volumeOk || !pattern.equals("NONE"))) || (scalper.predictedDirection.equals("UP") && scalper.confidence >= 80);
+        boolean strongBearish = (bearishCount >= 2 && (volumeOk || !pattern.equals("NONE"))) || (scalper.predictedDirection.equals("DOWN") && scalper.confidence >= 80);
 
         if (strongBullish) {
             finalDirection = "UP";
-            finalConfidence = 88 + (bullishCount * 2);
+            finalConfidence = 78 + (bullishCount * 3);
             finalReasoning = "V19 CONFLUENCE: " + String.join(" + ", reasoningList);
         } else if (strongBearish) {
             finalDirection = "DOWN";
-            finalConfidence = 88 + (bearishCount * 2);
+            finalConfidence = 78 + (bearishCount * 3);
             finalReasoning = "V19 CONFLUENCE: " + String.join(" + ", reasoningList);
         }
 
         if (optionData != null && !finalDirection.equals("NEUTRAL")) {
             if (finalDirection.equals("UP")) {
-                if (optionData.pcr > 1.05 && optionData.putOIChange > optionData.callOIChange * 1.4) finalConfidence += 4;
+                if (optionData.pcr > 1.0 && optionData.putOIChange > optionData.callOIChange * 1.1) finalConfidence += 5;
             } else {
-                if (optionData.pcr < 0.95 && optionData.callOIChange > optionData.putOIChange * 1.4) finalConfidence += 4;
+                if (optionData.pcr < 1.0 && optionData.callOIChange > optionData.putOIChange * 1.1) finalConfidence += 5;
             }
             Double d = optionData.greeks != null ? optionData.greeks.get("delta") : null;
-            if (d != null && Math.abs(d) >= 0.4) finalConfidence += 2;
+            if (d != null && Math.abs(d) >= 0.35) finalConfidence += 3;
         }
-        finalConfidence = Math.min(98.0, finalConfidence);
         
-        return new AIPrediction(finalDirection, finalConfidence, finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, finalModel, finalReasoning, atr * 1.0, atr * 3.0, false);
+        if (finalConfidence < 72) {
+            finalDirection = "NEUTRAL";
+            finalConfidence = 0;
+        } else {
+            finalConfidence = Math.min(98.0, finalConfidence);
+        }
+        
+        return new AIPrediction(finalDirection, finalConfidence, finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, finalModel, finalReasoning, atr * 1.5, atr * 1.5, false);
     }
 
     private AIPrediction sensexTrendStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema20, double rsi, double adx, double atr, OptionData optionData) {
@@ -520,13 +524,13 @@ public class AIPredictor {
         boolean trendUp = currentPrice > ema20 && ema10 > ema20 && ema20 > ema50;
         boolean trendDown = currentPrice < ema20 && ema10 < ema20 && ema20 < ema50;
         
-        // Elite filtering for SENSEX
-        if ((trendUp || trendDown) && adx > 28 && (rsi > 60 || rsi < 40)) {
+        // Balanced filtering for SENSEX
+        if ((trendUp || trendDown) && adx > 22 && (rsi > 55 || rsi < 45)) {
             direction = trendUp ? "UP" : "DOWN";
-            score = 85 + (adx / 4);
+            score = 82 + (adx / 4);
         }
         
-        return new AIPrediction(direction, score, score/100.0, adx, rsi, atr/currentPrice, 80, "SENSEX_TREND_V7", "Elite Sensex Multi-EMA Trend", atr * 2.0, atr * 1.2, false);
+        return new AIPrediction(direction, score, score/100.0, adx, rsi, atr/currentPrice, 80, "SENSEX_TREND_V7", "Sensex Multi-EMA Trend", atr * 2.0, atr * 1.2, false);
     }
 
     private AIPrediction sensexBreakoutStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double adx, double atr, SimpleMarketData latest, OptionData optionData) {
@@ -540,13 +544,13 @@ public class AIPredictor {
         
         if (isSqueeze && currentPrice > upperBB) {
             direction = "UP";
-            score = 88;
+            score = 85;
         } else if (isSqueeze && currentPrice < lowerBB) {
             direction = "DOWN";
-            score = 88;
+            score = 85;
         }
 
-        return new AIPrediction(direction, score, score/100.0, adx, 0, atr/currentPrice, 80, "SENSEX_BREAKOUT_V1", "Volatility Expansion", atr * 2.5, atr * 2.0, true);
+        return new AIPrediction(direction, score, score/100.0, adx, 0, atr/currentPrice, 80, "SENSEX_BREAKOUT_V1", "Volatility Expansion", atr * 2.0, atr * 1.5, true);
     }
 
     private AIPrediction sensexOptionScalperStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double rsi, double adx, double atr, OptionData optionData) {
@@ -555,16 +559,16 @@ public class AIPredictor {
         String direction = "NEUTRAL";
         double score = 0;
         
-        // Institutional "Delta" Scalp Logic (Tightened for Sensex):
-        if (optionData.putOIChange > optionData.callOIChange * 2.2 && rsi > 50) {
+        // Institutional "Delta" Scalp Logic (Optimized for Sensex):
+        if (optionData.putOIChange > optionData.callOIChange * 1.8 && rsi > 50) {
             direction = "UP";
-            score = 85;
-        } else if (optionData.callOIChange > optionData.putOIChange * 2.2 && rsi < 50) {
+            score = 82;
+        } else if (optionData.callOIChange > optionData.putOIChange * 1.8 && rsi < 50) {
             direction = "DOWN";
-            score = 85;
+            score = 82;
         }
 
-        return new AIPrediction(direction, score, score/100.0, adx, rsi, atr/currentPrice, 80, "SENSEX_INSTITUTIONAL_SCALPER_V2", "Institutional Delta Shift (Tightened)", atr * 1.5, atr * 1.5, true);
+        return new AIPrediction(direction, score, score/100.0, adx, rsi, atr/currentPrice, 80, "SENSEX_INSTITUTIONAL_SCALPER_V2", "Institutional Delta Shift", atr * 1.2, atr * 1.2, true);
     }
 
     private AIPrediction sensexMeanReversionStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double rsi, double atr, OptionData optionData) {

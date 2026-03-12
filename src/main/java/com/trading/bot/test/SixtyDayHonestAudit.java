@@ -152,8 +152,11 @@ public class SixtyDayHonestAudit {
             AIPredictor.AIPrediction prediction1 = predictor.generatePrediction(symbol, history1, null);
             
             // DUAL TIMEFRAME LOGIC (Live Bot implementation)
-            boolean fiveMinEligible = checkMinimumPoints(symbol, prediction5.estimatedMovePoints) && prediction5.confidence >= 80;
-            boolean oneMinEligible = checkMinimumPoints(symbol, prediction1.estimatedMovePoints) && prediction1.confidence >= 85;
+            boolean fiveMinEligible = checkMinimumPoints(symbol, prediction5.estimatedMovePoints) && prediction5.confidence >= 70;
+            boolean oneMinEligible = false;
+            if (prediction1 != null) {
+                oneMinEligible = checkMinimumPoints(symbol, prediction1.estimatedMovePoints) && prediction1.confidence >= 75;
+            }
 
             AIPredictor.AIPrediction chosen = null;
             double entryPrice = 0;
@@ -214,9 +217,9 @@ public class SixtyDayHonestAudit {
 
     private static boolean checkMinimumPoints(String symbol, double estimatedPoints) {
         double minPoints = switch (symbol) {
-            case "NIFTY50" -> 30.0;
-            case "SENSEX" -> 80.0;
-            default -> 20.0;
+            case "NIFTY50" -> 20.0;
+            case "SENSEX" -> 60.0;
+            default -> 15.0;
         };
         return estimatedPoints >= minPoints;
     }
