@@ -292,32 +292,33 @@ public class Phase3TelegramBot {
     }
 
     private synchronized void processCommand(long chatId, String text) {
-        // Prevent duplicate processing of the same command string if sent rapidly
+        // Simple case-insensitive match for the command part
+        String command = text.trim();
+        String cmdKey = command.toLowerCase().split("\\s+")[0];
+        
+        // Check for exact duplicate in the last 5 seconds to prevent rapid double-processing
         String lastCmd = pendingCommands.get(chatId);
-        if (text.equals(lastCmd)) {
-            // Optional: check timestamp if needed
+        if (command.equals(lastCmd)) {
             return;
         }
-        pendingCommands.put(chatId, text);
+        pendingCommands.put(chatId, command);
         
-        // Command Router
-        String command = text.trim();
         logger.info("📩 Received command from {}: {}", chatId, command);
         
-        if (command.startsWith("/start")) {
+        if (cmdKey.startsWith("/start")) {
             handleStartCommand(chatId);
-        } else if (command.startsWith("/token")) {
+        } else if (cmdKey.startsWith("/token")) {
             handleTokenCommand(chatId, command);
-        } else if (command.startsWith("/status")) {
+        } else if (cmdKey.startsWith("/status")) {
             handleStatusCommand(chatId);
-        } else if (command.startsWith("/scan")) {
+        } else if (cmdKey.startsWith("/scan")) {
             handleScanCommand(chatId);
-        } else if (command.startsWith("/stop")) {
+        } else if (cmdKey.startsWith("/stop")) {
             handleStopScanCommand(chatId);
         }
         
-        // Clear from pending after processing
-        scheduler.schedule(() -> pendingCommands.remove(chatId), 2, TimeUnit.SECONDS);
+        // Auto-clear from pending after a short delay to allow future valid same commands
+        scheduler.schedule(() -> pendingCommands.remove(chatId), 5, TimeUnit.SECONDS);
     }
     
     /**
@@ -683,6 +684,7 @@ public class Phase3TelegramBot {
     }
 
     protected boolean sendRequest(long chatId, String text, String parseMode) {
+        if (text == null || text.trim().isEmpty()) return false;
         try {
             String url = TELEGRAM_API_URL + "/sendMessage";
             
@@ -708,18 +710,16 @@ public class Phase3TelegramBot {
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(jsonData))
+                .timeout(java.time.Duration.ofSeconds(10))
+                .POST(HttpRequest.BodyPublishers.ofString(jsonData, StandardCharsets.UTF_8))
                 .build();
                 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             
             if (response.statusCode() != 200) {
-                System.err.println("❌ Telegram API Error: " + response.statusCode() + " - " + response.body());
-                logger.error("Telegram API Error: {} - {}", response.statusCode(), response.body());
+                logger.error("❌ Telegram API Error: {} - {}", response.statusCode(), response.body());
                 return false;
             } else {
-                logger.debug("📤 Sent message to chat {}: {}", chatId, text.substring(0, Math.min(50, text.length())));
-                System.out.println("✅ Message sent to " + chatId);
                 return true;
             }
         } catch (Exception e) {
