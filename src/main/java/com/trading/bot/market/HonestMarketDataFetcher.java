@@ -69,20 +69,17 @@ public class HonestMarketDataFetcher {
     }
     
     /**
-     * Update Access Token dynamically and CLEAR OLD CACHE
+     * Update Access Token dynamically and CLEAR ALL CACHE (Memory + Disk)
      */
     public static void setAccessToken(String token) {
         if (token != null && !token.trim().isEmpty()) {
             UPSTOX_ACCESS_TOKEN = token.trim();
             saveTokenToFile(token.trim());
             
-            // CRITICAL: Clear old market rates and cached data
-            // This ensures new token fetches FRESH data immediately
+            // CRITICAL: Clear memory AND disk cache to force fresh fetch
             if (instance != null) {
-                instance.lastValidPrices.clear();
-                instance.lastValidTimes.clear();
-                instance.dataCache.clear();
-                System.out.println("♻️ Access Token Updated: Cleared old market data and cache.");
+                instance.clearAllCache();
+                System.out.println("♻️ Access Token Updated: Memory and Disk Cache cleared.");
             }
         }
     }
@@ -93,10 +90,31 @@ public class HonestMarketDataFetcher {
     public void clearDailySession() {
         UPSTOX_ACCESS_TOKEN = "";
         saveTokenToFile(""); // Clear file
+        clearAllCache();
+        System.out.println("🕛 Daily Reset (11:59 PM): Token and All Cache cleared.");
+    }
+
+    private void clearAllCache() {
         lastValidPrices.clear();
         lastValidTimes.clear();
         dataCache.clear();
-        System.out.println("🕛 Daily Reset (11:59 PM): Token and Market Data cleared.");
+        
+        // Clear disk cache files
+        try {
+            File cacheDir = new File(CACHE_DIR);
+            if (cacheDir.exists() && cacheDir.isDirectory()) {
+                File[] files = cacheDir.listFiles();
+                if (files != null) {
+                    for (File f : files) {
+                        if (f.getName().endsWith(".json")) {
+                            f.delete();
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Failed to clear disk cache: " + e.getMessage());
+        }
     }
     
     public static String getAccessToken() {
@@ -398,20 +416,21 @@ public class HonestMarketDataFetcher {
              saveCacheToDisk(symbol, cachedData); // SAVE TO DISK
              System.out.println("✅ Cache updated & saved. Size: " + cachedData.size() + " candles.");
         } else {
-             System.out.println("⚠️ No new data fetched. Using cached data.");
+             System.out.println("⚠️ No recent data found for " + symbol + " to update cache.");
         }
         
-        // Check Data Freshness
-        if (!cachedData.isEmpty()) {
-            SimpleMarketData latest = cachedData.get(cachedData.size() - 1);
-            LocalDateTime now = LocalDateTime.now();
-            boolean isFresh = latest.timestamp.isAfter(now.minusMinutes(15)) || latest.timestamp.toLocalDate().isEqual(now.toLocalDate());
-            
-            if (!isFresh) {
-                 System.out.println("⚠️ 5-Min Data might be stale! Latest data from: " + latest.timestamp);
+        // 5. STRICT FRESHNESS CHECK: Ensure the latest data is truly current
+        SimpleMarketData latestCandle = cachedData.get(cachedData.size() - 1);
+        LocalDateTime now = LocalDateTime.now();
+        
+        // Check if market is currently open
+        if (com.trading.bot.util.MarketHours.isMarketOpenNow()) {
+            if (latestCandle.timestamp.isBefore(now.minusMinutes(15))) {
+                String error = String.format("❌ STALE DATA DETECTED for %s. Latest data is from %s, but current time is %s. Access token might be invalid or market data stream is delayed.", 
+                    symbol, latestCandle.timestamp, now);
+                System.err.println(error);
+                throw new Exception(error);
             }
-            lastValidPrices.put(symbol, latest.price);
-            lastValidTimes.put(symbol, LocalDateTime.now());
         }
         
         return cachedData;
@@ -924,11 +943,13 @@ public class HonestMarketDataFetcher {
         Map<String, Double> snapshot = new HashMap<>();
         List<String> errors = new ArrayList<>();
         
-        for (String symbol : Arrays.asList("NIFTY50", "SENSEX")) {
+        for (String symbol : Arrays.asList("NIFTY50", "SENSEX", "BANKNIFTY")) {
             try {
                 double price = fetchRealPriceFromUpstox(symbol);
                 if (price > 0) {
                     snapshot.put(symbol, price);
+                    lastValidPrices.put(symbol, price);
+                    lastValidTimes.put(symbol, LocalDateTime.now());
                     System.out.printf("✅ REAL price for %s: ₹%.2f%n", symbol, price);
                 } else {
                     errors.add(symbol);
@@ -948,11 +969,11 @@ public class HonestMarketDataFetcher {
             throw new Exception("❌ FAILED TO GET ANY REAL PRICES - All APIs failed");
         }
         
-        if (!errors.isEmpty()) {
-            System.out.printf("⚠️ Failed to get prices for: %s%n", String.join(", ", errors));
-        }
-        
         return snapshot;
+    }
+
+    public LocalDateTime getLastValidTime(String symbol) {
+        return lastValidTimes.get(symbol);
     }
     
     /**

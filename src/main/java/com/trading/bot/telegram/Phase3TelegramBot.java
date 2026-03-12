@@ -379,19 +379,28 @@ public class Phase3TelegramBot {
         try {
             Map<String, Double> prices = marketDataFetcher.getHonestMarketSnapshot();
             StringBuilder sb = new StringBuilder();
-            for (String symbol : Arrays.asList("NIFTY50", "SENSEX")) {
+            LocalDateTime now = LocalDateTime.now();
+            
+            for (String symbol : Arrays.asList("NIFTY50", "BANKNIFTY", "SENSEX")) {
                 if (prices.containsKey(symbol)) {
+                    LocalDateTime lastTime = marketDataFetcher.getLastValidTime(symbol);
+                    boolean isFresh = lastTime != null && lastTime.isAfter(now.minusMinutes(5));
+                    
                     String emoji = switch (symbol) {
                         case "NIFTY50" -> "📉";
+                        case "BANKNIFTY" -> "🏦";
                         case "SENSEX" -> "📊";
                         default -> "📈";
                     };
-                    sb.append(emoji).append(" **").append(symbol).append("** : `").append(String.format("%.2f", prices.get(symbol))).append("`\n");
+                    
+                    String status = isFresh ? "✅" : "⚠️ (Delayed)";
+                    sb.append(emoji).append(" **").append(symbol).append("** : `").append(String.format("%.2f", prices.get(symbol)))
+                      .append("` ").append(status).append("\n");
                 }
             }
             return sb.toString().trim();
         } catch (Exception e) {
-            return "❌ Error fetching rates";
+            return "❌ Error: " + e.getMessage();
         }
     }
     
@@ -422,26 +431,32 @@ public class Phase3TelegramBot {
      * Handle /scan command
      */
     protected void handleScanCommand(long chatId) {
-        if (isScanning) {
+        if (isScanning && scanFuture != null && !scanFuture.isCancelled() && !scanFuture.isDone()) {
             sendMessage(chatId, "🔍 **Scanning is Already Active**\n\n" +
                               "🤖 Bot is currently monitoring the market.");
             return;
         }
         
         isScanning = true;
+        
+        // Ensure any old task is cancelled
+        if (scanFuture != null) {
+            scanFuture.cancel(true);
+        }
+        
         sendMessage(chatId, "🔍 **Scanning Started**\n\n" +
                           "📡 Monitoring NIFTY50, SENSEX, BANKNIFTY...\n" +
                           "🤖 AI analyzing patterns...\n" +
                           "🔔 You will be notified of high-confidence signals.");
         
         // Schedule scanning task
-        if (scanFuture != null && !scanFuture.isDone()) {
-            scanFuture.cancel(false);
-        }
-        
         scanFuture = scheduler.scheduleWithFixedDelay(() -> {
-            if (!isScanning) return;
-            performScan(chatId);
+            try {
+                if (!isScanning) return;
+                performScan(chatId);
+            } catch (Exception e) {
+                logger.error("Critical error in scanning task: {}", e.getMessage());
+            }
         }, 5, 60, TimeUnit.SECONDS);
     }
 
@@ -558,13 +573,13 @@ public class Phase3TelegramBot {
                     chosenPrediction.greeks.getOrDefault("gamma", 0.0));
             }
 
-            // Check if data is fresh
+            // Check if data is fresh (Strict 10-minute limit for live alerts)
             SimpleMarketData latestData = data5 != null && !data5.isEmpty() ? data5.get(data5.size() - 1) : null;
             LocalDateTime dataTime = latestData != null ? latestData.timestamp : LocalDateTime.now();
-            boolean isFresh = dataTime.isAfter(LocalDateTime.now().minusMinutes(20));
+            boolean isFresh = dataTime.isAfter(LocalDateTime.now().minusMinutes(10));
             
             if (!isFresh) {
-                logger.warn("⚠️ Skipping alert for {} as data is stale (last update: {})", symbol, dataTime);
+                logger.warn("⚠️ Skipping alert for {} as data is stale (last update: {}). Current Time: {}", symbol, dataTime, LocalDateTime.now());
                 return;
             }
 
