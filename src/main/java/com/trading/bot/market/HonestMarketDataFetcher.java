@@ -424,7 +424,7 @@ public class HonestMarketDataFetcher {
         LocalDateTime now = LocalDateTime.now();
         
         // Check if market is currently open
-        if (com.trading.bot.util.MarketHours.isMarketOpenNow()) {
+        if (com.trading.bot.util.MarketHours.isMarketOpen()) {
             if (latestCandle.timestamp.isBefore(now.minusMinutes(15))) {
                 String error = String.format("❌ STALE DATA DETECTED for %s. Latest data is from %s, but current time is %s. Access token might be invalid or market data stream is delayed.", 
                     symbol, latestCandle.timestamp, now);
