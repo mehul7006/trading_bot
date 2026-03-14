@@ -2,6 +2,7 @@ package com.trading.bot.agents;
 
 import com.trading.bot.ai.AIPredictor;
 import com.trading.bot.market.SimpleMarketData;
+import com.trading.bot.market.OptionData;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,7 +20,7 @@ public class PredictionAgent implements Agent {
     }
 
     public AIPredictor.AIPrediction generateSignal(String symbol, List<SimpleMarketData> history) {
-        return predictor.generatePrediction(symbol, history, null);
+        return predictor.generatePrediction(symbol, history);
     }
 
     @Override

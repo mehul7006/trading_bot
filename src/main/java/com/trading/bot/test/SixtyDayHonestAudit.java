@@ -2,6 +2,7 @@ package com.trading.bot.test;
 
 import com.trading.bot.market.HonestMarketDataFetcher;
 import com.trading.bot.market.SimpleMarketData;
+import com.trading.bot.market.OptionData;
 import com.trading.bot.ai.AIPredictor;
 
 import java.time.LocalDate;
@@ -136,7 +137,7 @@ public class SixtyDayHonestAudit {
             // Slice history for 5-min prediction
             List<SimpleMarketData> history5 = data5.subList(0, i + 1);
             
-            AIPredictor.AIPrediction prediction5 = predictor.generatePrediction(symbol, history5, null);
+            AIPredictor.AIPrediction prediction5 = predictor.generatePrediction(symbol, history5);
             
             // Find corresponding 1-min history
             List<SimpleMarketData> history1 = new ArrayList<>();
@@ -149,7 +150,7 @@ public class SixtyDayHonestAudit {
             }
             
             if (history1.size() < 100) continue;
-            AIPredictor.AIPrediction prediction1 = predictor.generatePrediction(symbol, history1, null);
+            AIPredictor.AIPrediction prediction1 = predictor.generatePrediction(symbol, history1);
             
             // DUAL TIMEFRAME LOGIC (Live Bot implementation)
             boolean fiveMinEligible = checkMinimumPoints(symbol, prediction5.estimatedMovePoints) && prediction5.confidence >= 70;
