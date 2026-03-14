@@ -423,8 +423,8 @@ public class Phase3TelegramBot {
                        rates + "\n\n" +
                        "📢 **Today's Activity**\n" +
                        "• Calls Generated: `" + todayCallsGenerated + "`\n" +
-                       "• Active Slots: `" + slotsTriggered.size() + "/3`\n" +
-                       "• Bot Instance: `V19.8-LIVE`";
+                       "• Active Slots: `" + slotsTriggered.size() + "/4`\n" +
+                       "• Bot Instance: `V23.0-ELITE` (Multi-Index Optimized)";
         
         sendMessage(chatId, status);
     }
@@ -489,7 +489,7 @@ public class Phase3TelegramBot {
             slotsTriggered.clear();
             lastResetDate = today;
         }
-        if (todayCallsGenerated >= 3) return;
+        if (todayCallsGenerated >= 10) return;
         
         try {
             String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
@@ -553,8 +553,9 @@ public class Phase3TelegramBot {
             long currentTime = System.currentTimeMillis();
             long lastAlert = lastAlertTimeMap.getOrDefault(symbol, 0L);
             if (currentTime - lastAlert < 5 * 60 * 1000) return;
-            int slot = getSlot(LocalTime.now(ZoneId.of("Asia/Kolkata")));
-            if (slotsTriggered.contains(slot)) return;
+            // Removed slot restriction to allow 1-2 calls per segment as requested
+            // int slot = getSlot(LocalTime.now(ZoneId.of("Asia/Kolkata")));
+            // if (slotsTriggered.contains(slot)) return;
 
             double targetPoints = chosenPrediction.estimatedMovePoints;
             double targetPrice = chosenPrediction.predictedDirection.equals("UP") ? entryPrice + targetPoints : entryPrice - targetPoints;
@@ -588,7 +589,8 @@ public class Phase3TelegramBot {
             String alertId = "AL-" + (System.currentTimeMillis() % 10000);
             String timestamp = LocalDateTime.now(ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
 
-            String alert = signalEmoji + " **CONFIRMED CALL DETECTED** [" + alertId + "]\n\n" +
+            String alert = signalEmoji + " **CONFIRMED CALL DETECTED** [" + alertId + "]\n" +
+                          "📡 **Source:** Based on REAL-TIME Market Data\n\n" +
                           "📌 **Symbol:** " + symbol + "\n" +
                           "⏱️ **Timeframe:** " + timeframeLabel + "\n" +
                           "🚀 **Direction:** " + chosenPrediction.predictedDirection + " " + arrow + "\n" +
@@ -624,10 +626,10 @@ public class Phase3TelegramBot {
 
     private boolean checkMinimumPoints(String symbol, double estimatedPoints) {
         double minPoints = switch (symbol) {
-            case "NIFTY50" -> 20.0;
-            case "SENSEX" -> 60.0;
-            case "BANKNIFTY" -> 40.0;
-            default -> 15.0;
+            case "NIFTY50" -> 45.0; // Updated to match user requirements
+            case "SENSEX" -> 120.0;
+            case "BANKNIFTY" -> 100.0;
+            default -> 20.0;
         };
         return estimatedPoints >= minPoints;
     }

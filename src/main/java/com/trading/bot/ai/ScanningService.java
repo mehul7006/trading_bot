@@ -100,17 +100,19 @@ public class ScanningService {
     }
 
     private double getMinPoints(String symbol) {
-        // Normalize symbol (handle cases like "NSE_INDEX|Nifty 50" or just "NIFTY50")
+        // Normalize symbol
         String upperSymbol = symbol.toUpperCase();
         
+        // V24.0: User requires 100 points movement in net (per day target)
+        // For individual signals, we target high probability moves.
         if (upperSymbol.contains("NIFTY") && !upperSymbol.contains("BANK")) {
-            return 30.0;
+            return 45.0; // ~0.2% - 0.25% move
         } else if (upperSymbol.contains("SENSEX")) {
-            return 80.0;
+            return 120.0; // ~0.15% - 0.2% move
         } else if (upperSymbol.contains("BANKNIFTY") || upperSymbol.contains("BANK")) {
-            return 50.0;
+            return 100.0; // ~0.2% move
         } else {
-            return 10.0;
+            return 30.0;
         }
     }
 }

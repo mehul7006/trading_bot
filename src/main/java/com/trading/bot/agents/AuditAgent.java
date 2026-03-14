@@ -119,38 +119,26 @@ public class AuditAgent implements Agent {
     }
 
     private boolean passesGates(String symbol, int slab, AIPredictor.AIPrediction p) {
-        double minConf;
-        double minPts;
-        if ("NIFTY50".equals(symbol)) {
-            if (slab == 0) { minConf = 82; minPts = 18; }
-            else if (slab == 1) { minConf = 85; minPts = 22; }
-            else { minConf = 83; minPts = 20; }
-        } else if ("SENSEX".equals(symbol)) {
-            if (slab == 0) { minConf = 82; minPts = 65; }
-            else if (slab == 1) { minConf = 86; minPts = 80; }
-            else { minConf = 84; minPts = 70; }
-        } else if ("BANKNIFTY".equals(symbol)) {
-            if (slab == 0) { minConf = 84; minPts = 33; }
-            else if (slab == 1) { minConf = 87; minPts = 39; }
-            else { minConf = 84; minPts = 35; }
-        } else {
-            minConf = 80; minPts = 20;
-        }
-        boolean base = p.confidence >= minConf && p.estimatedMovePoints >= minPts;
-        if (!base) return false;
-        if ("BANKNIFTY".equals(symbol) && slab == 1) {
-            if (p.neuralNetworkScore <= 24) return false;
-            if (p.marketRegimePrediction < 35 || p.marketRegimePrediction > 65) return false;
-        }
-        return true;
+        // V24.0 Audit Gates: Optimized for 1-2 Calls/Day and >65% Win Rate
+        double minConf = 85;
+        double minPts = switch (symbol) {
+            case "NIFTY50" -> 35.0; // Balanced for 1-2 calls
+            case "SENSEX" -> 100.0; // Balanced for 1-2 calls
+            case "BANKNIFTY" -> 80.0; // Balanced for 1-2 calls
+            default -> 20.0;
+        };
+        
+        if (p.predictedDirection.equals("NEUTRAL")) return false;
+        
+        return p.confidence >= minConf && p.estimatedMovePoints >= minPts;
     }
 
     private boolean checkMinimumPoints(String symbol, double estimatedPoints) {
         double minPoints = switch (symbol) {
-            case "NIFTY50" -> 10.0;
-            case "SENSEX" -> 40.0;
-            case "BANKNIFTY" -> 25.0;
-            default -> 5.0;
+            case "NIFTY50" -> 35.0;
+            case "SENSEX" -> 100.0;
+            case "BANKNIFTY" -> 80.0;
+            default -> 10.0;
         };
         return estimatedPoints >= minPoints;
     }
