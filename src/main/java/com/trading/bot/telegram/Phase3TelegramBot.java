@@ -609,7 +609,7 @@ public class Phase3TelegramBot {
             sendMessage(chatId, alert);
             lastAlertTimeMap.put(symbol, currentTime);
             todayCallsGenerated++;
-            slotsTriggered.add(slot);
+            // slotsTriggered.add(slot); // Slot restriction removed
             
             ActiveSignal s = new ActiveSignal();
             s.symbol = symbol;
