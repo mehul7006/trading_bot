@@ -12,3 +12,8 @@ upstox_config*.properties
 cp.txt
 .vscode/
 .env
+
+# Web app build artifacts and downloaded Node.js (frontend-maven-plugin)
+web-app/node/
+web-app/node_modules/
+web-app/dist/
