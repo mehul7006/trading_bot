@@ -88,10 +88,10 @@ public class HonestMarketDataFetcher {
      * Daily cleanup: Clear token and cache at 11:59 PM
      */
     public void clearDailySession() {
-        UPSTOX_ACCESS_TOKEN = "";
-        saveTokenToFile(""); // Clear file
+        // Preserve token — Upstox tokens are valid for ~19h and still usable early next morning.
+        // Only clear market data cache so prices are re-fetched fresh each day.
         clearAllCache();
-        System.out.println("🕛 Daily Reset (11:59 PM): Token and All Cache cleared.");
+        System.out.println("🕛 Daily Reset (11:59 PM): Market data cache cleared. Token preserved for next session.");
     }
 
     private void clearAllCache() {

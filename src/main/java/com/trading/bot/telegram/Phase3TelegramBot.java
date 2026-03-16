@@ -79,45 +79,73 @@ public class Phase3TelegramBot {
     private java.time.LocalDate lastResetDate = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
     private final java.util.Set<Integer> slotsTriggered = java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    private void checkActiveSignal(long chatId, String symbol, List<SimpleMarketData> data) {
+    // Per-symbol call tracking for daily guarantee mechanism
+    private static final String CHAT_ID_FILE = "active_chat_id.txt";
+    private final Map<String, Integer> todayCallsBySymbol = new ConcurrentHashMap<>();
+
+    /**
+     * Checks if an active signal's target or SL has been hit.
+     * Returns true if the signal was resolved (hit target or SL), false if still open.
+     * On resolution: sends notification, clears cooldown so next scan fires immediately.
+     */
+    private boolean checkActiveSignal(long chatId, String symbol, List<SimpleMarketData> data) {
         ActiveSignal s = activeSignals.get(symbol);
-        if (s == null || data.isEmpty()) return;
+        if (s == null || data.isEmpty()) return false;
         SimpleMarketData last = data.get(data.size() - 1);
         double entry = s.entryPrice;
         double target = s.targetPoints;
         double sl = s.stopLossPoints;
+        double targetPrice = "UP".equalsIgnoreCase(s.direction) ? entry + target : entry - target;
+        double slPrice     = "UP".equalsIgnoreCase(s.direction) ? entry - sl    : entry + sl;
         boolean hitTarget = false;
-        boolean hitStop = false;
+        boolean hitStop   = false;
         if ("UP".equalsIgnoreCase(s.direction)) {
-            double targetPrice = entry + target;
-            double slPrice = entry - sl;
             if (last.high >= targetPrice) hitTarget = true;
-            if (last.low <= slPrice) hitStop = true;
+            else if (last.low <= slPrice) hitStop = true;
         } else {
-            double targetPrice = entry - target;
-            double slPrice = entry + sl;
             if (last.low <= targetPrice) hitTarget = true;
-            if (last.high >= slPrice) hitStop = true;
+            else if (last.high >= slPrice) hitStop = true;
         }
+
+        if (hitTarget) {
+            double pnlPoints = target;
+            long durationMin = (System.currentTimeMillis() - s.createdAt) / 60000;
+            String msg = String.format(
+                "✅ *TARGET HIT — BOOK PROFIT!*\n\n" +
+                "📌 *Symbol:* %s\n" +
+                "📈 *Direction:* %s\n" +
+                "💰 *Entry:* %.2f\n" +
+                "🎯 *Target:* %.2f  ← *ACHIEVED*\n" +
+                "📊 *Points Captured:* +%.0f pts\n" +
+                "⏱️ *Duration:* %d min\n\n" +
+                "💰 Position closed. Re-scanning for next opportunity...",
+                symbol, s.direction, entry, targetPrice, pnlPoints, durationMin);
+            sendMessage(chatId, msg);
+            activeSignals.remove(symbol);
+            lastAlertTimeMap.remove(symbol);   // reset cooldown → scan again immediately
+            return true;
+        }
+
         if (hitStop) {
-            String message = String.format("🛑 **STOP LOSS HIT (Cost-to-Cost Close)**\n\n" +
-                                         "Symbol: %s\n" +
-                                         "Exit Price: %.2f\n" +
-                                         "Reason: Price touched SL protection level.\n\n" +
-                                         "⚠️ Bot detected a trend reversal or excessive noise. Position closed to prevent further loss.", 
-                                         symbol, last.price);
-            sendMessage(chatId, message);
+            double lossPoints = sl;
+            long durationMin = (System.currentTimeMillis() - s.createdAt) / 60000;
+            String msg = String.format(
+                "🛑 *STOP LOSS HIT — EXIT NOW!*\n\n" +
+                "📌 *Symbol:* %s\n" +
+                "📈 *Direction:* %s\n" +
+                "💰 *Entry:* %.2f\n" +
+                "🛑 *SL Level:* %.2f  ← *TRIGGERED*\n" +
+                "📊 *Points Lost:* -%.0f pts\n" +
+                "⏱️ *Duration:* %d min\n\n" +
+                "⚠️ Trend invalidated. Re-scanning for next opportunity...",
+                symbol, s.direction, entry, slPrice, lossPoints, durationMin);
+            sendMessage(chatId, msg);
             activeSignals.remove(symbol);
-        } else if (hitTarget) {
-            String message = String.format("✅ **TARGET ACHIEVED!**\n\n" +
-                                         "Symbol: %s\n" +
-                                         "Exit Price: %.2f\n" +
-                                         "Strategy: %s\n\n" +
-                                         "💰 Move captured successfully. Position closed.", 
-                                         symbol, last.price, "AI Prediction");
-            sendMessage(chatId, message);
-            activeSignals.remove(symbol);
+            lastAlertTimeMap.remove(symbol);   // reset cooldown → scan again immediately
+            return true;
         }
+
+        return false;  // signal still open
     }
     private ScheduledFuture<?> scanFuture;
     private final Map<Long, String> pendingCommands = new ConcurrentHashMap<>();
@@ -175,7 +203,16 @@ public class Phase3TelegramBot {
         
         logger.info("✅ Phase 3 Telegram Bot started successfully");
         logger.info("🏦 Available features: Smart Money Analysis, Order Blocks, FVGs, Liquidity Analysis");
-        logger.info("📱 Send /start to begin institutional trading analysis");
+
+        // Auto-resume scan for the last known chatId (survives restarts)
+        long savedChatId = loadChatId();
+        if (savedChatId != 0) {
+            activeChatId = savedChatId;
+            logger.info("📡 Auto-resuming market scan for saved chatId: {}", savedChatId);
+            scheduler.schedule(() -> handleScanCommand(savedChatId), 15, TimeUnit.SECONDS);
+        } else {
+            logger.info("📱 Send /start then /scan to begin market scanning");
+        }
     }
     
     /**
@@ -367,6 +404,8 @@ public class Phase3TelegramBot {
      * Handle /start command
      */
     protected void handleStartCommand(long chatId) {
+        activeChatId = chatId;
+        saveChatId(chatId);
         sendMessage(chatId, "👋 **Welcome to Institutional Trading Bot**\n\n" +
                            "🚀 **System Online & Ready**\n" +
                            "📊 **Market Analysis**: Active\n" +
@@ -415,6 +454,7 @@ public class Phase3TelegramBot {
         if (!today.equals(lastResetDate)) {
             todayCallsGenerated = 0;
             slotsTriggered.clear();
+            todayCallsBySymbol.clear();
             lastResetDate = today;
         }
 
@@ -433,6 +473,8 @@ public class Phase3TelegramBot {
      * Handle /scan command
      */
     protected void handleScanCommand(long chatId) {
+        activeChatId = chatId;
+        saveChatId(chatId);
         if (isScanning && scanFuture != null && !scanFuture.isCancelled() && !scanFuture.isDone()) {
             sendMessage(chatId, "🔍 **Scanning is Already Active**\n\n" +
                               "🤖 Bot is currently monitoring the market.");
@@ -451,7 +493,7 @@ public class Phase3TelegramBot {
                           "🤖 AI analyzing patterns...\n" +
                           "🔔 You will be notified of high-confidence signals.");
         
-        // Schedule scanning task
+        // Schedule scanning task — 30s interval for constant market monitoring
         scanFuture = scheduler.scheduleWithFixedDelay(() -> {
             try {
                 if (!isScanning) return;
@@ -459,7 +501,7 @@ public class Phase3TelegramBot {
             } catch (Exception e) {
                 logger.error("Critical error in scanning task: {}", e.getMessage());
             }
-        }, 5, 60, TimeUnit.SECONDS);
+        }, 5, 30, TimeUnit.SECONDS);
     }
 
     private void stopScanningForInterruption(long chatId) {
@@ -481,12 +523,13 @@ public class Phase3TelegramBot {
 
     private void performScan(long chatId) {
         LocalTime now = LocalTime.now(ZoneId.of("Asia/Kolkata"));
-        boolean isEquityOpen = now.isAfter(LocalTime.of(9, 0)) && now.isBefore(LocalTime.of(15, 30));
+        boolean isEquityOpen = now.isAfter(LocalTime.of(9, 15)) && now.isBefore(LocalTime.of(15, 30));
         if (!isEquityOpen) return;
         java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
         if (!today.equals(lastResetDate)) {
             todayCallsGenerated = 0;
             slotsTriggered.clear();
+            todayCallsBySymbol.clear();
             lastResetDate = today;
         }
         if (todayCallsGenerated >= 10) return;
@@ -507,8 +550,17 @@ public class Phase3TelegramBot {
         try {
             List<SimpleMarketData> data5 = marketDataFetcher.getRealMarketData5Min(symbol);
             if (data5 == null || data5.isEmpty()) return;
-            
-            checkActiveSignal(chatId, symbol, data5);
+
+            // If an active signal exists for this symbol, only monitor it.
+            // If it resolves (target/SL hit), schedule an immediate rescan for this symbol.
+            if (activeSignals.containsKey(symbol)) {
+                boolean resolved = checkActiveSignal(chatId, symbol, data5);
+                if (resolved) {
+                    // Rescan this symbol immediately (2-second delay to allow data refresh)
+                    scheduler.schedule(() -> scanEquitySymbol(chatId, symbol), 2, TimeUnit.SECONDS);
+                }
+                return;  // don't generate a new signal while previous one is open
+            }
             
             // Fetch Option Chain Data for higher confidence
             OptionData optionData = marketDataFetcher.fetchOptionData(symbol);
@@ -535,10 +587,22 @@ public class Phase3TelegramBot {
             AIPredictor.AIPrediction chosenPrediction = null;
             String timeframeLabel = null;
             double entryPrice = 0.0;
-            
-            if (fiveMinEligible) {
+
+            // MTF conflict check: skip primary signal when 5-min and 1-min actively disagree
+            // (one says UP, other says DOWN) — conflicting timeframes = unreliable entry
+            boolean mtfConflict = prediction1 != null
+                    && !"NEUTRAL".equals(prediction5.predictedDirection)
+                    && !"NEUTRAL".equals(prediction1.predictedDirection)
+                    && !prediction5.predictedDirection.equals(prediction1.predictedDirection);
+
+            if (mtfConflict) {
+                logger.info("🔀 MTF conflict for {} (5min={} vs 1min={}), skipping primary signal",
+                    symbol, prediction5.predictedDirection, prediction1.predictedDirection);
+            } else if (fiveMinEligible) {
                 chosenPrediction = prediction5;
-                timeframeLabel = "5-min";
+                boolean mtfConfirmed = prediction1 != null
+                        && prediction5.predictedDirection.equals(prediction1.predictedDirection);
+                timeframeLabel = mtfConfirmed ? "5-min [MTF✓]" : "5-min";
                 entryPrice = data5.get(data5.size() - 1).price;
             } else if (oneMinEligible && data1 != null && !data1.isEmpty()) {
                 chosenPrediction = prediction1;
@@ -547,9 +611,27 @@ public class Phase3TelegramBot {
             }
             
             if (chosenPrediction == null) {
-                return;
+                // Daily guarantee: after 11:30 AM, if no call for this symbol today, use relaxed EMA signal
+                LocalTime nowIst = LocalTime.now(ZoneId.of("Asia/Kolkata"));
+                boolean noCallToday = todayCallsBySymbol.getOrDefault(symbol, 0) == 0;
+                boolean isGuaranteeWindow = nowIst.isAfter(LocalTime.of(11, 30)) && nowIst.isBefore(LocalTime.of(14, 45));
+
+                if (noCallToday && isGuaranteeWindow) {
+                    List<SimpleMarketData> dataForGuarantee = (data5 != null && !data5.isEmpty()) ? data5 : data1;
+                    if (dataForGuarantee != null && !dataForGuarantee.isEmpty()) {
+                        AIPredictor.AIPrediction relaxed = aiPredictor.generateRelaxedPrediction(symbol, dataForGuarantee, optionData);
+                        if (!"NEUTRAL".equals(relaxed.predictedDirection)) {
+                            chosenPrediction = relaxed;
+                            timeframeLabel = "5-min";
+                            entryPrice = dataForGuarantee.get(dataForGuarantee.size() - 1).price;
+                            logger.info("📅 Guarantee signal triggered for {} at {}", symbol, nowIst);
+                        }
+                    }
+                }
+
+                if (chosenPrediction == null) return;
             }
-            
+
             long currentTime = System.currentTimeMillis();
             long lastAlert = lastAlertTimeMap.getOrDefault(symbol, 0L);
             if (currentTime - lastAlert < 5 * 60 * 1000) return;
@@ -563,9 +645,10 @@ public class Phase3TelegramBot {
             String signalEmoji = chosenPrediction.predictedDirection.equals("UP") ? "🟢" : "🔴";
             
             double minPoints = switch (symbol) {
-                case "NIFTY50" -> 30.0;
-                case "SENSEX" -> 80.0;
-                default -> 20.0;
+                case "NIFTY50"   -> 25.0;
+                case "SENSEX"    -> 60.0;
+                case "BANKNIFTY" -> 70.0;
+                default          -> 20.0;
             };
             
             // Format Greeks string
@@ -621,6 +704,7 @@ public class Phase3TelegramBot {
             sendMessage(chatId, alert);
             lastAlertTimeMap.put(symbol, currentTime);
             todayCallsGenerated++;
+            todayCallsBySymbol.merge(symbol, 1, Integer::sum);
             // slotsTriggered.add(slot); // Slot restriction removed
             
             ActiveSignal s = new ActiveSignal();
@@ -637,11 +721,12 @@ public class Phase3TelegramBot {
     }
 
     private boolean checkMinimumPoints(String symbol, double estimatedPoints) {
+        // Thresholds calibrated to ATR*2.0 typical output per symbol on 5-min candles
         double minPoints = switch (symbol) {
-            case "NIFTY50" -> 45.0; // Updated to match user requirements
-            case "SENSEX" -> 120.0;
-            case "BANKNIFTY" -> 100.0;
-            default -> 20.0;
+            case "NIFTY50"   -> 25.0;
+            case "SENSEX"    -> 60.0;
+            case "BANKNIFTY" -> 70.0;
+            default          -> 20.0;
         };
         return estimatedPoints >= minPoints;
     }
@@ -785,6 +870,29 @@ public class Phase3TelegramBot {
             logger.info("🕛 Executing daily token and market data cleanup...");
             marketDataFetcher.clearDailySession();
         }, initialDelay, 24 * 60 * 60, TimeUnit.SECONDS);
+    }
+
+    /** Persist chatId to disk so scan auto-resumes after restart. */
+    private void saveChatId(long chatId) {
+        try {
+            java.nio.file.Files.writeString(java.nio.file.Path.of(CHAT_ID_FILE), String.valueOf(chatId));
+        } catch (Exception e) {
+            logger.warn("Could not save chatId: {}", e.getMessage());
+        }
+    }
+
+    /** Load previously saved chatId, or return 0 if none. */
+    private long loadChatId() {
+        try {
+            java.io.File f = new java.io.File(CHAT_ID_FILE);
+            if (f.exists()) {
+                String s = java.nio.file.Files.readString(f.toPath()).trim();
+                if (!s.isEmpty()) return Long.parseLong(s);
+            }
+        } catch (Exception e) {
+            logger.warn("Could not load chatId: {}", e.getMessage());
+        }
+        return 0;
     }
 
     /**
