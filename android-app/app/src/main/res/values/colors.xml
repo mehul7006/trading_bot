@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark Trading Theme Colors -->
+    <color name="background">#0D1117</color>
+    <color name="surface">#161B22</color>
+    <color name="surface_elevated">#21262D</color>
+    <color name="border">#30363D</color>
+    <color name="text_primary">#E6EDF3</color>
+    <color name="text_secondary">#8B949E</color>
+    <color name="accent_blue">#1F6FEB</color>
+    <color name="green_profit">#00D964</color>
+    <color name="red_loss">#FF4444</color>
+    <color name="gold_neutral">#E3B341</color>
+
+    <!-- Material theme required colors -->
+    <color name="purple_200">#1F6FEB</color>
+    <color name="purple_500">#1F6FEB</color>
+    <color name="purple_700">#1158C7</color>
+    <color name="teal_200">#00D964</color>
+    <color name="teal_700">#009944</color>
+    <color name="black">#0D1117</color>
+    <color name="white">#E6EDF3</color>
+
+    <!-- Bottom nav selector colors -->
+    <color name="bottom_nav_selected">#1F6FEB</color>
+    <color name="bottom_nav_unselected">#8B949E</color>
+</resources>

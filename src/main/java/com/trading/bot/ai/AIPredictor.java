@@ -220,10 +220,9 @@ public class AIPredictor {
         String finalDirection = "NEUTRAL";
         double finalConfidence = 0;
 
-        java.time.LocalTime time = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata"));
-        boolean isSafeTime = time.isAfter(java.time.LocalTime.of(9, 15)) && time.isBefore(java.time.LocalTime.of(15, 15));
-
         // Win-rate boosters: VWAP + EMA slope + candle body
+        // NOTE: isSafeTime removed — time filtering is handled by outer layers
+        // (Phase3TelegramBot.performScan checks isEquityOpen, AuditAgent.runAudit checks candle timestamp)
         double vwapLevel = new AdvancedIndicatorsEngine().calculateVWAP(data);
         boolean aboveVWAP   = currentPrice > vwapLevel;
         boolean belowVWAP   = currentPrice < vwapLevel;
@@ -231,31 +230,31 @@ public class AIPredictor {
         boolean ema20Falling = isEMA20Sloping(data, false);
 
         // ── Tier 1: Full confluence — VWAP + EMA slope + 2 strategies (~72-75% WR)
-        if (isSafeTime && bullishCount >= 2 && adx > 20 && rsi > 50 && rsi < 68
+        if (bullishCount >= 2 && adx > 20 && rsi > 50 && rsi < 68
                 && aboveVWAP && ema20Rising) {
             finalDirection = "UP";
             finalConfidence = 89 + (bullishCount * 2);
-        } else if (isSafeTime && bearishCount >= 2 && adx > 20 && rsi < 50 && rsi > 32
+        } else if (bearishCount >= 2 && adx > 20 && rsi < 50 && rsi > 32
                 && belowVWAP && ema20Falling) {
             finalDirection = "DOWN";
             finalConfidence = 89 + (bearishCount * 2);
 
         // ── Tier 2: VWAP + 2 strategies (~67-70% WR)
-        } else if (isSafeTime && bullishCount >= 2 && adx > 18 && rsi > 48 && rsi < 72
+        } else if (bullishCount >= 2 && adx > 18 && rsi > 48 && rsi < 72
                 && aboveVWAP) {
             finalDirection = "UP";
             finalConfidence = 87 + (bullishCount * 2);
-        } else if (isSafeTime && bearishCount >= 2 && adx > 18 && rsi < 52 && rsi > 28
+        } else if (bearishCount >= 2 && adx > 18 && rsi < 52 && rsi > 28
                 && belowVWAP) {
             finalDirection = "DOWN";
             finalConfidence = 87 + (bearishCount * 2);
 
         // ── Tier 3: Strong single strategy + VWAP + slope (~65% WR)
-        } else if (isSafeTime && bullishCount >= 1 && adx > 28 && rsi > 52 && rsi < 68
+        } else if (bullishCount >= 1 && adx > 28 && rsi > 52 && rsi < 68
                 && aboveVWAP && ema20Rising) {
             finalDirection = "UP";
             finalConfidence = 85;
-        } else if (isSafeTime && bearishCount >= 1 && adx > 28 && rsi < 48 && rsi > 32
+        } else if (bearishCount >= 1 && adx > 28 && rsi < 48 && rsi > 32
                 && belowVWAP && ema20Falling) {
             finalDirection = "DOWN";
             finalConfidence = 85;
@@ -289,10 +288,7 @@ public class AIPredictor {
         String finalDirection = "NEUTRAL";
         double finalConfidence = 0;
 
-        java.time.LocalTime time = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata"));
-        boolean isSafeTime = time.isAfter(java.time.LocalTime.of(9, 15)) && time.isBefore(java.time.LocalTime.of(15, 15));
-
-        // Win-rate boosters: VWAP + EMA slope
+        // Win-rate boosters: VWAP + EMA slope (isSafeTime removed — handled by outer layer)
         double vwap = new AdvancedIndicatorsEngine().calculateVWAP(data);
         boolean aboveVWAP    = currentPrice > vwap;
         boolean belowVWAP    = currentPrice < vwap;
@@ -300,31 +296,31 @@ public class AIPredictor {
         boolean ema20Falling = isEMA20Sloping(data, false);
 
         // ── Tier 1: Full confluence — VWAP + EMA slope + 2 strategies (~72-75% WR)
-        if (isSafeTime && bullishCount >= 2 && adx > 20 && rsi > 50 && rsi < 68
+        if (bullishCount >= 2 && adx > 20 && rsi > 50 && rsi < 68
                 && aboveVWAP && ema20Rising) {
             finalDirection = "UP";
             finalConfidence = 89 + (bullishCount * 2);
-        } else if (isSafeTime && bearishCount >= 2 && adx > 20 && rsi < 50 && rsi > 32
+        } else if (bearishCount >= 2 && adx > 20 && rsi < 50 && rsi > 32
                 && belowVWAP && ema20Falling) {
             finalDirection = "DOWN";
             finalConfidence = 89 + (bearishCount * 2);
 
         // ── Tier 2: VWAP + 2 strategies (~67-70% WR)
-        } else if (isSafeTime && bullishCount >= 2 && adx > 18 && rsi > 48 && rsi < 72
+        } else if (bullishCount >= 2 && adx > 18 && rsi > 48 && rsi < 72
                 && aboveVWAP) {
             finalDirection = "UP";
             finalConfidence = 87 + (bullishCount * 2);
-        } else if (isSafeTime && bearishCount >= 2 && adx > 18 && rsi < 52 && rsi > 28
+        } else if (bearishCount >= 2 && adx > 18 && rsi < 52 && rsi > 28
                 && belowVWAP) {
             finalDirection = "DOWN";
             finalConfidence = 87 + (bearishCount * 2);
 
         // ── Tier 3: Strong single strategy + VWAP + slope (~65% WR)
-        } else if (isSafeTime && bullishCount >= 1 && adx > 28 && rsi > 52 && rsi < 68
+        } else if (bullishCount >= 1 && adx > 28 && rsi > 52 && rsi < 68
                 && aboveVWAP && ema20Rising) {
             finalDirection = "UP";
             finalConfidence = 85;
-        } else if (isSafeTime && bearishCount >= 1 && adx > 28 && rsi < 48 && rsi > 32
+        } else if (bearishCount >= 1 && adx > 28 && rsi < 48 && rsi > 32
                 && belowVWAP && ema20Falling) {
             finalDirection = "DOWN";
             finalConfidence = 85;
@@ -358,10 +354,7 @@ public class AIPredictor {
         String finalDirection = "NEUTRAL";
         double finalConfidence = 0;
 
-        java.time.LocalTime time = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata"));
-        boolean isSafeTime = time.isAfter(java.time.LocalTime.of(9, 15)) && time.isBefore(java.time.LocalTime.of(15, 15));
-
-        // Win-rate boosters: VWAP + EMA slope
+        // Win-rate boosters: VWAP + EMA slope (isSafeTime removed — handled by outer layer)
         double vwap = new AdvancedIndicatorsEngine().calculateVWAP(data);
         boolean aboveVWAP    = currentPrice > vwap;
         boolean belowVWAP    = currentPrice < vwap;
@@ -369,31 +362,31 @@ public class AIPredictor {
         boolean ema20Falling = isEMA20Sloping(data, false);
 
         // ── Tier 1: Full confluence — VWAP + EMA slope + 2 strategies (~72-75% WR)
-        if (isSafeTime && bullishCount >= 2 && adx > 20 && rsi > 50 && rsi < 68
+        if (bullishCount >= 2 && adx > 20 && rsi > 50 && rsi < 68
                 && aboveVWAP && ema20Rising) {
             finalDirection = "UP";
             finalConfidence = 89 + (bullishCount * 2);
-        } else if (isSafeTime && bearishCount >= 2 && adx > 20 && rsi < 50 && rsi > 32
+        } else if (bearishCount >= 2 && adx > 20 && rsi < 50 && rsi > 32
                 && belowVWAP && ema20Falling) {
             finalDirection = "DOWN";
             finalConfidence = 89 + (bearishCount * 2);
 
         // ── Tier 2: VWAP + 2 strategies (~67-70% WR)
-        } else if (isSafeTime && bullishCount >= 2 && adx > 18 && rsi > 48 && rsi < 72
+        } else if (bullishCount >= 2 && adx > 18 && rsi > 48 && rsi < 72
                 && aboveVWAP) {
             finalDirection = "UP";
             finalConfidence = 87 + (bullishCount * 2);
-        } else if (isSafeTime && bearishCount >= 2 && adx > 18 && rsi < 52 && rsi > 28
+        } else if (bearishCount >= 2 && adx > 18 && rsi < 52 && rsi > 28
                 && belowVWAP) {
             finalDirection = "DOWN";
             finalConfidence = 87 + (bearishCount * 2);
 
         // ── Tier 3: Strong single strategy + VWAP + slope (~65% WR)
-        } else if (isSafeTime && bullishCount >= 1 && adx > 28 && rsi > 52 && rsi < 68
+        } else if (bullishCount >= 1 && adx > 28 && rsi > 52 && rsi < 68
                 && aboveVWAP && ema20Rising) {
             finalDirection = "UP";
             finalConfidence = 85;
-        } else if (isSafeTime && bearishCount >= 1 && adx > 28 && rsi < 48 && rsi > 32
+        } else if (bearishCount >= 1 && adx > 28 && rsi < 48 && rsi > 32
                 && belowVWAP && ema20Falling) {
             finalDirection = "DOWN";
             finalConfidence = 85;
@@ -672,9 +665,12 @@ public class AIPredictor {
         EnhancedFilters f = new EnhancedFilters();
 
         // ── Dead zone: 1:00–1:30 PM IST (historically lowest signal reliability)
-        java.time.LocalTime now = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata"));
-        f.deadZone = now.isAfter(java.time.LocalTime.of(13, 0))
-                  && now.isBefore(java.time.LocalTime.of(13, 30));
+        // Use last candle's timestamp so audit backtests historical dead zones correctly
+        java.time.LocalTime candleTime = (data != null && !data.isEmpty() && data.get(data.size()-1).timestamp != null)
+            ? data.get(data.size()-1).timestamp.toLocalTime()
+            : java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata"));
+        f.deadZone = candleTime.isAfter(java.time.LocalTime.of(13, 0))
+                  && candleTime.isBefore(java.time.LocalTime.of(13, 30));
 
         // ── Round number proximity (institutional hesitation zone)
         f.nearRoundLevel = isNearRoundLevel(currentPrice, symbol);
@@ -801,36 +797,46 @@ public class AIPredictor {
             pred.estimatedMovePoints, pred.suggestedStopLoss, pred.isBreakout);
     }
 
-    // ── MACD (12, 26, 9) ─────────────────────────────────────────────────────
+    // ── MACD (12, 26, 9) — O(1) window, no full-scan ────────────────────────
     private double[] calculateMACD(List<SimpleMarketData> data) {
         if (data.size() < 35) return new double[]{0, 0, 0};
-        double ema12 = calculateEMA(data, 12);
-        double ema26 = calculateEMA(data, 26);
+        // Clamp to last 60 candles: sufficient for 26-EMA + 9-signal without O(n²)
+        int startIdx = Math.max(0, data.size() - 60);
+        List<SimpleMarketData> recent = data.subList(startIdx, data.size());
+
+        double ema12 = calculateEMA(recent, 12);
+        double ema26 = calculateEMA(recent, 26);
         double macdLine = ema12 - ema26;
 
-        // Build recent MACD history for signal-line EMA
+        // Build 9-period signal line using fixed window (max 9 lookback iterations)
         List<Double> macdHistory = new ArrayList<>();
-        int lookback = Math.min(34, data.size() - 2);
+        int lookback = Math.min(9, recent.size() - 27);
         for (int i = lookback; i >= 1; i--) {
-            List<SimpleMarketData> sub = data.subList(0, data.size() - i);
+            List<SimpleMarketData> sub = recent.subList(0, recent.size() - i);
             if (sub.size() >= 26) {
                 macdHistory.add(calculateEMA(sub, 12) - calculateEMA(sub, 26));
             }
         }
         macdHistory.add(macdLine);
 
-        double signalLine = macdHistory.size() >= 9
-            ? calculateEMAFromValues(macdHistory, 9)
+        double signalLine = macdHistory.size() >= 2
+            ? calculateEMAFromValues(macdHistory, Math.min(9, macdHistory.size()))
             : macdLine;
         return new double[]{macdLine, signalLine, macdLine - signalLine};
     }
 
-    // ── Opening Range Breakout (9:15–9:30) ───────────────────────────────────
+    // ── Opening Range Breakout (9:15–9:30) — today only, last 500 candles ───
     private double[] getOpeningRange(List<SimpleMarketData> data) {
+        if (data.isEmpty()) return new double[]{0, 0};
+        java.time.LocalDate today = data.get(data.size() - 1).timestamp.toLocalDate();
         double orbHigh = Double.NEGATIVE_INFINITY, orbLow = Double.POSITIVE_INFINITY;
         boolean found = false;
-        for (SimpleMarketData d : data) {
+        // Only scan last 500 candles — today's session is always within this window
+        int startIdx = Math.max(0, data.size() - 500);
+        for (int i = startIdx; i < data.size(); i++) {
+            SimpleMarketData d = data.get(i);
             if (d.timestamp == null) continue;
+            if (!d.timestamp.toLocalDate().equals(today)) continue;
             java.time.LocalTime t = d.timestamp.toLocalTime();
             if (!t.isBefore(java.time.LocalTime.of(9, 15))
                     && !t.isAfter(java.time.LocalTime.of(9, 30))) {
@@ -843,13 +849,16 @@ public class AIPredictor {
             ? new double[]{orbHigh, orbLow} : new double[]{0, 0};
     }
 
-    // ── Previous Day High / Low ───────────────────────────────────────────────
+    // ── Previous Day High / Low — last 800 candles only ──────────────────────
     private double[] getPreviousDayHighLow(List<SimpleMarketData> data) {
         if (data.isEmpty()) return new double[]{0, 0};
         java.time.LocalDate today = data.get(data.size() - 1).timestamp.toLocalDate();
         double pdh = Double.NEGATIVE_INFINITY, pdl = Double.POSITIVE_INFINITY;
         boolean found = false;
-        for (SimpleMarketData d : data) {
+        // 800 candles ≈ 2 full trading days of 1-min data — more than enough for PDH/PDL
+        int startIdx = Math.max(0, data.size() - 800);
+        for (int i = startIdx; i < data.size(); i++) {
+            SimpleMarketData d = data.get(i);
             if (d.timestamp == null) continue;
             java.time.LocalDate day = d.timestamp.toLocalDate();
             if (day.isBefore(today)) {
@@ -862,34 +871,38 @@ public class AIPredictor {
             ? new double[]{pdh, pdl} : new double[]{0, 0};
     }
 
-    // ── Market Structure: HH + HL (uptrend) ──────────────────────────────────
+    // ── Market Structure: HH + HL (uptrend) — last 50 candles only ──────────
     private boolean isUptrendStructure(List<SimpleMarketData> data) {
         if (data.size() < 20) return false;
+        int startIdx = Math.max(0, data.size() - 50);
+        List<SimpleMarketData> recent = data.subList(startIdx, data.size());
         List<Double> sH = new ArrayList<>(), sL = new ArrayList<>();
-        for (int i = 2; i < data.size() - 2; i++) {
-            if (data.get(i).high > data.get(i-1).high && data.get(i).high > data.get(i-2).high
-                    && data.get(i).high > data.get(i+1).high && data.get(i).high > data.get(i+2).high)
-                sH.add(data.get(i).high);
-            if (data.get(i).low < data.get(i-1).low && data.get(i).low < data.get(i-2).low
-                    && data.get(i).low < data.get(i+1).low && data.get(i).low < data.get(i+2).low)
-                sL.add(data.get(i).low);
+        for (int i = 2; i < recent.size() - 2; i++) {
+            if (recent.get(i).high > recent.get(i-1).high && recent.get(i).high > recent.get(i-2).high
+                    && recent.get(i).high > recent.get(i+1).high && recent.get(i).high > recent.get(i+2).high)
+                sH.add(recent.get(i).high);
+            if (recent.get(i).low < recent.get(i-1).low && recent.get(i).low < recent.get(i-2).low
+                    && recent.get(i).low < recent.get(i+1).low && recent.get(i).low < recent.get(i+2).low)
+                sL.add(recent.get(i).low);
         }
         return sH.size() >= 2 && sL.size() >= 2
             && sH.get(sH.size()-1) > sH.get(sH.size()-2)
             && sL.get(sL.size()-1) > sL.get(sL.size()-2);
     }
 
-    // ── Market Structure: LH + LL (downtrend) ────────────────────────────────
+    // ── Market Structure: LH + LL (downtrend) — last 50 candles only ─────────
     private boolean isDowntrendStructure(List<SimpleMarketData> data) {
         if (data.size() < 20) return false;
+        int startIdx = Math.max(0, data.size() - 50);
+        List<SimpleMarketData> recent = data.subList(startIdx, data.size());
         List<Double> sH = new ArrayList<>(), sL = new ArrayList<>();
-        for (int i = 2; i < data.size() - 2; i++) {
-            if (data.get(i).high > data.get(i-1).high && data.get(i).high > data.get(i-2).high
-                    && data.get(i).high > data.get(i+1).high && data.get(i).high > data.get(i+2).high)
-                sH.add(data.get(i).high);
-            if (data.get(i).low < data.get(i-1).low && data.get(i).low < data.get(i-2).low
-                    && data.get(i).low < data.get(i+1).low && data.get(i).low < data.get(i+2).low)
-                sL.add(data.get(i).low);
+        for (int i = 2; i < recent.size() - 2; i++) {
+            if (recent.get(i).high > recent.get(i-1).high && recent.get(i).high > recent.get(i-2).high
+                    && recent.get(i).high > recent.get(i+1).high && recent.get(i).high > recent.get(i+2).high)
+                sH.add(recent.get(i).high);
+            if (recent.get(i).low < recent.get(i-1).low && recent.get(i).low < recent.get(i-2).low
+                    && recent.get(i).low < recent.get(i+1).low && recent.get(i).low < recent.get(i+2).low)
+                sL.add(recent.get(i).low);
         }
         return sH.size() >= 2 && sL.size() >= 2
             && sH.get(sH.size()-1) < sH.get(sH.size()-2)
@@ -899,11 +912,14 @@ public class AIPredictor {
     // ── Bollinger Band Squeeze: current ATR < 70 % of 20-bar avg ATR ─────────
     private boolean isBollingerSqueeze(List<SimpleMarketData> data) {
         if (data.size() < 40) return false;
-        double curATR = calculateATR(data, 14);
-        int periods = Math.min(20, data.size() - 16);
+        // Clamp to last 40 candles — 14-ATR + 20 periods fits exactly in this window
+        int startIdx = Math.max(0, data.size() - 40);
+        List<SimpleMarketData> recent = data.subList(startIdx, data.size());
+        double curATR = calculateATR(recent, 14);
+        int periods = Math.min(20, recent.size() - 16);
         double sumATR = 0;
         for (int i = 0; i < periods; i++)
-            sumATR += calculateATR(data.subList(0, data.size() - i), 14);
+            sumATR += calculateATR(recent.subList(0, recent.size() - i), 14);
         double avgATR = sumATR / periods;
         return avgATR > 0 && curATR < avgATR * 0.70;
     }

@@ -26,6 +26,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import java.util.concurrent.ScheduledFuture;
+import com.trading.bot.api.TradingApiServer;
 
 /**
  * PHASE 3 TELEGRAM BOT - Complete 3-Phase Integration
@@ -66,15 +67,15 @@ public class Phase3TelegramBot {
         DedupCommand(String cmd, long at) { this.cmd = cmd; this.at = at; }
     }
     
-    private static class ActiveSignal {
-        String symbol;
-        String direction;
-        double entryPrice;
-        double targetPoints;
-        double stopLossPoints;
-        long createdAt;
+    public static class ActiveSignal {
+        public String symbol;
+        public String direction;
+        public double entryPrice;
+        public double targetPoints;
+        public double stopLossPoints;
+        public long createdAt;
     }
-    
+
     private final Map<String, ActiveSignal> activeSignals = new ConcurrentHashMap<>();
     private java.time.LocalDate lastResetDate = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
     private final java.util.Set<Integer> slotsTriggered = java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -107,6 +108,9 @@ public class Phase3TelegramBot {
             else if (last.high >= slPrice) hitStop = true;
         }
 
+        String renderUrl2 = System.getenv("RENDER_EXTERNAL_URL");
+        String webLink = (renderUrl2 != null && !renderUrl2.isEmpty()) ? renderUrl2 + "/app" : "http://localhost:8080/app";
+
         if (hitTarget) {
             double pnlPoints = target;
             long durationMin = (System.currentTimeMillis() - s.createdAt) / 60000;
@@ -118,8 +122,9 @@ public class Phase3TelegramBot {
                 "🎯 *Target:* %.2f  ← *ACHIEVED*\n" +
                 "📊 *Points Captured:* +%.0f pts\n" +
                 "⏱️ *Duration:* %d min\n\n" +
-                "💰 Position closed. Re-scanning for next opportunity...",
-                symbol, s.direction, entry, targetPrice, pnlPoints, durationMin);
+                "💰 Position closed. Re-scanning for next opportunity...\n\n" +
+                "🌐 [Open Live Dashboard](%s)",
+                symbol, s.direction, entry, targetPrice, pnlPoints, durationMin, webLink);
             sendMessage(chatId, msg);
             activeSignals.remove(symbol);
             lastAlertTimeMap.remove(symbol);   // reset cooldown → scan again immediately
@@ -137,8 +142,9 @@ public class Phase3TelegramBot {
                 "🛑 *SL Level:* %.2f  ← *TRIGGERED*\n" +
                 "📊 *Points Lost:* -%.0f pts\n" +
                 "⏱️ *Duration:* %d min\n\n" +
-                "⚠️ Trend invalidated. Re-scanning for next opportunity...",
-                symbol, s.direction, entry, slPrice, lossPoints, durationMin);
+                "⚠️ Trend invalidated. Re-scanning for next opportunity...\n\n" +
+                "🌐 [Open Live Dashboard](%s)",
+                symbol, s.direction, entry, slPrice, lossPoints, durationMin, webLink);
             sendMessage(chatId, msg);
             activeSignals.remove(symbol);
             lastAlertTimeMap.remove(symbol);   // reset cooldown → scan again immediately
@@ -215,6 +221,24 @@ public class Phase3TelegramBot {
         }
     }
     
+    // -----------------------------------------------------------------------
+    // API Getters (used by TradingApiServer)
+    // -----------------------------------------------------------------------
+
+    public Map<String, ActiveSignal> getActiveSignals() {
+        return Collections.unmodifiableMap(activeSignals);
+    }
+
+    public boolean isScanning() {
+        return isScanning;
+    }
+
+    public int getTodayCallsGenerated() {
+        return todayCallsGenerated;
+    }
+
+    // -----------------------------------------------------------------------
+
     /**
      * Stop the Telegram bot
      */
@@ -683,6 +707,10 @@ public class Phase3TelegramBot {
                 logger.warn("Could not fetch latest LTP for alert comparison: {}", e.getMessage());
             }
 
+            // Web dashboard link (uses RENDER_EXTERNAL_URL env var or falls back to localhost)
+            String renderUrl = System.getenv("RENDER_EXTERNAL_URL");
+            String webUrl = (renderUrl != null && !renderUrl.isEmpty()) ? renderUrl + "/app" : "http://localhost:8080/app";
+
             String alert = signalEmoji + " **CONFIRMED CALL DETECTED** [" + alertId + "]\n" +
                           "📡 **Source:** Based on REAL-TIME Market Data\n\n" +
                           "📌 **Symbol:** " + symbol + "\n" +
@@ -699,7 +727,8 @@ public class Phase3TelegramBot {
                           "   • Put-Call Ratio (PCR): " + String.format("%.2f", chosenPrediction.pcr) + "\n" +
                           greeksInfo +
                           "📝 **Reasoning:** " + chosenPrediction.predictionReasoning + "\n\n" +
-                          "🕒 **Alert Time:** " + timestamp + " IST";
+                          "🕒 **Alert Time:** " + timestamp + " IST\n\n" +
+                          "🌐 **[Open Live Dashboard](" + webUrl + ")**";
             
             sendMessage(chatId, alert);
             lastAlertTimeMap.put(symbol, currentTime);
@@ -715,6 +744,23 @@ public class Phase3TelegramBot {
             s.stopLossPoints = chosenPrediction.suggestedStopLoss;
             s.createdAt = System.currentTimeMillis();
             activeSignals.put(symbol, s);
+
+            // Record signal in history for REST API
+            try {
+                Map<String, Object> histEntry = new LinkedHashMap<>();
+                histEntry.put("symbol", symbol);
+                histEntry.put("direction", chosenPrediction.predictedDirection);
+                histEntry.put("entryPrice", entryPrice);
+                histEntry.put("targetPoints", chosenPrediction.estimatedMovePoints);
+                histEntry.put("stopLossPoints", chosenPrediction.suggestedStopLoss);
+                histEntry.put("confidence", chosenPrediction.confidence);
+                histEntry.put("pcr", chosenPrediction.pcr);
+                histEntry.put("createdAt", System.currentTimeMillis());
+                histEntry.put("status", "OPEN");
+                TradingApiServer.SignalHistoryStore.add(histEntry);
+            } catch (Exception histEx) {
+                logger.warn("Could not store signal history: {}", histEx.getMessage());
+            }
         } catch (Exception e) {
             logger.error("Error scanning equity " + symbol, e);
         }
