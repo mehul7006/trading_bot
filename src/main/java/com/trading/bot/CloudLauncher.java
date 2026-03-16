@@ -85,10 +85,16 @@ public class CloudLauncher {
         @Override
         public void handle(HttpExchange t) throws IOException {
             String response = "Bot is Running! Upstox Integration Active.";
-            t.sendResponseHeaders(200, response.length());
-            OutputStream os = t.getResponseBody();
-            os.write(response.getBytes());
-            os.close();
+            
+            // Fix for HEAD request warning
+            if ("HEAD".equalsIgnoreCase(t.getRequestMethod())) {
+                t.sendResponseHeaders(200, -1); // No body for HEAD
+            } else {
+                t.sendResponseHeaders(200, response.length());
+                try (OutputStream os = t.getResponseBody()) {
+                    os.write(response.getBytes());
+                }
+            }
         }
     }
 }

@@ -424,7 +424,7 @@ public class Phase3TelegramBot {
                        "📢 **Today's Activity**\n" +
                        "• Calls Generated: `" + todayCallsGenerated + "`\n" +
                        "• Active Slots: `" + slotsTriggered.size() + "/4`\n" +
-                       "• Bot Instance: `V23.0-ELITE` (Multi-Index Optimized)";
+                       "• Bot Instance: `V24.0-INSTITUTIONAL` (Smart Money Concepts)";
         
         sendMessage(chatId, status);
     }
@@ -589,13 +589,25 @@ public class Phase3TelegramBot {
             String alertId = "AL-" + (System.currentTimeMillis() % 10000);
             String timestamp = LocalDateTime.now(ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
 
+            // Get absolute current LTP for comparison
+            double currentLTP = entryPrice; // Default to entry price
+            try {
+                Map<String, Double> snapshot = marketDataFetcher.getHonestMarketSnapshot();
+                if (snapshot.containsKey(symbol)) {
+                    currentLTP = snapshot.get(symbol);
+                }
+            } catch (Exception e) {
+                logger.warn("Could not fetch latest LTP for alert comparison: {}", e.getMessage());
+            }
+
             String alert = signalEmoji + " **CONFIRMED CALL DETECTED** [" + alertId + "]\n" +
                           "📡 **Source:** Based on REAL-TIME Market Data\n\n" +
                           "📌 **Symbol:** " + symbol + "\n" +
                           "⏱️ **Timeframe:** " + timeframeLabel + "\n" +
                           "🚀 **Direction:** " + chosenPrediction.predictedDirection + " " + arrow + "\n" +
                           "🎯 **Projected Move:** " + String.format("%.0f", targetPoints) + " pts\n" +
-                          "💰 **Entry Price:** " + String.format("%.0f", entryPrice) + "\n" +
+                          "💰 **Current Market Price (LTP):** " + String.format("%.2f", currentLTP) + "\n" +
+                          "💰 **Entry Price (Signal):** " + String.format("%.2f", entryPrice) + "\n" +
                           "💰 **Target Price (Exit):** " + String.format("%.0f", targetPrice) + "\n" +
                           "🛡️ **Stop Loss:** " + String.format("%.0f", chosenPrediction.suggestedStopLoss) + " pts\n" +
                           "📏 **Threshold:** " + String.format("%.0f", minPoints) + " pts\n" +
