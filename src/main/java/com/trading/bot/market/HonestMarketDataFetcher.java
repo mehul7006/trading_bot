@@ -34,7 +34,7 @@ public class HonestMarketDataFetcher {
     private final Map<String, String> optionExpiryCache = new java.util.concurrent.ConcurrentHashMap<>();
     
     // Upstox API configuration
-    private static String UPSTOX_ACCESS_TOKEN = System.getenv("UPSTOX_ACCESS_TOKEN") != null ? System.getenv("UPSTOX_ACCESS_TOKEN") : "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OWI3NzM0ZTg2N2UzYjJmYjY3OTI0NjEiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc3MzYzMDI4NiwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzczNjk4NDAwfQ.x-tuzfWsEnDbkuVwwiSnNT6uijoT1nKyESY8Z4JTeGk";
+    private static String UPSTOX_ACCESS_TOKEN = System.getenv("UPSTOX_ACCESS_TOKEN") != null ? System.getenv("UPSTOX_ACCESS_TOKEN") : "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OWI4YzJmNzY5ODE2OTcxMWU1NTRmNzQiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc3MzcxNjIxNSwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzczNzg0ODAwfQ.2SQS-IjDgX_ujzpeOKNuSUVUjYArilhbDtAMka01joo";
     
     // Token File Path
     private static final String TOKEN_FILE_PATH = "upstox_token.txt";

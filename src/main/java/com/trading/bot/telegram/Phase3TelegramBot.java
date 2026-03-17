@@ -26,8 +26,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import java.util.concurrent.ScheduledFuture;
-import com.trading.bot.api.TradingApiServer;
-
 /**
  * PHASE 3 TELEGRAM BOT - Complete 3-Phase Integration
  * Features: Phase 1 (Technical+ML) + Phase 2 (Multi-timeframe+Advanced) + Phase 3 (Smart Money)
@@ -84,6 +82,14 @@ public class Phase3TelegramBot {
     private static final String CHAT_ID_FILE = "active_chat_id.txt";
     private final Map<String, Integer> todayCallsBySymbol = new ConcurrentHashMap<>();
 
+    // Market movement monitoring: track prices for movement alerts
+    private final Map<String, Double> movementBaselinePrice = new ConcurrentHashMap<>();
+    private final Map<String, Long>   lastMovementAlertTime = new ConcurrentHashMap<>();
+    // Movement alert thresholds (%)
+    private static final double NIFTY_MOVE_THRESHOLD   = 0.35; // 0.35% ~ 85 pts on Nifty
+    private static final double BANKNIFTY_MOVE_THRESHOLD = 0.40; // 0.40% ~ 200 pts on BankNifty
+    private static final double SENSEX_MOVE_THRESHOLD  = 0.30; // 0.30% ~ 230 pts on Sensex
+
     /**
      * Checks if an active signal's target or SL has been hit.
      * Returns true if the signal was resolved (hit target or SL), false if still open.
@@ -92,7 +98,6 @@ public class Phase3TelegramBot {
     private boolean checkActiveSignal(long chatId, String symbol, List<SimpleMarketData> data) {
         ActiveSignal s = activeSignals.get(symbol);
         if (s == null || data.isEmpty()) return false;
-        SimpleMarketData last = data.get(data.size() - 1);
         double entry = s.entryPrice;
         double target = s.targetPoints;
         double sl = s.stopLossPoints;
@@ -100,31 +105,42 @@ public class Phase3TelegramBot {
         double slPrice     = "UP".equalsIgnoreCase(s.direction) ? entry - sl    : entry + sl;
         boolean hitTarget = false;
         boolean hitStop   = false;
-        if ("UP".equalsIgnoreCase(s.direction)) {
-            if (last.high >= targetPrice) hitTarget = true;
-            else if (last.low <= slPrice) hitStop = true;
-        } else {
-            if (last.low <= targetPrice) hitTarget = true;
-            else if (last.high >= slPrice) hitStop = true;
-        }
 
-        String renderUrl2 = System.getenv("RENDER_EXTERNAL_URL");
-        String webLink = (renderUrl2 != null && !renderUrl2.isEmpty()) ? renderUrl2 + "/app" : "http://localhost:8080/app";
+        // FIX: Scan ALL candles from signal creation time, not just the last candle.
+        // This ensures we never miss a target that was hit in a previous candle
+        // (e.g., target hit at 10:02 AM but price pulled back before next scan at 10:06 AM).
+        for (SimpleMarketData candle : data) {
+            // Skip candles that were completed before this signal was created
+            if (candle.timestamp != null) {
+                long candleMillis = candle.timestamp
+                    .atZone(java.time.ZoneId.of("Asia/Kolkata"))
+                    .toInstant().toEpochMilli();
+                if (candleMillis < s.createdAt - 60_000) continue; // allow 1-min overlap
+            }
+            if ("UP".equalsIgnoreCase(s.direction)) {
+                // For UP signals: check target first (optimistic — target hit before SL)
+                if (candle.high >= targetPrice) { hitTarget = true; break; }
+                if (candle.low  <= slPrice)     { hitStop   = true; break; }
+            } else {
+                // For DOWN signals: check target first
+                if (candle.low  <= targetPrice) { hitTarget = true; break; }
+                if (candle.high >= slPrice)     { hitStop   = true; break; }
+            }
+        }
 
         if (hitTarget) {
             double pnlPoints = target;
             long durationMin = (System.currentTimeMillis() - s.createdAt) / 60000;
             String msg = String.format(
-                "✅ *TARGET HIT — BOOK PROFIT!*\n\n" +
+                "✅ *TARGET HIT — BOOK PROFIT!* 🎉\n\n" +
                 "📌 *Symbol:* %s\n" +
                 "📈 *Direction:* %s\n" +
                 "💰 *Entry:* %.2f\n" +
                 "🎯 *Target:* %.2f  ← *ACHIEVED*\n" +
                 "📊 *Points Captured:* +%.0f pts\n" +
                 "⏱️ *Duration:* %d min\n\n" +
-                "💰 Position closed. Re-scanning for next opportunity...\n\n" +
-                "🌐 [Open Live Dashboard](%s)",
-                symbol, s.direction, entry, targetPrice, pnlPoints, durationMin, webLink);
+                "💰 Position closed. Re-scanning for next opportunity...",
+                symbol, s.direction, entry, targetPrice, pnlPoints, durationMin);
             sendMessage(chatId, msg);
             activeSignals.remove(symbol);
             lastAlertTimeMap.remove(symbol);   // reset cooldown → scan again immediately
@@ -142,9 +158,8 @@ public class Phase3TelegramBot {
                 "🛑 *SL Level:* %.2f  ← *TRIGGERED*\n" +
                 "📊 *Points Lost:* -%.0f pts\n" +
                 "⏱️ *Duration:* %d min\n\n" +
-                "⚠️ Trend invalidated. Re-scanning for next opportunity...\n\n" +
-                "🌐 [Open Live Dashboard](%s)",
-                symbol, s.direction, entry, slPrice, lossPoints, durationMin, webLink);
+                "⚠️ Trend invalidated. Re-scanning for next opportunity...",
+                symbol, s.direction, entry, slPrice, lossPoints, durationMin);
             sendMessage(chatId, msg);
             activeSignals.remove(symbol);
             lastAlertTimeMap.remove(symbol);   // reset cooldown → scan again immediately
@@ -162,7 +177,7 @@ public class Phase3TelegramBot {
 
     public Phase3TelegramBot(boolean testMode) {
         this.httpClient = HttpClient.newHttpClient();
-        this.scheduler = Executors.newScheduledThreadPool(2);
+        this.scheduler = Executors.newScheduledThreadPool(4);
         this.phase3Bot = new Phase3IntegratedBot();
         this.marketDataFetcher = HonestMarketDataFetcher.getInstance();
         this.aiPredictor = new AIPredictor();
@@ -203,7 +218,10 @@ public class Phase3TelegramBot {
         
         // Start message polling
         scheduler.scheduleWithFixedDelay(this::checkForMessages, 0, 2, TimeUnit.SECONDS);
-        
+
+        // Market movement monitor — runs every 2 minutes during market hours
+        scheduler.scheduleWithFixedDelay(this::monitorMarketMovement, 30, 120, TimeUnit.SECONDS);
+
         // Schedule daily cleanup at 11:59 PM
         scheduleDailyCleanup();
         
@@ -602,10 +620,10 @@ public class Phase3TelegramBot {
                 logger.error("Error generating 1-min prediction for {}: {}", symbol, ex.getMessage());
             }
             
-            boolean fiveMinEligible = checkMinimumPoints(symbol, prediction5.estimatedMovePoints) && prediction5.confidence >= 70;
+            boolean fiveMinEligible = checkMinimumPoints(symbol, prediction5.estimatedMovePoints) && prediction5.confidence >= 65;
             boolean oneMinEligible = false;
             if (prediction1 != null) {
-                oneMinEligible = checkMinimumPoints(symbol, prediction1.estimatedMovePoints) && prediction1.confidence >= 75;
+                oneMinEligible = checkMinimumPoints(symbol, prediction1.estimatedMovePoints) && prediction1.confidence >= 68;
             }
             
             AIPredictor.AIPrediction chosenPrediction = null;
@@ -638,7 +656,7 @@ public class Phase3TelegramBot {
                 // Daily guarantee: after 11:30 AM, if no call for this symbol today, use relaxed EMA signal
                 LocalTime nowIst = LocalTime.now(ZoneId.of("Asia/Kolkata"));
                 boolean noCallToday = todayCallsBySymbol.getOrDefault(symbol, 0) == 0;
-                boolean isGuaranteeWindow = nowIst.isAfter(LocalTime.of(11, 30)) && nowIst.isBefore(LocalTime.of(14, 45));
+                boolean isGuaranteeWindow = nowIst.isAfter(LocalTime.of(10, 30)) && nowIst.isBefore(LocalTime.of(14, 45));
 
                 if (noCallToday && isGuaranteeWindow) {
                     List<SimpleMarketData> dataForGuarantee = (data5 != null && !data5.isEmpty()) ? data5 : data1;
@@ -658,7 +676,7 @@ public class Phase3TelegramBot {
 
             long currentTime = System.currentTimeMillis();
             long lastAlert = lastAlertTimeMap.getOrDefault(symbol, 0L);
-            if (currentTime - lastAlert < 5 * 60 * 1000) return;
+            if (currentTime - lastAlert < 3 * 60 * 1000) return; // 3-min cooldown per symbol
             // Removed slot restriction to allow 1-2 calls per segment as requested
             // int slot = getSlot(LocalTime.now(ZoneId.of("Asia/Kolkata")));
             // if (slotsTriggered.contains(slot)) return;
@@ -707,28 +725,29 @@ public class Phase3TelegramBot {
                 logger.warn("Could not fetch latest LTP for alert comparison: {}", e.getMessage());
             }
 
-            // Web dashboard link (uses RENDER_EXTERNAL_URL env var or falls back to localhost)
-            String renderUrl = System.getenv("RENDER_EXTERNAL_URL");
-            String webUrl = (renderUrl != null && !renderUrl.isEmpty()) ? renderUrl + "/app" : "http://localhost:8080/app";
+            double rrRatio = chosenPrediction.suggestedStopLoss > 0
+                ? chosenPrediction.estimatedMovePoints / chosenPrediction.suggestedStopLoss : 0;
 
-            String alert = signalEmoji + " **CONFIRMED CALL DETECTED** [" + alertId + "]\n" +
-                          "📡 **Source:** Based on REAL-TIME Market Data\n\n" +
-                          "📌 **Symbol:** " + symbol + "\n" +
-                          "⏱️ **Timeframe:** " + timeframeLabel + "\n" +
-                          "🚀 **Direction:** " + chosenPrediction.predictedDirection + " " + arrow + "\n" +
-                          "🎯 **Projected Move:** " + String.format("%.0f", targetPoints) + " pts\n" +
-                          "💰 **Current Market Price (LTP):** " + String.format("%.2f", currentLTP) + "\n" +
-                          "💰 **Entry Price (Signal):** " + String.format("%.2f", entryPrice) + "\n" +
-                          "💰 **Target Price (Exit):** " + String.format("%.0f", targetPrice) + "\n" +
-                          "🛡️ **Stop Loss:** " + String.format("%.0f", chosenPrediction.suggestedStopLoss) + " pts\n" +
-                          "📏 **Threshold:** " + String.format("%.0f", minPoints) + " pts\n" +
-                          "🤖 **AI Confidence:** " + String.format("%.1f%%", chosenPrediction.confidence) + "\n\n" +
-                          "📊 **Option Metrics:**\n" +
-                          "   • Put-Call Ratio (PCR): " + String.format("%.2f", chosenPrediction.pcr) + "\n" +
+            double slAbsPrice = "UP".equals(chosenPrediction.predictedDirection)
+                ? entryPrice - chosenPrediction.suggestedStopLoss
+                : entryPrice + chosenPrediction.suggestedStopLoss;
+
+            String alert = signalEmoji + " *TRADE SIGNAL* [" + alertId + "]\n" +
+                          "🕒 *Time:* " + timestamp + " IST\n" +
+                          "📡 *Source:* REAL-TIME Data\n\n" +
+                          "📌 *Symbol:* " + symbol + "\n" +
+                          "⏱️ *Timeframe:* " + timeframeLabel + "\n" +
+                          "🚀 *Direction:* " + chosenPrediction.predictedDirection + " " + arrow + "\n\n" +
+                          "💰 *Entry:* " + String.format("%.2f", entryPrice) + "\n" +
+                          "🎯 *Target:* " + String.format("%.2f", targetPrice) +
+                              "  (+" + String.format("%.0f", targetPoints) + " pts)\n" +
+                          "🛑 *Stop Loss:* " + String.format("%.2f", slAbsPrice) +
+                              "  (-" + String.format("%.0f", chosenPrediction.suggestedStopLoss) + " pts)\n" +
+                          "📊 *R:R:* 1:" + String.format("%.1f", rrRatio) + "\n\n" +
+                          "🤖 *AI Confidence:* " + String.format("%.1f%%", chosenPrediction.confidence) + "\n" +
+                          "📊 *PCR:* " + String.format("%.2f", chosenPrediction.pcr) + "\n" +
                           greeksInfo +
-                          "📝 **Reasoning:** " + chosenPrediction.predictionReasoning + "\n\n" +
-                          "🕒 **Alert Time:** " + timestamp + " IST\n\n" +
-                          "🌐 **[Open Live Dashboard](" + webUrl + ")**";
+                          "📝 *Reason:* " + chosenPrediction.predictionReasoning;
             
             sendMessage(chatId, alert);
             lastAlertTimeMap.put(symbol, currentTime);
@@ -757,12 +776,90 @@ public class Phase3TelegramBot {
                 histEntry.put("pcr", chosenPrediction.pcr);
                 histEntry.put("createdAt", System.currentTimeMillis());
                 histEntry.put("status", "OPEN");
-                TradingApiServer.SignalHistoryStore.add(histEntry);
+                // Signal history logged internally
+                logger.info("Signal history stored: {} {} entry={} target={} sl={}",
+                    symbol, histEntry.get("direction"), histEntry.get("entryPrice"),
+                    histEntry.get("targetPoints"), histEntry.get("stopLossPoints"));
             } catch (Exception histEx) {
-                logger.warn("Could not store signal history: {}", histEx.getMessage());
+                logger.warn("Could not log signal history: {}", histEx.getMessage());
             }
         } catch (Exception e) {
             logger.error("Error scanning equity " + symbol, e);
+        }
+    }
+
+    /**
+     * Market movement monitor — runs every 2 minutes.
+     * Sends alerts when NIFTY50 / BANKNIFTY / SENSEX move significantly
+     * (>= threshold %) compared to the price captured at the start of each
+     * monitoring window. Alerts at most once every 10 minutes per symbol.
+     */
+    private void monitorMarketMovement() {
+        if (activeChatId == 0) return; // No chat registered yet
+
+        java.time.LocalTime now = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata"));
+        boolean isMarketOpen = now.isAfter(java.time.LocalTime.of(9, 15))
+                            && now.isBefore(java.time.LocalTime.of(15, 35));
+        if (!isMarketOpen) return;
+
+        String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
+        for (String sym : symbols) {
+            try {
+                List<SimpleMarketData> data = marketDataFetcher.getRealMarketData5Min(sym);
+                if (data == null || data.isEmpty()) continue;
+                double currentPrice = data.get(data.size() - 1).price;
+                if (currentPrice <= 0) continue;
+
+                // Establish baseline on first call
+                movementBaselinePrice.putIfAbsent(sym, currentPrice);
+                double baseline = movementBaselinePrice.get(sym);
+
+                double changePct = Math.abs((currentPrice - baseline) / baseline * 100.0);
+                double threshold = switch (sym) {
+                    case "NIFTY50"   -> NIFTY_MOVE_THRESHOLD;
+                    case "BANKNIFTY" -> BANKNIFTY_MOVE_THRESHOLD;
+                    case "SENSEX"    -> SENSEX_MOVE_THRESHOLD;
+                    default          -> 0.40;
+                };
+
+                // Minimum 10 minutes between movement alerts for same symbol
+                long lastAlert = lastMovementAlertTime.getOrDefault(sym, 0L);
+                boolean cooldownOk = (System.currentTimeMillis() - lastAlert) > 10 * 60 * 1000L;
+
+                if (changePct >= threshold && cooldownOk) {
+                    double changePoints = currentPrice - baseline;
+                    String direction = changePoints > 0 ? "📈 UP" : "📉 DOWN";
+                    String emoji = changePoints > 0 ? "🟢" : "🔴";
+                    String changeStr = (changePoints > 0 ? "+" : "") + String.format("%.0f", changePoints);
+                    String symLabel = switch (sym) {
+                        case "NIFTY50"   -> "NIFTY 50";
+                        case "BANKNIFTY" -> "BANK NIFTY";
+                        case "SENSEX"    -> "SENSEX";
+                        default          -> sym;
+                    };
+                    String msg = emoji + " *MARKET MOVEMENT ALERT*\n\n" +
+                        "📌 *Index:* " + symLabel + "\n" +
+                        "🚀 *Move:* " + direction + "\n" +
+                        "📊 *Change:* " + changeStr + " pts (" + String.format("%.2f%%", Math.abs(changePct)) + ")\n" +
+                        "💰 *Current Price:* " + String.format("%.2f", currentPrice) + "\n" +
+                        "📍 *From:* " + String.format("%.2f", baseline) + "\n" +
+                        "🕒 *Time:* " + now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) + " IST";
+                    sendMessage(activeChatId, msg);
+                    lastMovementAlertTime.put(sym, System.currentTimeMillis());
+                    // Reset baseline after alert so next move is measured from here
+                    movementBaselinePrice.put(sym, currentPrice);
+                    logger.info("📡 Movement alert sent for {}: {} pts ({} %)",
+                        sym, changeStr, String.format("%.2f", changePct));
+                }
+
+                // Reset baseline every 15 minutes to keep alerts relevant
+                if ((System.currentTimeMillis() - lastAlert) > 15 * 60 * 1000L && changePct < threshold) {
+                    movementBaselinePrice.put(sym, currentPrice);
+                }
+
+            } catch (Exception e) {
+                logger.warn("Movement monitor error for {}: {}", sym, e.getMessage());
+            }
         }
     }
 

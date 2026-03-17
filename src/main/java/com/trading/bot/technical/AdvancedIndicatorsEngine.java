@@ -149,7 +149,13 @@ public class AdvancedIndicatorsEngine {
             tpv += tp * x.volume;
             tv += x.volume;
         }
-        return tv == 0 ? 0 : tpv / tv;
+        if (tv > 0) return tpv / tv;
+        // Fallback for index data with no volume: 20-bar SMA of typical price
+        if (d.isEmpty()) return 0;
+        int n = d.size(), startIdx = Math.max(0, n - 20);
+        double sum = 0; int cnt = 0;
+        for (int i = startIdx; i < n; i++) { sum += (d.get(i).high + d.get(i).low + d.get(i).price) / 3.0; cnt++; }
+        return cnt > 0 ? sum / cnt : d.get(n - 1).price;
     }
 
     public StochasticResult calculateStochastic(List<SimpleMarketData> priceHistory, int kPeriod, int dPeriod) {

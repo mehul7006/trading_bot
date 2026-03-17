@@ -2,6 +2,7 @@ package com.trading.bot.agents;
 
 import com.trading.bot.market.HonestMarketDataFetcher;
 import com.trading.bot.market.SimpleMarketData;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,7 +23,22 @@ public class MarketDataAgent implements Agent {
     }
 
     public List<SimpleMarketData> getHistoricalData(String symbol, int days) throws Exception {
-        return fetcher.getRealMarketData5Min(symbol);
+        List<SimpleMarketData> all = fetcher.getRealMarketData5Min(symbol);
+        if (all == null || all.isEmpty()) return all;
+
+        // Filter to last `days` calendar days, but always keep ≥200 candles for indicator warm-up
+        LocalDate cutoff = LocalDate.now().minusDays(days);
+        int cutoffIndex = 0;
+        for (int i = 0; i < all.size(); i++) {
+            if (all.get(i).timestamp != null && !all.get(i).timestamp.toLocalDate().isBefore(cutoff)) {
+                cutoffIndex = i;
+                break;
+            }
+        }
+        // Ensure at least 200 candles for indicator warm-up
+        cutoffIndex = Math.min(cutoffIndex, all.size() - 200);
+        cutoffIndex = Math.max(cutoffIndex, 0);
+        return all.subList(cutoffIndex, all.size());
     }
 
     @Override

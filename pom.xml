@@ -15,6 +15,7 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <exec.mainClass>com.trading.bot.CloudLauncher</exec.mainClass>
+        <frontend.skip>false</frontend.skip>
     </properties>
 
     <dependencies>
@@ -144,18 +145,27 @@
                         <id>install-node-npm</id>
                         <goals><goal>install-node-and-npm</goal></goals>
                         <phase>generate-resources</phase>
+                        <configuration>
+                            <skip>${frontend.skip}</skip>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>npm-install</id>
                         <goals><goal>npm</goal></goals>
                         <phase>generate-resources</phase>
-                        <configuration><arguments>ci</arguments></configuration>
+                        <configuration>
+                            <arguments>ci</arguments>
+                            <skip>${frontend.skip}</skip>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>npm-build</id>
                         <goals><goal>npm</goal></goals>
                         <phase>generate-resources</phase>
-                        <configuration><arguments>run build</arguments></configuration>
+                        <configuration>
+                            <arguments>run build</arguments>
+                            <skip>${frontend.skip}</skip>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
