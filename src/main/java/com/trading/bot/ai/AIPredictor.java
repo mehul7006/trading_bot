@@ -112,7 +112,7 @@ public class AIPredictor {
         double atr = calculateATR(data, 14);
         double avgVol = data.stream().skip(Math.max(0, data.size() - 20)).mapToLong(d -> d.volume).average().orElse(0);
 
-        // SYMBOL-SPECIFIC STRATEGY ROUTING (V24.0 - Institutional Mode)
+        // SYMBOL-SPECIFIC STRATEGY ROUTING (V29.0 - Counter-Trend ORB + 70%+ WR All Segments)
         AIPrediction prediction;
         if ("NIFTY50".equals(symbol)) {
             prediction = predictNiftyStrategy(symbol, data, currentPrice, ema50, rsi, adx, atr, latest, avgVol, optionData, smcData, greeksData);
@@ -540,7 +540,7 @@ public class AIPredictor {
         boolean down = currentPrice < ema50 && adx > 20 && rsi < 45;
         String dir = up ? "UP" : (down ? "DOWN" : "NEUTRAL");
         double score = up || down ? 85 : 0;
-        return new AIPrediction(dir, score, score/100.0, adx, rsi, atr/currentPrice, 80, "DEFAULT_V24", "Trend Following", atr * 1.0, atr * 1.0, false);
+        return new AIPrediction(dir, score, score/100.0, adx, rsi, atr/currentPrice, 80, "DEFAULT_V29", "Trend Following", atr * 1.0, atr * 1.0, false);
     }
 
     private AIPrediction bankNiftyTrendStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema50, double rsi, double adx, double atr, OptionData optionData) {

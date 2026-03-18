@@ -5,7 +5,7 @@ import java.util.List;
 public class AuditRunner {
     public static void main(String[] args) {
         int days = 120; // Last 120 days
-        System.out.println("🚀 Starting " + days + "-Day Bot Performance Audit (V24.1)");
+        System.out.println("🚀 Starting " + days + "-Day Bot Performance Audit (V29.0)");
         System.out.println("=======================================================================");
 
         AuditAgent auditAgent = new AuditAgent();
@@ -80,7 +80,7 @@ public class AuditRunner {
         System.out.printf("  Win Points    : +%.1f pts (est.)%n", totalWinPoints);
         System.out.printf("  Loss Points   : -%.1f pts (est.)%n", totalLossPoints);
         System.out.println("=======================================================================");
-        System.out.println("✅ Audit Done — V24.1 (O(n) window filters + Enhanced confluence)");
+        System.out.println("✅ Audit Done — V29.0 (Counter-Trend ORB + 70%+ WR All Segments)");
     }
 
     private static double getAvgSL(String symbol) {

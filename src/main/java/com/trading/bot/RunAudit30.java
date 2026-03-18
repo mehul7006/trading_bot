@@ -8,14 +8,14 @@ public class RunAudit30 {
         List<AuditAgent.AuditResult> results = new ArrayList<>();
         AuditAgent agent = new AuditAgent();
         int days = args.length > 0 ? Integer.parseInt(args[0]) : 30;
-        System.out.println("Running " + days + "-day audit (V27 High Win-Rate Strategy)...\n");
+        System.out.println("Running " + days + "-day audit (V29 Counter-Trend ORB + 70%+ WR All Segments)...\n");
         for (String sym : symbols) {
             System.out.println("Auditing " + sym + " ...");
             results.add(agent.runAudit(sym, days));
         }
         int totalTrades=0,totalWins=0,totalPartial=0,totalLoss=0; double totalNet=0;
         System.out.println("\n╔══════════════════════════════════════════════════════════════════╗");
-        System.out.println("║  " + days + "-DAY BACKTEST — V27 High Win-Rate Strategy");
+        System.out.println("║  " + days + "-DAY BACKTEST — V29 Counter-Trend ORB + 70%+ WR All Segments");
         System.out.println("╠════════════╦═══════╦════════╦═════════╦══════════╦═══════════════╣");
         System.out.println("║ Symbol     ║Trades ║  Wins  ║ Partial ║ Win Rate ║   Net Points  ║");
         System.out.println("╠════════════╬═══════╬════════╬═════════╬══════════╬═══════════════╣");

@@ -137,7 +137,7 @@ public class TradingApiServer {
                 resp.put("todayCallsGenerated", bot.getTodayCallsGenerated());
                 resp.put("activeSignalsCount", bot.getActiveSignals().size());
                 resp.put("serverTime", java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Kolkata")).toString());
-                resp.put("version", "V24.0");
+                resp.put("version", "V29.0");
 
                 // Simple win rate from history
                 List<Map<String, Object>> hist = SignalHistoryStore.getLast(20);
