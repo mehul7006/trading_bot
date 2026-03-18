@@ -85,36 +85,22 @@ public class HonestMarketDataFetcher {
     }
 
     /**
-     * Daily cleanup: Clear token and cache at 11:59 PM
+     * Daily cleanup at 11:59 PM: clears in-memory prices/cache so next morning's
+     * first fetch gets truly fresh data. The 120-day rolling disk files are KEPT —
+     * they are already up-to-date from the 3:35 PM end-of-day snapshot.
      */
     public void clearDailySession() {
-        // Preserve token — Upstox tokens are valid for ~19h and still usable early next morning.
-        // Only clear market data cache so prices are re-fetched fresh each day.
-        clearAllCache();
-        System.out.println("🕛 Daily Reset (11:59 PM): Market data cache cleared. Token preserved for next session.");
+        // Only wipe in-memory state — disk history is valuable and must not be deleted.
+        lastValidPrices.clear();
+        lastValidTimes.clear();
+        dataCache.clear();
+        System.out.println("🕛 Daily Reset (11:59 PM): In-memory cache cleared. 120-day disk history preserved.");
     }
 
     private void clearAllCache() {
         lastValidPrices.clear();
         lastValidTimes.clear();
         dataCache.clear();
-        
-        // Clear disk cache files
-        try {
-            File cacheDir = new File(CACHE_DIR);
-            if (cacheDir.exists() && cacheDir.isDirectory()) {
-                File[] files = cacheDir.listFiles();
-                if (files != null) {
-                    for (File f : files) {
-                        if (f.getName().endsWith(".json")) {
-                            f.delete();
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("⚠️ Failed to clear disk cache: " + e.getMessage());
-        }
     }
     
     public static String getAccessToken() {

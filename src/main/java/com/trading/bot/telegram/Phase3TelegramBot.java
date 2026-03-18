@@ -225,8 +225,11 @@ public class Phase3TelegramBot {
         // Market movement monitor — runs every 2 minutes during market hours
         scheduler.scheduleWithFixedDelay(this::monitorMarketMovement, 30, 120, TimeUnit.SECONDS);
 
-        // Schedule daily cleanup at 11:59 PM
+        // Schedule daily cleanup at 11:59 PM (memory-only clear; disk history preserved)
         scheduleDailyCleanup();
+
+        // Schedule end-of-day data snapshot at 3:35 PM IST to capture today's full session
+        scheduleEndOfDaySnapshot();
         
         logger.info("✅ Phase 3 Telegram Bot started successfully");
         logger.info("🏦 Available features: Smart Money Analysis, Order Blocks, FVGs, Liquidity Analysis");
@@ -556,7 +559,7 @@ public class Phase3TelegramBot {
             } catch (Exception e) {
                 logger.error("Critical error in scanning task: {}", e.getMessage());
             }
-        }, 5, 30, TimeUnit.SECONDS);
+        }, 5, 60, TimeUnit.SECONDS);
     }
 
     private void stopScanningForInterruption(long chatId) {
@@ -1037,11 +1040,37 @@ public class Phase3TelegramBot {
         if (now.isAfter(nextCleanup)) {
             nextCleanup = nextCleanup.plusDays(1);
         }
-        
+
         long initialDelay = java.time.Duration.between(now, nextCleanup).toSeconds();
         scheduler.scheduleAtFixedRate(() -> {
-            logger.info("🕛 Executing daily token and market data cleanup...");
+            logger.info("🕛 Daily Reset (11:59 PM): Clearing in-memory market data cache. 120-day disk history preserved.");
             marketDataFetcher.clearDailySession();
+        }, initialDelay, 24 * 60 * 60, TimeUnit.SECONDS);
+    }
+
+    /**
+     * At 3:35 PM IST (5 min after market close), do a final data refresh so today's
+     * complete session is merged and saved into the 120-day rolling disk store.
+     */
+    private void scheduleEndOfDaySnapshot() {
+        LocalTime snapshotTime = LocalTime.of(15, 35);
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+        LocalDateTime next = now.with(snapshotTime);
+        if (now.isAfter(next)) {
+            next = next.plusDays(1);
+        }
+        long initialDelay = java.time.Duration.between(now, next).toSeconds();
+        scheduler.scheduleAtFixedRate(() -> {
+            logger.info("📦 End-of-day snapshot: saving today's candles to 120-day local store...");
+            String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
+            for (String sym : symbols) {
+                try {
+                    marketDataFetcher.getRealMarketData5Min(sym);
+                    logger.info("✅ 120-day store updated for {}", sym);
+                } catch (Exception e) {
+                    logger.warn("⚠️ End-of-day snapshot failed for {}: {}", sym, e.getMessage());
+                }
+            }
         }, initialDelay, 24 * 60 * 60, TimeUnit.SECONDS);
     }
 
