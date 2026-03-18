@@ -236,7 +236,7 @@ public class Phase3TelegramBot {
         if (savedChatId != 0) {
             activeChatId = savedChatId;
             logger.info("📡 Auto-resuming market scan for saved chatId: {}", savedChatId);
-            scheduler.schedule(() -> handleScanCommand(savedChatId), 15, TimeUnit.SECONDS);
+            scheduler.schedule(() -> startScanSilently(savedChatId), 15, TimeUnit.SECONDS);
         } else {
             logger.info("📱 Send /start then /scan to begin market scanning");
         }
@@ -526,23 +526,28 @@ public class Phase3TelegramBot {
         activeChatId = chatId;
         saveChatId(chatId);
         if (isScanning && scanFuture != null && !scanFuture.isCancelled() && !scanFuture.isDone()) {
-            sendMessage(chatId, "🔍 **Scanning is Already Active**\n\n" +
-                              "🤖 Bot is currently monitoring the market.");
+            sendMessage(chatId, "✅ Already started scanning\n\n" +
+                              "📡 Bot is monitoring NIFTY50, SENSEX, BANKNIFTY.\n" +
+                              "🔔 You will be notified when a signal is found.");
             return;
         }
-        
-        isScanning = true;
-        
-        // Ensure any old task is cancelled
-        if (scanFuture != null) {
-            scanFuture.cancel(true);
-        }
-        
-        sendMessage(chatId, "🔍 **Scanning Started**\n\n" +
+        startScanSilently(chatId);
+        sendMessage(chatId, "🔍 Now I will start scanning\n\n" +
                           "📡 Monitoring NIFTY50, SENSEX, BANKNIFTY...\n" +
                           "🤖 AI analyzing patterns...\n" +
                           "🔔 You will be notified of high-confidence signals.");
-        
+    }
+
+    /** Starts the scan scheduler without sending any Telegram message. Used for auto-resume on restart. */
+    private void startScanSilently(long chatId) {
+        activeChatId = chatId;
+        if (isScanning && scanFuture != null && !scanFuture.isCancelled() && !scanFuture.isDone()) {
+            return; // already running, nothing to do
+        }
+        isScanning = true;
+        if (scanFuture != null) {
+            scanFuture.cancel(true);
+        }
         // Schedule scanning task — 30s interval for constant market monitoring
         scanFuture = scheduler.scheduleWithFixedDelay(() -> {
             try {
