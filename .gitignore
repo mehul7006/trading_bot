@@ -17,3 +17,14 @@ cp.txt
 web-app/node/
 web-app/node_modules/
 web-app/dist/
+
+# Auto-generated market data cache (rebuilt on first run)
+market_data_cache/
+
+# Maven shade plugin artifact
+dependency-reduced-pom.xml
+
+# Runtime state files (auto-created at startup)
+daily_signal_state.properties
+active_chat_id.txt
+signal_log.csv
