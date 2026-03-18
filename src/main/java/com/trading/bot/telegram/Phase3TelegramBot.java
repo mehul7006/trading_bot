@@ -738,16 +738,20 @@ public class Phase3TelegramBot {
             String alertId = "AL-" + (System.currentTimeMillis() % 10000);
             String timestamp = LocalDateTime.now(ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
 
-            // Get absolute current LTP for comparison
-            double currentLTP = entryPrice; // Default to entry price
+            // Use live LTP as entry price (more accurate than last candle close which may be 5 min old)
             try {
                 Map<String, Double> snapshot = marketDataFetcher.getHonestMarketSnapshot();
-                if (snapshot.containsKey(symbol)) {
-                    currentLTP = snapshot.get(symbol);
+                if (snapshot.containsKey(symbol) && snapshot.get(symbol) > 0) {
+                    entryPrice = snapshot.get(symbol);
+                    logger.info("✅ Using live LTP as entry price for {}: {}", symbol, entryPrice);
                 }
             } catch (Exception e) {
-                logger.warn("Could not fetch latest LTP for alert comparison: {}", e.getMessage());
+                logger.warn("Could not fetch live LTP for {}; using last candle close: {}", symbol, e.getMessage());
             }
+
+            // Recalculate target and SL absolute prices with the refreshed entry
+            targetPrice = chosenPrediction.predictedDirection.equals("UP")
+                ? entryPrice + targetPoints : entryPrice - targetPoints;
 
             double rrRatio = chosenPrediction.suggestedStopLoss > 0
                 ? chosenPrediction.estimatedMovePoints / chosenPrediction.suggestedStopLoss : 0;
