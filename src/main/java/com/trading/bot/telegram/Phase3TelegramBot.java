@@ -211,8 +211,11 @@ public class Phase3TelegramBot {
         }
         
         isRunning = true;
-        logger.info("🚀 Starting Phase 3 Telegram Bot...");
-        
+        logger.info("🚀 Starting Phase 3 Telegram Bot V29...");
+
+        // Restore today's signal counts/cooldowns so restarts don't duplicate signals
+        loadDailyState();
+
         // Silent Startup - No spamming user on restart
         // sendStartupMessage();
         
@@ -351,9 +354,14 @@ public class Phase3TelegramBot {
                         String text = extractMessageText(update);
                         
                         if (chatId != 0 && text != null) {
-                            // Filter out messages older than 30 seconds to prevent "re-play" after restart
-                            // Note: Telegram doesn't give timestamp easily in this simple parser, 
-                            // but we can at least ensure we only process each updateId ONCE globally.
+                            // Filter out messages older than 90 seconds — prevents replaying old
+                            // commands after a bot restart (lastUpdateId resets to 0 on restart).
+                            long msgDate = extractMessageDate(update); // Unix epoch seconds
+                            long nowSec  = System.currentTimeMillis() / 1000;
+                            if (msgDate > 0 && (nowSec - msgDate) > 90) {
+                                logger.info("⏭ Skipping old message ({}s ago): {}", nowSec - msgDate, text);
+                                continue;
+                            }
                             latestCommands.put(chatId, text);
                         }
                     } catch (Exception e) {
@@ -462,8 +470,8 @@ public class Phase3TelegramBot {
         try {
             Map<String, Double> prices = marketDataFetcher.getHonestMarketSnapshot();
             StringBuilder sb = new StringBuilder();
-            LocalDateTime now = LocalDateTime.now();
-            
+            LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+
             for (String symbol : Arrays.asList("NIFTY50", "BANKNIFTY", "SENSEX")) {
                 if (prices.containsKey(symbol)) {
                     LocalDateTime lastTime = marketDataFetcher.getLastValidTime(symbol);
@@ -506,7 +514,7 @@ public class Phase3TelegramBot {
                        "📢 **Today's Activity**\n" +
                        "• Calls Generated: `" + todayCallsGenerated + "`\n" +
                        "• Active Slots: `" + slotsTriggered.size() + "/4`\n" +
-                       "• Bot Instance: `V24.0-INSTITUTIONAL` (Smart Money Concepts)";
+                       "• Bot Instance: `V29.0-INSTITUTIONAL` (70%+ WR All Segments)";
         
         sendMessage(chatId, status);
     }
@@ -701,13 +709,14 @@ public class Phase3TelegramBot {
                     chosenPrediction.greeks.getOrDefault("gamma", 0.0));
             }
 
-            // Check if data is fresh (Strict 10-minute limit for live alerts)
+            // Check if data is fresh — use IST for comparison (data timestamps are IST)
             SimpleMarketData latestData = data5 != null && !data5.isEmpty() ? data5.get(data5.size() - 1) : null;
-            LocalDateTime dataTime = latestData != null ? latestData.timestamp : LocalDateTime.now();
-            boolean isFresh = dataTime.isAfter(LocalDateTime.now().minusMinutes(10));
-            
+            LocalDateTime nowIst = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+            LocalDateTime dataTime = latestData != null ? latestData.timestamp : nowIst;
+            boolean isFresh = dataTime.isAfter(nowIst.minusMinutes(10));
+
             if (!isFresh) {
-                logger.warn("⚠️ Skipping alert for {} as data is stale (last update: {}). Current Time: {}", symbol, dataTime, LocalDateTime.now());
+                logger.warn("⚠️ Skipping alert for {} — stale data (last: {} IST, now: {} IST)", symbol, dataTime, nowIst);
                 return;
             }
 
@@ -753,6 +762,7 @@ public class Phase3TelegramBot {
             lastAlertTimeMap.put(symbol, currentTime);
             todayCallsGenerated++;
             todayCallsBySymbol.merge(symbol, 1, Integer::sum);
+            saveDailyState(); // persist so restarts don't duplicate signals
             // slotsTriggered.add(slot); // Slot restriction removed
             
             ActiveSignal s = new ActiveSignal();
@@ -1000,6 +1010,21 @@ public class Phase3TelegramBot {
         }
     }
     
+    private long extractMessageDate(String update) {
+        try {
+            // Telegram message JSON: ..."date":1234567890,...
+            String marker = "\"date\":";
+            int idx = update.indexOf(marker);
+            if (idx == -1) return 0;
+            String sub = update.substring(idx + marker.length()).trim();
+            int end = 0;
+            while (end < sub.length() && Character.isDigit(sub.charAt(end))) end++;
+            return Long.parseLong(sub.substring(0, end));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     private void scheduleDailyCleanup() {
         LocalTime cleanupTime = LocalTime.of(23, 59);
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
@@ -1036,6 +1061,51 @@ public class Phase3TelegramBot {
             logger.warn("Could not load chatId: {}", e.getMessage());
         }
         return 0;
+    }
+
+    private static final String DAILY_STATE_FILE = "daily_signal_state.properties";
+
+    /** Save today's signal counts and cooldown timestamps to disk (survives restarts). */
+    private void saveDailyState() {
+        try {
+            String today = java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")).toString();
+            java.util.Properties p = new java.util.Properties();
+            p.setProperty("date", today);
+            p.setProperty("totalCalls", String.valueOf(todayCallsGenerated));
+            todayCallsBySymbol.forEach((sym, cnt) -> p.setProperty("calls." + sym, String.valueOf(cnt)));
+            lastAlertTimeMap.forEach((sym, ts) -> p.setProperty("lastAlert." + sym, String.valueOf(ts)));
+            try (java.io.OutputStream os = new java.io.FileOutputStream(DAILY_STATE_FILE)) {
+                p.store(os, "Daily signal state — auto-generated");
+            }
+        } catch (Exception e) {
+            logger.warn("Could not save daily state: {}", e.getMessage());
+        }
+    }
+
+    /** Load daily signal state if it was saved today (prevents duplicate signals across restarts). */
+    private void loadDailyState() {
+        try {
+            java.io.File f = new java.io.File(DAILY_STATE_FILE);
+            if (!f.exists()) return;
+            java.util.Properties p = new java.util.Properties();
+            try (java.io.InputStream is = new java.io.FileInputStream(f)) { p.load(is); }
+            String savedDate = p.getProperty("date", "");
+            String today = java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")).toString();
+            if (!today.equals(savedDate)) {
+                logger.info("📅 Daily state is from {} — ignoring (new day)", savedDate);
+                return;
+            }
+            todayCallsGenerated = Integer.parseInt(p.getProperty("totalCalls", "0"));
+            for (String key : p.stringPropertyNames()) {
+                if (key.startsWith("calls."))
+                    todayCallsBySymbol.put(key.substring(6), Integer.parseInt(p.getProperty(key)));
+                if (key.startsWith("lastAlert."))
+                    lastAlertTimeMap.put(key.substring(10), Long.parseLong(p.getProperty(key)));
+            }
+            logger.info("✅ Loaded daily state: {} calls today, cooldowns restored", todayCallsGenerated);
+        } catch (Exception e) {
+            logger.warn("Could not load daily state: {}", e.getMessage());
+        }
     }
 
     /**
