@@ -79,7 +79,8 @@ public class Phase3TelegramBot {
     private final java.util.Set<Integer> slotsTriggered = java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     // Per-symbol call tracking for daily guarantee mechanism
-    private static final String CHAT_ID_FILE = "active_chat_id.txt";
+    private static final String CHAT_ID_FILE  = "active_chat_id.txt";
+    private static final String SIGNAL_LOG_FILE = "signal_log.csv";
     private final Map<String, Integer> todayCallsBySymbol = new ConcurrentHashMap<>();
 
     // Market movement monitoring: track prices for movement alerts
@@ -142,6 +143,7 @@ public class Phase3TelegramBot {
                 "💰 Position closed. Re-scanning for next opportunity...",
                 symbol, s.direction, entry, targetPrice, pnlPoints, durationMin);
             sendMessage(chatId, msg);
+            updateSignalLog(symbol, s.createdAt, "WIN", pnlPoints);
             activeSignals.remove(symbol);
             lastAlertTimeMap.remove(symbol);   // reset cooldown → scan again immediately
             return true;
@@ -161,6 +163,7 @@ public class Phase3TelegramBot {
                 "⚠️ Trend invalidated. Re-scanning for next opportunity...",
                 symbol, s.direction, entry, slPrice, lossPoints, durationMin);
             sendMessage(chatId, msg);
+            updateSignalLog(symbol, s.createdAt, "LOSS", -lossPoints);
             activeSignals.remove(symbol);
             lastAlertTimeMap.remove(symbol);   // reset cooldown → scan again immediately
             return true;
@@ -406,6 +409,10 @@ public class Phase3TelegramBot {
             handleScanCommand(chatId);
         } else if (cmdKey.startsWith("/stop")) {
             handleStopScanCommand(chatId);
+        } else if (cmdKey.startsWith("/today")) {
+            sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata"))));
+        } else if (cmdKey.startsWith("/yesterday")) {
+            sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(1)));
         }
         
         // Auto-clear from pending after a short delay to allow future valid same commands
@@ -782,25 +789,10 @@ public class Phase3TelegramBot {
             s.createdAt = System.currentTimeMillis();
             activeSignals.put(symbol, s);
 
-            // Record signal in history for REST API
-            try {
-                Map<String, Object> histEntry = new LinkedHashMap<>();
-                histEntry.put("symbol", symbol);
-                histEntry.put("direction", chosenPrediction.predictedDirection);
-                histEntry.put("entryPrice", entryPrice);
-                histEntry.put("targetPoints", chosenPrediction.estimatedMovePoints);
-                histEntry.put("stopLossPoints", chosenPrediction.suggestedStopLoss);
-                histEntry.put("confidence", chosenPrediction.confidence);
-                histEntry.put("pcr", chosenPrediction.pcr);
-                histEntry.put("createdAt", System.currentTimeMillis());
-                histEntry.put("status", "OPEN");
-                // Signal history logged internally
-                logger.info("Signal history stored: {} {} entry={} target={} sl={}",
-                    symbol, histEntry.get("direction"), histEntry.get("entryPrice"),
-                    histEntry.get("targetPoints"), histEntry.get("stopLossPoints"));
-            } catch (Exception histEx) {
-                logger.warn("Could not log signal history: {}", histEx.getMessage());
-            }
+            // Persist signal to log file for /today and /yesterday reports
+            appendSignalLog(symbol, chosenPrediction.predictedDirection, entryPrice,
+                chosenPrediction.estimatedMovePoints, chosenPrediction.suggestedStopLoss,
+                s.createdAt);
         } catch (Exception e) {
             logger.error("Error scanning equity " + symbol, e);
         }
@@ -1072,6 +1064,105 @@ public class Phase3TelegramBot {
                 }
             }
         }, initialDelay, 24 * 60 * 60, TimeUnit.SECONDS);
+    }
+
+    // -----------------------------------------------------------------------
+    // Signal Log — persists every call + outcome to signal_log.csv
+    // Format: date,time,symbol,direction,entry,targetPts,slPts,status,points,createdAt
+    // -----------------------------------------------------------------------
+
+    private synchronized void appendSignalLog(String symbol, String direction,
+            double entry, double targetPts, double slPts, long createdAt) {
+        try {
+            java.time.ZonedDateTime zdt = java.time.Instant.ofEpochMilli(createdAt)
+                    .atZone(ZoneId.of("Asia/Kolkata"));
+            String date = zdt.toLocalDate().toString();
+            String time = zdt.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"));
+            String line = String.join(",", date, time, symbol, direction,
+                    String.format("%.2f", entry),
+                    String.format("%.2f", targetPts),
+                    String.format("%.2f", slPts),
+                    "OPEN", "0.00", String.valueOf(createdAt));
+            java.nio.file.Files.writeString(java.nio.file.Path.of(SIGNAL_LOG_FILE),
+                    line + System.lineSeparator(),
+                    java.nio.file.StandardOpenOption.CREATE,
+                    java.nio.file.StandardOpenOption.APPEND);
+        } catch (Exception e) {
+            logger.warn("Could not append signal log: {}", e.getMessage());
+        }
+    }
+
+    private synchronized void updateSignalLog(String symbol, long createdAt,
+            String status, double points) {
+        try {
+            java.nio.file.Path path = java.nio.file.Path.of(SIGNAL_LOG_FILE);
+            if (!path.toFile().exists()) return;
+            List<String> lines = java.nio.file.Files.readAllLines(path);
+            String createdAtStr = String.valueOf(createdAt);
+            List<String> updated = new ArrayList<>();
+            for (String line : lines) {
+                String[] parts = line.split(",", -1);
+                // Match by symbol (col 2) and createdAt (col 9)
+                if (parts.length >= 10 && parts[2].equals(symbol)
+                        && parts[9].equals(createdAtStr)) {
+                    parts[7] = status;
+                    parts[8] = String.format("%.2f", points);
+                    line = String.join(",", parts);
+                }
+                updated.add(line);
+            }
+            java.nio.file.Files.write(path, updated);
+        } catch (Exception e) {
+            logger.warn("Could not update signal log: {}", e.getMessage());
+        }
+    }
+
+    private String buildDayReport(java.time.LocalDate date) {
+        String dateStr = date.toString();
+        String label = date.equals(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")))
+                ? "Today (" + dateStr + ")" : "Yesterday (" + dateStr + ")";
+        try {
+            java.nio.file.Path path = java.nio.file.Path.of(SIGNAL_LOG_FILE);
+            if (!path.toFile().exists()) {
+                return "📋 *" + label + " Report*\n\nNo signal log found. Signals are recorded once the bot starts generating calls.";
+            }
+            List<String> lines = java.nio.file.Files.readAllLines(path);
+            int total = 0, wins = 0, losses = 0, open = 0;
+            double netPoints = 0;
+            StringBuilder detail = new StringBuilder();
+            for (String line : lines) {
+                String[] p = line.split(",", -1);
+                if (p.length < 10 || !p[0].equals(dateStr)) continue;
+                total++;
+                String sym = p[2], dir = p[3], status = p[7];
+                double pts = Double.parseDouble(p[8]);
+                netPoints += pts;
+                String icon;
+                if ("WIN".equals(status))        { wins++;   icon = "✅"; }
+                else if ("LOSS".equals(status))  { losses++; icon = "❌"; }
+                else                             { open++;   icon = "🔄"; }
+                detail.append(String.format("%s %s %s @ %s → %s (%.0f pts)%n",
+                        icon, sym, dir, p[4], status, pts));
+            }
+            if (total == 0) {
+                return "📋 *" + label + " Report*\n\nNo calls generated on this day.";
+            }
+            int resolved = wins + losses;
+            double winRate = resolved > 0 ? (wins * 100.0 / resolved) : 0;
+            return String.format(
+                "📋 *%s Report*\n\n" +
+                "📞 Total Calls  : %d\n" +
+                "✅ Wins         : %d\n" +
+                "❌ Losses       : %d\n" +
+                "🔄 Open/Pending : %d\n" +
+                "📈 Win Rate     : %.1f%%\n" +
+                "💰 Net Points   : %+.0f pts\n\n" +
+                "*Detail:*\n%s",
+                label, total, wins, losses, open, winRate, netPoints, detail.toString().trim());
+        } catch (Exception e) {
+            logger.warn("Error building day report: {}", e.getMessage());
+            return "⚠️ Could not read signal log: " + e.getMessage();
+        }
     }
 
     /** Persist chatId to disk so scan auto-resumes after restart. */
