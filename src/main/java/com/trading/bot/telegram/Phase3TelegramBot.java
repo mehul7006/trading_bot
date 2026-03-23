@@ -588,7 +588,7 @@ public class Phase3TelegramBot {
 
     private void performScan(long chatId) {
         LocalTime now = LocalTime.now(ZoneId.of("Asia/Kolkata"));
-        boolean isEquityOpen = now.isAfter(LocalTime.of(9, 15)) && now.isBefore(LocalTime.of(15, 30));
+        boolean isEquityOpen = !now.isBefore(LocalTime.of(9, 15)) && now.isBefore(LocalTime.of(15, 30));
         if (!isEquityOpen) return;
         java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
         if (!today.equals(lastResetDate)) {
@@ -616,15 +616,22 @@ public class Phase3TelegramBot {
             List<SimpleMarketData> data5 = marketDataFetcher.getRealMarketData5Min(symbol);
             if (data5 == null || data5.isEmpty()) return;
 
-            // If an active signal exists for this symbol, only monitor it.
-            // If it resolves (target/SL hit), schedule an immediate rescan for this symbol.
+            // If an active signal exists for this symbol, monitor it first.
+            // If it resolves (target/SL hit), schedule an immediate rescan.
+            // If still open but last alert was >2 min ago, allow a new signal to be generated.
             if (activeSignals.containsKey(symbol)) {
                 boolean resolved = checkActiveSignal(chatId, symbol, data5);
                 if (resolved) {
                     // Rescan this symbol immediately (2-second delay to allow data refresh)
                     scheduler.schedule(() -> scanEquitySymbol(chatId, symbol), 2, TimeUnit.SECONDS);
+                    return;
                 }
-                return;  // don't generate a new signal while previous one is open
+                // Previous signal still open — block only if within 2-min window
+                long lastAlert2 = lastAlertTimeMap.getOrDefault(symbol, 0L);
+                if (System.currentTimeMillis() - lastAlert2 < 2 * 60 * 1000) {
+                    return; // too soon — wait for 2-min gap before next signal
+                }
+                // More than 2 min since last signal → allow new signal, overwrite active slot
             }
             
             // Fetch Option Chain Data for higher confidence
@@ -679,7 +686,7 @@ public class Phase3TelegramBot {
                 // Daily guarantee: after 11:30 AM, if no call for this symbol today, use relaxed EMA signal
                 LocalTime nowIst = LocalTime.now(ZoneId.of("Asia/Kolkata"));
                 boolean noCallToday = todayCallsBySymbol.getOrDefault(symbol, 0) == 0;
-                boolean isGuaranteeWindow = nowIst.isAfter(LocalTime.of(10, 30)) && nowIst.isBefore(LocalTime.of(14, 45));
+                boolean isGuaranteeWindow = nowIst.isAfter(LocalTime.of(9, 30)) && nowIst.isBefore(LocalTime.of(14, 45));
 
                 if (noCallToday && isGuaranteeWindow) {
                     List<SimpleMarketData> dataForGuarantee = (data5 != null && !data5.isEmpty()) ? data5 : data1;
@@ -699,7 +706,7 @@ public class Phase3TelegramBot {
 
             long currentTime = System.currentTimeMillis();
             long lastAlert = lastAlertTimeMap.getOrDefault(symbol, 0L);
-            if (currentTime - lastAlert < 3 * 60 * 1000) return; // 3-min cooldown per symbol
+            if (currentTime - lastAlert < 2 * 60 * 1000) return; // 2-min cooldown per symbol
             // Removed slot restriction to allow 1-2 calls per segment as requested
             // int slot = getSlot(LocalTime.now(ZoneId.of("Asia/Kolkata")));
             // if (slotsTriggered.contains(slot)) return;
@@ -812,7 +819,7 @@ public class Phase3TelegramBot {
         if (activeChatId == 0) return; // No chat registered yet
 
         java.time.LocalTime now = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata"));
-        boolean isMarketOpen = now.isAfter(java.time.LocalTime.of(9, 15))
+        boolean isMarketOpen = !now.isBefore(java.time.LocalTime.of(9, 15))
                             && now.isBefore(java.time.LocalTime.of(15, 35));
         if (!isMarketOpen) return;
 

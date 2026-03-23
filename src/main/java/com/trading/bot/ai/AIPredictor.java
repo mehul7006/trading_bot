@@ -1362,7 +1362,7 @@ public class AIPredictor {
         }
 
         java.time.LocalTime now = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata"));
-        if (!now.isAfter(java.time.LocalTime.of(9, 15)) || !now.isBefore(java.time.LocalTime.of(15, 0))) {
+        if (now.isBefore(java.time.LocalTime.of(9, 15)) || !now.isBefore(java.time.LocalTime.of(15, 0))) {
             return createDefaultAIPrediction("Outside safe market hours");
         }
 
