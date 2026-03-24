@@ -86,6 +86,9 @@ public class Phase3TelegramBot {
     // Expiry session cooldown — separate from regular cooldown (20-min per symbol)
     private final Map<String, Long> expiryLastAlertMap = new ConcurrentHashMap<>();
 
+    // 1-min education signal cooldown — 5-min per symbol (independent of all other cooldowns)
+    private final Map<String, Long> edu1MinLastAlertMap = new ConcurrentHashMap<>();
+
     // Market movement monitoring: track prices for movement alerts
     private final Map<String, Double> movementBaselinePrice = new ConcurrentHashMap<>();
     private final Map<String, Long>   lastMovementAlertTime = new ConcurrentHashMap<>();
@@ -609,6 +612,12 @@ public class Phase3TelegramBot {
                 scanEquitySymbol(chatId, symbol);
             }
 
+            // ── 1-Min Education Signals (runs every scan, completely independent) ──
+            for (String symbol : symbols) {
+                if (!isScanning) break;
+                scan1MinEducation(chatId, symbol);
+            }
+
             // ── Expiry Session: NIFTY50 (Tuesday) + SENSEX (Thursday), 14:00–15:10 IST ──
             boolean isExpiryWindow = !now.isBefore(LocalTime.of(14, 0)) && now.isBefore(LocalTime.of(15, 10));
             if (isExpiryWindow) {
@@ -822,6 +831,82 @@ public class Phase3TelegramBot {
                 s.createdAt);
         } catch (Exception e) {
             logger.error("Error scanning equity " + symbol, e);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // 1-MIN EDUCATION SCANNER — runs alongside main bot, NEVER affects win rate
+    //   Confidence: ≥ 88% | Min pts: NIFTY50:15, SENSEX:40, BANKNIFTY:45
+    //   Cooldown:  5 min per symbol (independent of all other cooldowns)
+    //   All messages clearly labelled EDUCATION PURPOSE ONLY — DO NOT TRADE
+    // ─────────────────────────────────────────────────────────────────────────────
+    private void scan1MinEducation(long chatId, String symbol) {
+        try {
+            // 5-minute cooldown per symbol for education signals
+            long lastEduAlert = edu1MinLastAlertMap.getOrDefault(symbol, 0L);
+            if (System.currentTimeMillis() - lastEduAlert < 5 * 60 * 1000L) return;
+
+            List<SimpleMarketData> data1 = marketDataFetcher.getRealMarketData(symbol);
+            if (data1 == null || data1.size() < 200) return;
+
+            // Stale data guard — data must be within last 10 min
+            SimpleMarketData latest = data1.get(data1.size() - 1);
+            LocalDateTime nowIst = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+            if (latest.timestamp != null && latest.timestamp.isBefore(nowIst.minusMinutes(10))) return;
+
+            OptionData optionData = null;
+            try { optionData = marketDataFetcher.fetchOptionData(symbol); } catch (Exception ignored) {}
+
+            AIPredictor.AIPrediction pred = aiPredictor.generatePrediction(symbol, data1, optionData);
+
+            if ("NEUTRAL".equals(pred.predictedDirection)) return;
+            if (pred.confidence < 88.0) return;
+
+            double minPts = switch (symbol) {
+                case "NIFTY50"   -> 15.0;
+                case "SENSEX"    -> 40.0;
+                case "BANKNIFTY" -> 45.0;
+                default          -> 15.0;
+            };
+            if (pred.estimatedMovePoints < minPts) return;
+
+            double entryPrice = latest.price;
+            try {
+                Map<String, Double> snap = marketDataFetcher.getHonestMarketSnapshot();
+                if (snap.containsKey(symbol) && snap.get(symbol) > 0) entryPrice = snap.get(symbol);
+            } catch (Exception ignored) {}
+
+            double targetPts = pred.estimatedMovePoints;
+            double slPts     = pred.suggestedStopLoss;
+            double targetPx  = "UP".equals(pred.predictedDirection) ? entryPrice + targetPts : entryPrice - targetPts;
+            double slPx      = "UP".equals(pred.predictedDirection) ? entryPrice - slPts     : entryPrice + slPts;
+            double rrRatio   = slPts > 0 ? targetPts / slPts : 0;
+            String arrow     = "UP".equals(pred.predictedDirection) ? "⬆️" : "⬇️";
+            String ts        = nowIst.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+
+            String msg =
+                "📚 *\\[EDUCATION PURPOSE ONLY\\]*\n" +
+                "⚠️ *DO NOT BUY OR SELL BASED ON THIS SIGNAL*\n" +
+                "━━━━━━━━━━━━━━━━━━━━━━\n" +
+                "🕐 *1-Min Signal* | " + ts + " IST\n\n" +
+                "📌 *Symbol:* " + symbol + "\n" +
+                "🚀 *Direction:* " + pred.predictedDirection + " " + arrow + "\n\n" +
+                "💰 *Entry:*     " + String.format("%.2f", entryPrice) + "\n" +
+                "🎯 *Target:*    " + String.format("%.2f", targetPx) + "  (+" + String.format("%.0f", targetPts) + " pts)\n" +
+                "🛑 *Stop Loss:* " + String.format("%.2f", slPx) + "  (-" + String.format("%.0f", slPts) + " pts)\n" +
+                "📊 *R:R:* 1:" + String.format("%.1f", rrRatio) + "\n\n" +
+                "🤖 *AI Confidence:* " + String.format("%.1f%%", pred.confidence) + "\n" +
+                "📝 *Reason:* " + pred.predictionReasoning + "\n\n" +
+                "━━━━━━━━━━━━━━━━━━━━━━\n" +
+                "📚 _This is for learning/observation only._\n" +
+                "_This call does NOT count toward win rate or net points._";
+
+            sendMessage(chatId, msg);
+            edu1MinLastAlertMap.put(symbol, System.currentTimeMillis());
+            logger.info("📚 1-min education signal sent for {} {} conf={}%", symbol, pred.predictedDirection, String.format("%.1f", pred.confidence));
+
+        } catch (Exception e) {
+            logger.error("Error in 1-min education scan for {}: {}", symbol, e.getMessage());
         }
     }
 
