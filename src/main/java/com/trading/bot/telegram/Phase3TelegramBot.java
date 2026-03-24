@@ -52,7 +52,7 @@ public class Phase3TelegramBot {
     private long activeChatId = 0;
     private boolean autoAnalysisActive = false;
     private boolean isScanning = false;
-    private int todayCallsGenerated = 0;
+    private final java.util.concurrent.atomic.AtomicInteger todayCallsGenerated = new java.util.concurrent.atomic.AtomicInteger(0);
     private final Map<String, Long> lastAlertTimeMap = new ConcurrentHashMap<>();
     private final Map<String, Long> lastWatchlistAlertMap = new ConcurrentHashMap<>();
     private final Map<Long, String> lastSentMessageByChat = new ConcurrentHashMap<>();
@@ -267,7 +267,7 @@ public class Phase3TelegramBot {
     }
 
     public int getTodayCallsGenerated() {
-        return todayCallsGenerated;
+        return todayCallsGenerated.get();
     }
 
     // -----------------------------------------------------------------------
@@ -518,17 +518,17 @@ public class Phase3TelegramBot {
         // Clear slots triggered if it's a new day (Safety check)
         java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
         if (!today.equals(lastResetDate)) {
-            todayCallsGenerated = 0;
+            todayCallsGenerated.set(0);
             slotsTriggered.clear();
             todayCallsBySymbol.clear();
             lastResetDate = today;
         }
 
         String rates = getCurrentMarketRatesSimple();
-        String status = "📊 **Market Status Report**\n\n" + 
+        String status = "📊 **Market Status Report**\n\n" +
                        rates + "\n\n" +
                        "📢 **Today's Activity**\n" +
-                       "• Calls Generated: `" + todayCallsGenerated + "`\n" +
+                       "• Calls Generated: `" + todayCallsGenerated.get() + "`\n" +
                        "• Active Slots: `" + slotsTriggered.size() + "/4`\n" +
                        "• Bot Instance: `V29.0-INSTITUTIONAL` (70%+ WR All Segments)";
         
@@ -598,12 +598,12 @@ public class Phase3TelegramBot {
         if (!isEquityOpen) return;
         java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
         if (!today.equals(lastResetDate)) {
-            todayCallsGenerated = 0;
+            todayCallsGenerated.set(0);
             slotsTriggered.clear();
             todayCallsBySymbol.clear();
             lastResetDate = today;
         }
-        if (todayCallsGenerated >= 10) return;
+        if (todayCallsGenerated.get() >= 10) return;
         
         try {
             String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
@@ -637,7 +637,15 @@ public class Phase3TelegramBot {
             if (todayCallsBySymbol.getOrDefault(symbol, 0) >= 3) return;
 
             List<SimpleMarketData> data5 = marketDataFetcher.getRealMarketData5Min(symbol);
-            if (data5 == null || data5.isEmpty()) return;
+            if (data5 == null || data5.isEmpty()) {
+                // Warn user if data is missing during market hours (likely token expired)
+                long lastWarn = lastWatchlistAlertMap.getOrDefault("TOKEN_WARN_" + symbol, 0L);
+                if (System.currentTimeMillis() - lastWarn > 30 * 60 * 1000L) {
+                    sendMessage(chatId, "⚠️ *No market data for " + symbol + "* — Upstox token may have expired.\n\nPlease paste fresh token: `/token <your_new_token>`");
+                    lastWatchlistAlertMap.put("TOKEN_WARN_" + symbol, System.currentTimeMillis());
+                }
+                return;
+            }
 
             // If an active signal exists for this symbol, monitor it first.
             // If it resolves (target/SL hit), schedule an immediate rescan.
@@ -811,7 +819,7 @@ public class Phase3TelegramBot {
             
             sendMessage(chatId, alert);
             lastAlertTimeMap.put(symbol, currentTime);
-            todayCallsGenerated++;
+            todayCallsGenerated.incrementAndGet();
             todayCallsBySymbol.merge(symbol, 1, Integer::sum);
             saveDailyState(); // persist so restarts don't duplicate signals
             // slotsTriggered.add(slot); // Slot restriction removed
@@ -896,7 +904,7 @@ public class Phase3TelegramBot {
                 "🛑 *Stop Loss:* " + String.format("%.2f", slPx) + "  (-" + String.format("%.0f", slPts) + " pts)\n" +
                 "📊 *R:R:* 1:" + String.format("%.1f", rrRatio) + "\n\n" +
                 "🤖 *AI Confidence:* " + String.format("%.1f%%", pred.confidence) + "\n" +
-                "📝 *Reason:* " + pred.predictionReasoning + "\n\n" +
+                "📝 *Reason:* " + (pred.predictionReasoning != null ? pred.predictionReasoning : "Technical signal") + "\n\n" +
                 "━━━━━━━━━━━━━━━━━━━━━━\n" +
                 "📚 _This is for learning/observation only._\n" +
                 "_This call does NOT count toward win rate or net points._";
@@ -1013,7 +1021,7 @@ public class Phase3TelegramBot {
             long now2 = System.currentTimeMillis();
             expiryLastAlertMap.put(symbol, now2);
             lastAlertTimeMap.put(symbol, now2);
-            todayCallsGenerated++;
+            todayCallsGenerated.incrementAndGet();
             todayCallsBySymbol.merge(symbol, 1, Integer::sum);
             saveDailyState();
 
@@ -1202,6 +1210,10 @@ public class Phase3TelegramBot {
      */
     protected void sendMessage(long chatId, String text) {
         try {
+            // Telegram API rejects messages over 4096 chars — truncate safely
+            if (text != null && text.length() > 4000) {
+                text = text.substring(0, 3997) + "...";
+            }
             long now = System.currentTimeMillis();
             String lastText = lastSentMessageByChat.get(chatId);
             Long lastTime = lastSentMessageTime.get(chatId);
@@ -1210,9 +1222,9 @@ public class Phase3TelegramBot {
             }
             lastSentMessageByChat.put(chatId, text);
             lastSentMessageTime.put(chatId, now);
-            
+
             boolean success = sendRequest(chatId, text, "Markdown");
-            
+
             if (!success) {
                 String plainText = text.replace("**", "").replace("__", "").replace("`", "");
                 sendRequest(chatId, plainText, null);
@@ -1481,7 +1493,7 @@ public class Phase3TelegramBot {
             String today = java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")).toString();
             java.util.Properties p = new java.util.Properties();
             p.setProperty("date", today);
-            p.setProperty("totalCalls", String.valueOf(todayCallsGenerated));
+            p.setProperty("totalCalls", String.valueOf(todayCallsGenerated.get()));
             todayCallsBySymbol.forEach((sym, cnt) -> p.setProperty("calls." + sym, String.valueOf(cnt)));
             lastAlertTimeMap.forEach((sym, ts) -> p.setProperty("lastAlert." + sym, String.valueOf(ts)));
             try (java.io.OutputStream os = new java.io.FileOutputStream(DAILY_STATE_FILE)) {
@@ -1505,14 +1517,14 @@ public class Phase3TelegramBot {
                 logger.info("📅 Daily state is from {} — ignoring (new day)", savedDate);
                 return;
             }
-            todayCallsGenerated = Integer.parseInt(p.getProperty("totalCalls", "0"));
+            todayCallsGenerated.set(Integer.parseInt(p.getProperty("totalCalls", "0")));
             for (String key : p.stringPropertyNames()) {
                 if (key.startsWith("calls."))
                     todayCallsBySymbol.put(key.substring(6), Integer.parseInt(p.getProperty(key)));
                 if (key.startsWith("lastAlert."))
                     lastAlertTimeMap.put(key.substring(10), Long.parseLong(p.getProperty(key)));
             }
-            logger.info("✅ Loaded daily state: {} calls today, cooldowns restored", todayCallsGenerated);
+            logger.info("✅ Loaded daily state: {} calls today, cooldowns restored", todayCallsGenerated.get());
         } catch (Exception e) {
             logger.warn("Could not load daily state: {}", e.getMessage());
         }
