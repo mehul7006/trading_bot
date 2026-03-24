@@ -83,6 +83,9 @@ public class Phase3TelegramBot {
     private static final String SIGNAL_LOG_FILE = "signal_log.csv";
     private final Map<String, Integer> todayCallsBySymbol = new ConcurrentHashMap<>();
 
+    // Expiry session cooldown — separate from regular cooldown (20-min per symbol)
+    private final Map<String, Long> expiryLastAlertMap = new ConcurrentHashMap<>();
+
     // Market movement monitoring: track prices for movement alerts
     private final Map<String, Double> movementBaselinePrice = new ConcurrentHashMap<>();
     private final Map<String, Long>   lastMovementAlertTime = new ConcurrentHashMap<>();
@@ -606,6 +609,14 @@ public class Phase3TelegramBot {
                 scanEquitySymbol(chatId, symbol);
             }
 
+            // ── Expiry Session: NIFTY50 (Tuesday) + SENSEX (Thursday), 14:00–15:10 IST ──
+            boolean isExpiryWindow = !now.isBefore(LocalTime.of(14, 0)) && now.isBefore(LocalTime.of(15, 10));
+            if (isExpiryWindow) {
+                java.time.DayOfWeek dow = java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")).getDayOfWeek();
+                if (dow == java.time.DayOfWeek.TUESDAY  && isScanning) scanExpirySymbol(chatId, "NIFTY50");
+                if (dow == java.time.DayOfWeek.THURSDAY && isScanning) scanExpirySymbol(chatId, "SENSEX");
+            }
+
         } catch (Exception e) {
             logger.error("Scan error: {}", e.getMessage());
         }
@@ -807,6 +818,179 @@ public class Phase3TelegramBot {
         } catch (Exception e) {
             logger.error("Error scanning equity " + symbol, e);
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // EXPIRY SESSION SCANNER — RSI Exhaustion Reversal (14:00–15:10 IST)
+    //   NIFTY50  → every Tuesday
+    //   SENSEX   → every Thursday
+    //   Filters: RSI>=68 (short) / <=32 (long) + BB 1.8σ pierce + Vol 1.4x + Body 55%
+    //   Target: 2.0×ATR14 | SL: 0.5×ATR14 (4:1 R:R)
+    //   Cooldown: 20 min per symbol (independent from regular cooldown)
+    // ─────────────────────────────────────────────────────────────────────────────
+    private void scanExpirySymbol(long chatId, String symbol) {
+        try {
+            List<SimpleMarketData> data = marketDataFetcher.getRealMarketData5Min(symbol);
+            if (data == null || data.size() < 25) return;
+
+            // 20-min cooldown (expiry signals are independent of regular cooldown)
+            long expiryLast = expiryLastAlertMap.getOrDefault(symbol, 0L);
+            if (System.currentTimeMillis() - expiryLast < 20 * 60 * 1000L) return;
+
+            // ── Indicators ──────────────────────────────────────────────────────
+            double rsi    = expiryCalcRSI(data, 14);
+            double atr    = expiryCalcATR(data, 14);
+            double[] bb   = expiryCalcBB(data, 20, 1.8);
+            double volMA  = expiryCalcVolMA(data, 20);
+            if (atr <= 0) return;
+
+            SimpleMarketData latest = data.get(data.size() - 1);
+            double price     = latest.price;
+            double open      = latest.open;
+            double high      = latest.high;
+            double low       = latest.low;
+            double range     = high - low;
+            double body      = Math.abs(price - open);
+            double bodyRatio = range > 0 ? body / range : 0;
+            double volume    = latest.volume > 0 ? latest.volume : 1;
+            double bbUpper   = bb[0], bbLower = bb[1];
+
+            // ── Signal detection ────────────────────────────────────────────────
+            String direction = null;
+            String reason    = null;
+
+            if (rsi <= 32.0 && price <= bbLower * 1.002 && price > open
+                    && bodyRatio >= 0.55 && volume >= volMA * 1.4) {
+                direction = "UP";
+                reason = String.format(
+                    "Expiry RSI=%.1f (OVERSOLD) | Price at BB lower | Bull candle %.0f%% body | Vol %.1fx avg",
+                    rsi, bodyRatio * 100, volume / volMA);
+            } else if (rsi >= 68.0 && price >= bbUpper * 0.998 && price < open
+                    && bodyRatio >= 0.55 && volume >= volMA * 1.4) {
+                direction = "DOWN";
+                reason = String.format(
+                    "Expiry RSI=%.1f (OVERBOUGHT) | Price at BB upper | Bear candle %.0f%% body | Vol %.1fx avg",
+                    rsi, bodyRatio * 100, volume / volMA);
+            }
+
+            if (direction == null) return;
+
+            // ── Position sizing ──────────────────────────────────────────────────
+            double targetPts = atr * 2.0;
+            double slPts     = atr * 0.5;
+            double minPts    = "NIFTY50".equals(symbol) ? 15.0 : 30.0; // SENSEX
+            if (targetPts < minPts) return;
+
+            // Stale data guard
+            LocalDateTime nowIst = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+            if (latest.timestamp != null && latest.timestamp.isBefore(nowIst.minusMinutes(10))) {
+                logger.warn("Expiry scan: stale data for {}, skipping", symbol);
+                return;
+            }
+
+            // Try to fetch live LTP for accurate entry
+            double entryPrice = price;
+            try {
+                Map<String, Double> snap = marketDataFetcher.getHonestMarketSnapshot();
+                if (snap.containsKey(symbol) && snap.get(symbol) > 0) entryPrice = snap.get(symbol);
+            } catch (Exception e) {
+                logger.warn("Expiry: could not fetch live LTP for {}", symbol);
+            }
+
+            double targetPrice = "UP".equals(direction) ? entryPrice + targetPts : entryPrice - targetPts;
+            double slPrice     = "UP".equals(direction) ? entryPrice - slPts     : entryPrice + slPts;
+            double rrRatio     = slPts > 0 ? targetPts / slPts : 0;
+            String arrow       = "UP".equals(direction) ? "⬆️" : "⬇️";
+            String emoji       = "UP".equals(direction) ? "🟢" : "🔴";
+            String alertId     = "EXP-" + (System.currentTimeMillis() % 10000);
+            String timestamp   = nowIst.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+
+            String alert = emoji + " *EXPIRY SESSION SIGNAL* [" + alertId + "]\n" +
+                "🕒 *Time:* " + timestamp + " IST\n" +
+                "⚡ *Source:* Expiry Reversal (14:00–15:10 window)\n\n" +
+                "📌 *Symbol:* " + symbol + "\n" +
+                "🚀 *Direction:* " + direction + " " + arrow + "\n\n" +
+                "💰 *Entry:* " + String.format("%.2f", entryPrice) + "\n" +
+                "🎯 *Target:* " + String.format("%.2f", targetPrice) +
+                    "  (+" + String.format("%.0f", targetPts) + " pts)\n" +
+                "🛑 *Stop Loss:* " + String.format("%.2f", slPrice) +
+                    "  (-" + String.format("%.0f", slPts) + " pts)\n" +
+                "📊 *R:R:* 1:" + String.format("%.1f", rrRatio) + "\n\n" +
+                "📝 *Reason:* " + reason + "\n" +
+                "_RSI Exhaustion Reversal — Expiry Day Momentum_";
+
+            sendMessage(chatId, alert);
+            long now2 = System.currentTimeMillis();
+            expiryLastAlertMap.put(symbol, now2);
+            lastAlertTimeMap.put(symbol, now2);
+            todayCallsGenerated++;
+            todayCallsBySymbol.merge(symbol, 1, Integer::sum);
+            saveDailyState();
+
+            ActiveSignal sig = new ActiveSignal();
+            sig.symbol       = symbol;
+            sig.direction    = direction;
+            sig.entryPrice   = entryPrice;
+            sig.targetPoints = targetPts;
+            sig.stopLossPoints = slPts;
+            sig.createdAt    = now2;
+            activeSignals.put(symbol, sig);
+            appendSignalLog(symbol, direction, entryPrice, targetPts, slPts, now2);
+
+        } catch (Exception e) {
+            logger.error("Error in expiry scan for " + symbol, e);
+        }
+    }
+
+    // ── Indicator helpers for expiry session (self-contained, no AIPredictor) ──
+
+    private double expiryCalcRSI(List<SimpleMarketData> h, int period) {
+        if (h.size() < period + 1) return 50.0;
+        double gains = 0, losses = 0;
+        for (int i = h.size() - period; i < h.size(); i++) {
+            double d = h.get(i).price - h.get(i - 1).price;
+            if (d > 0) gains += d; else losses -= d;
+        }
+        if (losses == 0) return 100.0;
+        double rs = (gains / period) / (losses / period);
+        return 100.0 - (100.0 / (1.0 + rs));
+    }
+
+    private double expiryCalcATR(List<SimpleMarketData> h, int period) {
+        if (h.size() < period + 1) return 0;
+        double sum = 0;
+        for (int i = h.size() - period; i < h.size(); i++) {
+            double pc = h.get(i - 1).price;
+            sum += Math.max(h.get(i).high - h.get(i).low,
+                   Math.max(Math.abs(h.get(i).high - pc),
+                            Math.abs(h.get(i).low  - pc)));
+        }
+        return sum / period;
+    }
+
+    /** Returns [upperBB, lowerBB] */
+    private double[] expiryCalcBB(List<SimpleMarketData> h, int period, double mult) {
+        if (h.size() < period) {
+            double p = h.get(h.size() - 1).price;
+            return new double[]{p * 1.01, p * 0.99};
+        }
+        double sum = 0;
+        for (int i = h.size() - period; i < h.size(); i++) sum += h.get(i).price;
+        double sma = sum / period;
+        double varSum = 0;
+        for (int i = h.size() - period; i < h.size(); i++) {
+            double d = h.get(i).price - sma;
+            varSum += d * d;
+        }
+        double std = Math.sqrt(varSum / period);
+        return new double[]{sma + mult * std, sma - mult * std};
+    }
+
+    private double expiryCalcVolMA(List<SimpleMarketData> h, int period) {
+        if (h.size() < period) return 1;
+        double sum = 0;
+        for (int i = h.size() - period; i < h.size(); i++) sum += h.get(i).volume;
+        return sum / period > 0 ? sum / period : 1;
     }
 
     /**

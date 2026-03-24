@@ -34,7 +34,8 @@ public class HonestMarketDataFetcher {
     private final Map<String, String> optionExpiryCache = new java.util.concurrent.ConcurrentHashMap<>();
     
     // Upstox API configuration
-    private static String UPSTOX_ACCESS_TOKEN = System.getenv("UPSTOX_ACCESS_TOKEN") != null ? System.getenv("UPSTOX_ACCESS_TOKEN") : "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OWI4YzJmNzY5ODE2OTcxMWU1NTRmNzQiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc3MzcxNjIxNSwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzczNzg0ODAwfQ.2SQS-IjDgX_ujzpeOKNuSUVUjYArilhbDtAMka01joo";
+    // Token loaded from env var or upstox_token.txt at runtime — never hardcode here
+    private static String UPSTOX_ACCESS_TOKEN = System.getenv("UPSTOX_ACCESS_TOKEN") != null ? System.getenv("UPSTOX_ACCESS_TOKEN") : "";
     
     // Token File Path
     private static final String TOKEN_FILE_PATH = "upstox_token.txt";
@@ -136,11 +137,20 @@ public class HonestMarketDataFetcher {
      */
     public List<SimpleMarketData> getRealMarketData(String symbol) throws Exception {
         System.out.println("🔍 Fetching HONEST market data for: " + symbol);
-        
-        // 1. Fetch historical candles (might be stale)
+
+        // 1. Fetch historical candles (completed sessions only — yesterday and before)
         List<SimpleMarketData> historicalData = fetchHistoricalCandles(symbol, "1minute");
-        
-        // 2. Fetch Today's Real-Time OHLC (To fix stale data issues)
+
+        // 1b. Merge today's live intraday candles so the 1-min list is current
+        List<SimpleMarketData> intraday = fetchIntradayCandles(symbol, "1minute");
+        if (!intraday.isEmpty()) {
+            java.util.TreeMap<LocalDateTime, SimpleMarketData> mergeMap = new java.util.TreeMap<>();
+            for (SimpleMarketData c : historicalData) mergeMap.put(c.timestamp, c);
+            for (SimpleMarketData c : intraday) mergeMap.put(c.timestamp, c);
+            historicalData = new ArrayList<>(mergeMap.values());
+        }
+
+        // 2. Fetch Today's Real-Time OHLC as a fallback / final price anchor
         SimpleMarketData todayOHLC = fetchDayOHLC(symbol);
         
         if (todayOHLC != null) {
@@ -381,22 +391,31 @@ public class HonestMarketDataFetcher {
         }
         
         List<SimpleMarketData> recentData = fetchRecentHistory(symbol, lookbackDays);
-        
-        if (!recentData.isEmpty()) {
-             List<SimpleMarketData> recent5Min = resampleTo5Minute(recentData);
-             
+
+        // Also fetch today's live intraday candles (historical API only returns completed sessions)
+        List<SimpleMarketData> intradayData = fetchIntradayCandles(symbol, "1minute");
+
+        // Merge historical + intraday into a single list before resampling
+        java.util.TreeMap<LocalDateTime, SimpleMarketData> rawMerge = new java.util.TreeMap<>();
+        for (SimpleMarketData c : recentData) rawMerge.put(c.timestamp, c);
+        for (SimpleMarketData c : intradayData) rawMerge.put(c.timestamp, c); // today's data wins
+        List<SimpleMarketData> combinedRecent = new ArrayList<>(rawMerge.values());
+
+        if (!combinedRecent.isEmpty()) {
+             List<SimpleMarketData> recent5Min = resampleTo5Minute(combinedRecent);
+
              // Smart Merge: Use Map to handle duplicates by timestamp
              java.util.TreeMap<LocalDateTime, SimpleMarketData> mergedMap = new java.util.TreeMap<>();
              for (SimpleMarketData c : cachedData) mergedMap.put(c.timestamp, c);
              for (SimpleMarketData c : recent5Min) mergedMap.put(c.timestamp, c); // Overwrite with newer data
-             
+
              // Convert back to list
              cachedData = new ArrayList<>(mergedMap.values());
-             
+
              // ROLLOVER: Keep only last 120 days
              LocalDateTime cutoff = LocalDateTime.now().minusDays(120);
              cachedData.removeIf(c -> c.timestamp.isBefore(cutoff));
-             
+
              // Update Caches
              dataCache.put(symbol, cachedData);
              saveCacheToDisk(symbol, cachedData); // SAVE TO DISK
@@ -477,6 +496,40 @@ public class HonestMarketDataFetcher {
         String toDate = LocalDate.now().toString();
         String fromDate = LocalDate.now().minusDays(days).toString();
         return fetchHistoricalCandles(symbol, "1minute", fromDate, toDate);
+    }
+
+    /**
+     * Fetch today's live intraday candles using the Upstox intraday API.
+     * The historical-candle endpoint only returns completed sessions (yesterday and before).
+     * For today's real-time 1-minute bars, the intraday endpoint must be used.
+     */
+    private List<SimpleMarketData> fetchIntradayCandles(String symbol, String interval) {
+        List<SimpleMarketData> data = new ArrayList<>();
+        try {
+            String instrumentKey = SYMBOL_MAPPING.get(symbol);
+            if (instrumentKey == null) return data;
+            String encodedKey = URLEncoder.encode(instrumentKey, StandardCharsets.UTF_8).replace("+", "%20");
+            String url = "https://api.upstox.com/v2/historical-candle/intraday/" + encodedKey + "/" + interval;
+
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Authorization", "Bearer " + UPSTOX_ACCESS_TOKEN)
+                .header("Accept", "application/json")
+                .timeout(java.time.Duration.ofSeconds(15))
+                .GET()
+                .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                data = parseHistoricalCandles(response.body(), symbol);
+                System.out.printf("✅ Intraday: fetched %d candles for %s%n", data.size(), symbol);
+            } else {
+                System.err.printf("⚠️ Intraday API HTTP %d for %s%n", response.statusCode(), symbol);
+            }
+        } catch (Exception e) {
+            System.err.printf("⚠️ Intraday fetch error for %s: %s%n", symbol, e.getMessage());
+        }
+        return data;
     }
 
     private List<SimpleMarketData> resampleTo5Minute(List<SimpleMarketData> data1Min) {
