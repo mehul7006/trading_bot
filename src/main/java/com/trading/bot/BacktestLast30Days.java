@@ -16,11 +16,11 @@ import java.util.*;
  */
 public class BacktestLast30Days {
 
-    private static final double MIN_CONFIDENCE = 85.0;
+    private static final double MIN_CONFIDENCE = 86.0;  // raised from 85; AIPredictor gates internally at 88
     private static final Map<String, Double> MIN_POINTS = Map.of(
-        "NIFTY50",   25.0,
-        "SENSEX",    60.0,
-        "BANKNIFTY", 70.0
+        "NIFTY50",   28.0,   // raised from 25 — filter tiny-range signals
+        "SENSEX",    65.0,   // raised from 60
+        "BANKNIFTY", 75.0    // raised from 70
     );
     private static final long COOLDOWN_MS             = 10L * 60 * 1000;
     private static final long BNF_PRIME_COOLDOWN_MS   = 12L * 60 * 1000;

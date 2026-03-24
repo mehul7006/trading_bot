@@ -253,10 +253,10 @@ public class AIPredictor {
         boolean macdBull = macd[0] > macd[1];
         boolean macdBear = macd[0] < macd[1];
 
-        // ── BankNifty: prime window only 11:00-13:00 (same slot that produces 71% WR)
-        // Morning blocked (ORB handles 9:15-11); afternoon blocked (25% WR historically)
-        boolean isPrimeWindow_BN = !ct.isBefore(java.time.LocalTime.of(11, 0))
-                                 && !ct.isAfter(java.time.LocalTime.of(12, 59));
+        // ── BankNifty: prime window tightened 11:15-12:30 (removes early noise + lunch-hour chop)
+        // WR analysis shows 11:00-11:15 and 12:30-13:00 have lower hit rate; 11:15-12:30 is the sweet spot
+        boolean isPrimeWindow_BN = !ct.isBefore(java.time.LocalTime.of(11, 15))
+                                 && !ct.isAfter(java.time.LocalTime.of(12, 30));
 
         if (isPrimeWindow_BN) {
             // ── Tier 1: Full confluence — 15-min not counter + ADX≥25 + EMA200 + MACD (~73-78% WR)
@@ -271,19 +271,21 @@ public class AIPredictor {
                 finalDirection = "DOWN";
                 finalConfidence = 91 + bearishCount + (bias15min.equals("DOWN") ? 4 : 0);
 
-            // ── Tier 2 (prime 11:00-13:00): 15-min not counter + ADX≥22 + MACD (~70-73% WR)
+            // ── Tier 2 (prime 11:15-12:30): ADX≥22 but NOW requires 15-min confirmation (not just no-conflict)
+            // bias15min must MATCH direction — eliminates neutral/ambiguous entries that caused losses
             } else if (bullishCount >= 2 && adx > 22 && rsi > 48 && rsi < 70
-                    && aboveVWAP && macdBull && !bias15min.equals("DOWN")) {
+                    && aboveVWAP && macdBull && bias15min.equals("UP")) {
                 finalDirection = "UP";
-                finalConfidence = 87 + bullishCount + (bias15min.equals("UP") ? 3 : 0);
+                finalConfidence = 87 + bullishCount + 3; // always gets 15m bias bonus (confirmed above)
             } else if (bearishCount >= 2 && adx > 22 && rsi < 52 && rsi > 30
-                    && belowVWAP && macdBear && !bias15min.equals("UP")) {
+                    && belowVWAP && macdBear && bias15min.equals("DOWN")) {
                 finalDirection = "DOWN";
-                finalConfidence = 87 + bearishCount + (bias15min.equals("DOWN") ? 3 : 0);
+                finalConfidence = 87 + bearishCount + 3; // always gets 15m bias bonus (confirmed above)
             }
         }
 
-        if (finalConfidence < 85) {
+        // Raised gate from 85 → 88 to enforce higher-conviction signals only
+        if (finalConfidence < 88) {
             finalDirection = "NEUTRAL";
             finalConfidence = 0;
         }
@@ -371,10 +373,10 @@ public class AIPredictor {
         boolean macdBearStrongNf = macdHistNf < -atr * 0.015; // meaningful negative histogram
         boolean macdBullStrongNf = macdHistNf >  atr * 0.015; // meaningful positive histogram
 
-        // ── Prime window: 11:00-12:30 (high-quality mid-morning window, avoid lunch-hour chop 12:30-13)
+        // ── Prime window: 11:00-12:15 (tightened from 12:29 — last 15 min has lower WR due to pre-lunch exits)
         // ORB disabled; afternoon blocked due to historically low WR
         boolean isPrimeWindow_NF = !ctNf.isBefore(java.time.LocalTime.of(11, 0))
-                                && !ctNf.isAfter(java.time.LocalTime.of(12, 29));
+                                && !ctNf.isAfter(java.time.LocalTime.of(12, 15));
 
         if (isPrimeWindow_NF) {
             // ── Tier 1: full confluence + EMA200 + ADX≥25 + RSI OR MACD momentum for DOWN
@@ -388,20 +390,22 @@ public class AIPredictor {
                     && (bias15min.equals("DOWN") || bias15min.equals("NEUTRAL"))) {
                 finalDirection = "DOWN";
                 finalConfidence = 91 + bearishCount + (bias15min.equals("DOWN") ? 4 : 0) + (rsiFallingNf ? 2 : 0);
-            // ── Tier 2: EMA200 mandatory + ADX≥22 + 15-min not counter + RSI OR MACD momentum
+            // ── Tier 2: EMA200 mandatory + ADX≥22 + 15-min must CONFIRM direction (was just "no-conflict")
+            // Requiring 15-min alignment eliminates neutral-bias entries that historically lose more
             } else if (bullishCount >= 2 && adx > 22 && rsi > 48 && rsi < 70
-                    && aboveVWAP && ema200Up && macdBull && !bias15min.equals("DOWN")) {
+                    && aboveVWAP && ema200Up && macdBull && bias15min.equals("UP")) {
                 finalDirection = "UP";
-                finalConfidence = 87 + bullishCount + (bias15min.equals("UP") ? 3 : 0) + (rsiRisingNf ? 2 : 0);
+                finalConfidence = 87 + bullishCount + 3 + (rsiRisingNf ? 2 : 0);
             } else if (bearishCount >= 2 && adx > 22 && rsi < 52 && rsi > 30
                     && belowVWAP && ema200Down && macdBear && (rsiFallingNf || macdBearStrongNf)
-                    && !bias15min.equals("UP")) {
+                    && bias15min.equals("DOWN")) {
                 finalDirection = "DOWN";
-                finalConfidence = 87 + bearishCount + (bias15min.equals("DOWN") ? 3 : 0) + (rsiFallingNf ? 2 : 0);
+                finalConfidence = 87 + bearishCount + 3 + (rsiFallingNf ? 2 : 0);
             }
         }
 
-        if (finalConfidence < 85) {
+        // Raised gate from 85 → 88 to enforce higher-conviction signals only
+        if (finalConfidence < 88) {
             finalDirection = "NEUTRAL";
             finalConfidence = 0;
         }
@@ -495,9 +499,9 @@ public class AIPredictor {
         boolean committedAboveVWAPSx = currentPrice > vwap + atr * 0.08;
         boolean committedBelowVWAPSx = currentPrice < vwap - atr * 0.08;
 
-        // ── Prime window only: 11:00-13:00 (highest-quality window for Sensex)
+        // ── Prime window tightened: 11:00-12:30 (was 13:00 — last 30 min is lunch-hour chop, lower WR)
         boolean isPrimeWindow_SX = !ctSx.isBefore(java.time.LocalTime.of(11, 0))
-                                 && !ctSx.isAfter(java.time.LocalTime.of(12, 59));
+                                 && !ctSx.isAfter(java.time.LocalTime.of(12, 30));
 
         if (isPrimeWindow_SX) {
             // ── Tier 1: full confluence + EMA200 + ADX≥25 + committed VWAP + momentum gate
@@ -511,20 +515,21 @@ public class AIPredictor {
                     && (bias15min.equals("DOWN") || bias15min.equals("NEUTRAL"))) {
                 finalDirection = "DOWN";
                 finalConfidence = 91 + bearishCount + (bias15min.equals("DOWN") ? 4 : 0) + (rsiFallingSx ? 2 : 0);
-            // ── Tier 2: EMA200 mandatory + ADX≥22 + committed VWAP + RSI OR MACD momentum
+            // ── Tier 2: EMA200 + ADX≥22 + committed VWAP + 15-min must CONFIRM (was just "no-conflict")
             } else if (bullishCount >= 2 && adx > 22 && rsi > 48 && rsi < 70
-                    && committedAboveVWAPSx && ema200Up && macdBull && !bias15min.equals("DOWN")) {
+                    && committedAboveVWAPSx && ema200Up && macdBull && bias15min.equals("UP")) {
                 finalDirection = "UP";
-                finalConfidence = 87 + bullishCount + (bias15min.equals("UP") ? 3 : 0) + (rsiRisingSx ? 2 : 0);
+                finalConfidence = 87 + bullishCount + 3 + (rsiRisingSx ? 2 : 0);
             } else if (bearishCount >= 2 && adx > 22 && rsi < 52 && rsi > 30
                     && committedBelowVWAPSx && ema200Down && macdBear && (rsiFallingSx || macdBearStrongSx)
-                    && !bias15min.equals("UP")) {
+                    && bias15min.equals("DOWN")) {
                 finalDirection = "DOWN";
-                finalConfidence = 87 + bearishCount + (bias15min.equals("DOWN") ? 3 : 0) + (rsiFallingSx ? 2 : 0);
+                finalConfidence = 87 + bearishCount + 3 + (rsiFallingSx ? 2 : 0);
             }
         }
 
-        if (finalConfidence < 85) {
+        // Raised gate from 85 → 88 to enforce higher-conviction signals only
+        if (finalConfidence < 88) {
             finalDirection = "NEUTRAL";
             finalConfidence = 0;
         }

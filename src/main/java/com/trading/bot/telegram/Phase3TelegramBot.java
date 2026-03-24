@@ -624,6 +624,9 @@ public class Phase3TelegramBot {
 
     private void scanEquitySymbol(long chatId, String symbol) {
         try {
+            // Per-symbol daily limit: max 3 calls/symbol — quality over quantity
+            if (todayCallsBySymbol.getOrDefault(symbol, 0) >= 3) return;
+
             List<SimpleMarketData> data5 = marketDataFetcher.getRealMarketData5Min(symbol);
             if (data5 == null || data5.isEmpty()) return;
 
@@ -661,7 +664,7 @@ public class Phase3TelegramBot {
                 logger.error("Error generating 1-min prediction for {}: {}", symbol, ex.getMessage());
             }
             
-            boolean fiveMinEligible = checkMinimumPoints(symbol, prediction5.estimatedMovePoints) && prediction5.confidence >= 65;
+            boolean fiveMinEligible = checkMinimumPoints(symbol, prediction5.estimatedMovePoints) && prediction5.confidence >= 70; // raised from 65
             boolean oneMinEligible = false;
             if (prediction1 != null) {
                 oneMinEligible = checkMinimumPoints(symbol, prediction1.estimatedMovePoints) && prediction1.confidence >= 68;
@@ -694,16 +697,18 @@ public class Phase3TelegramBot {
             }
             
             if (chosenPrediction == null) {
-                // Daily guarantee: after 11:30 AM, if no call for this symbol today, use relaxed EMA signal
+                // Daily guarantee: after 13:00, if still no call for this symbol, use relaxed EMA signal
+                // Pushed from 9:30 → 13:00 so prime window (11-12:30) always gets first chance.
+                // Also requires conf ≥ 78 — avoids firing low-quality fallback signals.
                 LocalTime nowIst = LocalTime.now(ZoneId.of("Asia/Kolkata"));
                 boolean noCallToday = todayCallsBySymbol.getOrDefault(symbol, 0) == 0;
-                boolean isGuaranteeWindow = nowIst.isAfter(LocalTime.of(9, 30)) && nowIst.isBefore(LocalTime.of(14, 45));
+                boolean isGuaranteeWindow = nowIst.isAfter(LocalTime.of(13, 0)) && nowIst.isBefore(LocalTime.of(14, 45));
 
                 if (noCallToday && isGuaranteeWindow) {
                     List<SimpleMarketData> dataForGuarantee = (data5 != null && !data5.isEmpty()) ? data5 : data1;
                     if (dataForGuarantee != null && !dataForGuarantee.isEmpty()) {
                         AIPredictor.AIPrediction relaxed = aiPredictor.generateRelaxedPrediction(symbol, dataForGuarantee, optionData);
-                        if (!"NEUTRAL".equals(relaxed.predictedDirection)) {
+                        if (!"NEUTRAL".equals(relaxed.predictedDirection) && relaxed.confidence >= 78) {
                             chosenPrediction = relaxed;
                             timeframeLabel = "5-min";
                             entryPrice = dataForGuarantee.get(dataForGuarantee.size() - 1).price;
