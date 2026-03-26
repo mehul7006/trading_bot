@@ -36,7 +36,13 @@ public class HonestMarketDataFetcher {
     // Upstox API configuration
     // Token loaded from env var or upstox_token.txt at runtime — never hardcode here
     private static String UPSTOX_ACCESS_TOKEN = System.getenv("UPSTOX_ACCESS_TOKEN") != null ? System.getenv("UPSTOX_ACCESS_TOKEN") : "";
-    
+
+    // Analytics token — long-lived fallback (expires 2027-03-23). Used automatically when primary token returns 401.
+    private static final String ANALYTICS_TOKEN = "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OWMwYjgxZDQwMGJjNjBiYmMyMDE5ODUiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlzRXh0ZW5kZWQiOnRydWUsImlhdCI6MTc3NDIzNzcyNSwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxODA1ODM5MjAwfQ.AV4cr6-B0tD7asSaMDQjmPrX6FL2DmJsO_px-DatJRk";
+    private static boolean usingFallbackToken = false;
+    // Callback to notify Telegram when fallback is activated
+    private static java.util.function.Consumer<String> tokenAlertCallback = null;
+
     // Token File Path
     private static final String TOKEN_FILE_PATH = "upstox_token.txt";
     private static final String CACHE_DIR = "market_data_cache";
@@ -70,19 +76,70 @@ public class HonestMarketDataFetcher {
     }
     
     /**
-     * Update Access Token dynamically and CLEAR ALL CACHE (Memory + Disk)
+     * Register a callback that will be called when the fallback token activates or primary is restored.
+     * Used by the bot to send a Telegram alert to the user.
+     */
+    public static void setTokenAlertCallback(java.util.function.Consumer<String> callback) {
+        tokenAlertCallback = callback;
+    }
+
+    /** Returns the token currently in use (primary or fallback). */
+    private static String activeToken() {
+        return usingFallbackToken ? ANALYTICS_TOKEN : UPSTOX_ACCESS_TOKEN;
+    }
+
+    /**
+     * Called internally when a 401 is received. Switches to analytics fallback token once.
+     */
+    private static synchronized void activateFallbackToken() {
+        if (!usingFallbackToken) {
+            usingFallbackToken = true;
+            System.out.println("⚠️ Primary Upstox token expired/invalid — switched to Analytics fallback token.");
+            if (tokenAlertCallback != null) {
+                tokenAlertCallback.accept(
+                    "⚠️ *Upstox Token Expired!*\n\n" +
+                    "Your daily token has expired. Bot has automatically switched to the *Analytics fallback token* to keep running.\n\n" +
+                    "Please update your token with:\n`/token <your_new_token>`"
+                );
+            }
+        }
+    }
+
+    /**
+     * Update Access Token dynamically and CLEAR ALL CACHE (Memory + Disk).
+     * Also switches back from fallback to primary immediately.
      */
     public static void setAccessToken(String token) {
         if (token != null && !token.trim().isEmpty()) {
             UPSTOX_ACCESS_TOKEN = token.trim();
             saveTokenToFile(token.trim());
-            
+
+            // Switch back to primary if we were on fallback
+            boolean wasOnFallback = usingFallbackToken;
+            usingFallbackToken = false;
+
             // CRITICAL: Clear memory AND disk cache to force fresh fetch
             if (instance != null) {
                 instance.clearAllCache();
                 System.out.println("♻️ Access Token Updated: Memory and Disk Cache cleared.");
             }
+
+            if (wasOnFallback) {
+                System.out.println("✅ Switched back to primary Upstox token.");
+                if (tokenAlertCallback != null) {
+                    tokenAlertCallback.accept(
+                        "✅ *Primary Token Restored!*\n\n" +
+                        "New token accepted. Bot is now using your fresh Upstox token.\n" +
+                        "Analytics fallback is on standby."
+                    );
+                }
+            }
         }
+    }
+
+    /** Returns true if the bot is currently running on the analytics fallback token. */
+    public static boolean isUsingFallbackToken() {
+        return usingFallbackToken;
     }
 
     /**
@@ -102,10 +159,42 @@ public class HonestMarketDataFetcher {
         lastValidPrices.clear();
         lastValidTimes.clear();
         dataCache.clear();
+        // optionExpiryCache intentionally not cleared — expiry dates don't change mid-day
+        // and the cache already validates freshness against today's date before returning
     }
     
     public static String getAccessToken() {
         return UPSTOX_ACCESS_TOKEN;
+    }
+
+    /**
+     * Make an HTTP GET request with automatic 401 → fallback token retry.
+     */
+    private HttpResponse<String> getWithFallback(String url) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Authorization", "Bearer " + activeToken())
+            .header("Accept", "application/json")
+            .timeout(java.time.Duration.ofSeconds(15))
+            .GET()
+            .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        // If 401 and not already on fallback, switch and retry once
+        if (response.statusCode() == 401 && !usingFallbackToken) {
+            activateFallbackToken();
+            HttpRequest retryRequest = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Authorization", "Bearer " + activeToken())
+                .header("Accept", "application/json")
+                .timeout(java.time.Duration.ofSeconds(15))
+                .GET()
+                .build();
+            response = httpClient.send(retryRequest, HttpResponse.BodyHandlers.ofString());
+        }
+
+        return response;
     }
     
     private void loadTokenFromFile() {
@@ -201,17 +290,9 @@ public class HonestMarketDataFetcher {
             
             String encodedKey = URLEncoder.encode(instrumentKey, StandardCharsets.UTF_8).replace("+", "%20");
             String url = "https://api.upstox.com/v2/market-quote/ohlc?instrument_key=" + encodedKey + "&interval=1d";
-            
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + UPSTOX_ACCESS_TOKEN)
-                .header("Accept", "application/json")
-                .timeout(java.time.Duration.ofSeconds(10))
-                .GET()
-                .build();
-            
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            
+
+            HttpResponse<String> response = getWithFallback(url);
+
             if (response.statusCode() == 200) {
                 JsonNode root = objectMapper.readTree(response.body());
                 if (root.path("status").asText().equals("success")) {
@@ -262,17 +343,9 @@ public class HonestMarketDataFetcher {
                     encodedKey, interval, toDate, fromDate);
             
             System.out.println("🌐 Historical API URL: " + url);
-            
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + UPSTOX_ACCESS_TOKEN)
-                .header("Accept", "application/json")
-                .timeout(java.time.Duration.ofSeconds(15))
-                .GET()
-                .build();
-            
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            
+
+            HttpResponse<String> response = getWithFallback(url);
+
             if (response.statusCode() == 200) {
                 data = parseHistoricalCandles(response.body(), symbol);
                 System.out.printf("✅ Fetched %d historical candles for %s%n", data.size(), symbol);
@@ -511,15 +584,7 @@ public class HonestMarketDataFetcher {
             String encodedKey = URLEncoder.encode(instrumentKey, StandardCharsets.UTF_8).replace("+", "%20");
             String url = "https://api.upstox.com/v2/historical-candle/intraday/" + encodedKey + "/" + interval;
 
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + UPSTOX_ACCESS_TOKEN)
-                .header("Accept", "application/json")
-                .timeout(java.time.Duration.ofSeconds(15))
-                .GET()
-                .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = getWithFallback(url);
             if (response.statusCode() == 200) {
                 data = parseHistoricalCandles(response.body(), symbol);
                 System.out.printf("✅ Intraday: fetched %d candles for %s%n", data.size(), symbol);
@@ -591,16 +656,8 @@ public class HonestMarketDataFetcher {
             String encodedKey = URLEncoder.encode(instrumentKey, StandardCharsets.UTF_8).replace("+", "%20");
             // We need to find the nearest expiry. For simplicity, we'll assume the API returns the full chain
             String url = "https://api.upstox.com/v2/option/chain?instrument_key=" + encodedKey + "&expiry_date="; // Leave expiry blank for nearest
-            
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + UPSTOX_ACCESS_TOKEN)
-                .header("Accept", "application/json")
-                .timeout(java.time.Duration.ofSeconds(15))
-                .GET()
-                .build();
-            
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            HttpResponse<String> response = getWithFallback(url);
             
             if (response.statusCode() == 200) {
                 JsonNode root = objectMapper.readTree(response.body());
@@ -667,14 +724,7 @@ public class HonestMarketDataFetcher {
             String encodedKey = URLEncoder.encode(instrumentKey, StandardCharsets.UTF_8).replace("+", "%20");
             String expiry = computeNearestExpiryDate(symbol);
             String url = "https://api.upstox.com/v2/option/chain?instrument_key=" + encodedKey + "&expiry_date=" + expiry;
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + UPSTOX_ACCESS_TOKEN)
-                .header("Accept", "application/json")
-                .timeout(java.time.Duration.ofSeconds(15))
-                .GET()
-                .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = getWithFallback(url);
             if (response.statusCode() != 200) return null;
             JsonNode root = objectMapper.readTree(response.body());
             if (!root.path("status").asText().equals("success")) return null;
@@ -713,14 +763,7 @@ public class HonestMarketDataFetcher {
             String encodedKey = URLEncoder.encode(instrumentKey, StandardCharsets.UTF_8).replace("+", "%20");
             String expiry = computeNearestExpiryDate(symbol);
             String url = "https://api.upstox.com/v2/option/chain?instrument_key=" + encodedKey + "&expiry_date=" + expiry;
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + UPSTOX_ACCESS_TOKEN)
-                .header("Accept", "application/json")
-                .timeout(java.time.Duration.ofSeconds(15))
-                .GET()
-                .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = getWithFallback(url);
             if (response.statusCode() != 200) return strikes;
             JsonNode root = objectMapper.readTree(response.body());
             if (!root.path("status").asText().equals("success")) return strikes;
@@ -771,14 +814,7 @@ public class HonestMarketDataFetcher {
             String encodedKey = URLEncoder.encode(instrumentKey, StandardCharsets.UTF_8).replace("+", "%20");
             String expiry = computeNearestExpiryDate(symbol);
             String url = "https://api.upstox.com/v2/option/chain?instrument_key=" + encodedKey + "&expiry_date=" + expiry;
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + UPSTOX_ACCESS_TOKEN)
-                .header("Accept", "application/json")
-                .timeout(java.time.Duration.ofSeconds(15))
-                .GET()
-                .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = getWithFallback(url);
             if (response.statusCode() != 200) return null;
             JsonNode root = objectMapper.readTree(response.body());
             if (!root.path("status").asText().equals("success")) return null;
@@ -809,14 +845,7 @@ public class HonestMarketDataFetcher {
             String encodedKey = URLEncoder.encode(instrumentKey, StandardCharsets.UTF_8).replace("+", "%20");
             String expiry = computeNearestExpiryDate(symbol);
             String url = "https://api.upstox.com/v2/option/chain?instrument_key=" + encodedKey + "&expiry_date=" + expiry;
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + UPSTOX_ACCESS_TOKEN)
-                .header("Accept", "application/json")
-                .timeout(java.time.Duration.ofSeconds(15))
-                .GET()
-                .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = getWithFallback(url);
             if (response.statusCode() != 200) return null;
             JsonNode root = objectMapper.readTree(response.body());
             if (!root.path("status").asText().equals("success")) return null;
@@ -875,14 +904,7 @@ public class HonestMarketDataFetcher {
             if (instrumentKey == null) return null;
             String encodedKey = URLEncoder.encode(instrumentKey, StandardCharsets.UTF_8).replace("+", "%20");
             String url = "https://api.upstox.com/v2/option/contract?instrument_key=" + encodedKey;
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + UPSTOX_ACCESS_TOKEN)
-                .header("Accept", "application/json")
-                .timeout(java.time.Duration.ofSeconds(15))
-                .GET()
-                .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = getWithFallback(url);
             if (response.statusCode() != 200) return null;
             JsonNode root = objectMapper.readTree(response.body());
             if (!root.path("status").asText().equals("success")) return null;
@@ -906,14 +928,7 @@ public class HonestMarketDataFetcher {
         try {
             String encodedKey = URLEncoder.encode(optionInstrumentKey, StandardCharsets.UTF_8).replace("+", "%20");
             String url = "https://api.upstox.com/v2/market-quote/ohlc?instrument_key=" + encodedKey + "&interval=1d";
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + UPSTOX_ACCESS_TOKEN)
-                .header("Accept", "application/json")
-                .timeout(java.time.Duration.ofSeconds(10))
-                .GET()
-                .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = getWithFallback(url);
             if (response.statusCode() == 200) {
                 JsonNode root = objectMapper.readTree(response.body());
                 if (root.path("status").asText().equals("success")) {
@@ -943,14 +958,7 @@ public class HonestMarketDataFetcher {
         try {
             String encodedKey = URLEncoder.encode(instrumentKey, StandardCharsets.UTF_8).replace("+", "%20");
             String url = String.format("https://api.upstox.com/v2/historical-candle/%s/%s/%s/%s", encodedKey, interval, toDate, fromDate);
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + UPSTOX_ACCESS_TOKEN)
-                .header("Accept", "application/json")
-                .timeout(java.time.Duration.ofSeconds(15))
-                .GET()
-                .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = getWithFallback(url);
             if (response.statusCode() == 200) {
                 data = parseHistoricalCandles(response.body(), instrumentKey);
             } else {

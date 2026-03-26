@@ -49,7 +49,7 @@ public class Phase3TelegramBot {
     private long lastUpdateId = 0;
     private boolean isRunning = false;
     private final Set<Long> processedMessages = java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
-    private long activeChatId = 0;
+    private volatile long activeChatId = 0;
     private boolean autoAnalysisActive = false;
     private boolean isScanning = false;
     private final java.util.concurrent.atomic.AtomicInteger todayCallsGenerated = new java.util.concurrent.atomic.AtomicInteger(0);
@@ -226,6 +226,12 @@ public class Phase3TelegramBot {
         
         isRunning = true;
         logger.info("🚀 Starting Phase 3 Telegram Bot V29...");
+
+        // Register fallback token alert callback — sends Telegram message when analytics token activates or primary is restored
+        HonestMarketDataFetcher.setTokenAlertCallback(msg -> {
+            long cid = activeChatId != 0 ? activeChatId : loadChatId();
+            if (cid != 0) sendMessage(cid, msg);
+        });
 
         // Restore today's signal counts/cooldowns so restarts don't duplicate signals
         loadDailyState();
@@ -1358,14 +1364,19 @@ public class Phase3TelegramBot {
     protected void handleTokenCommand(long chatId, String command) {
         String[] parts = command.split(" ", 2);
         if (parts.length < 2 || parts[1].trim().isEmpty()) {
+            sendMessage(chatId,
+                "🔑 *Token Status*\n\n" +
+                (HonestMarketDataFetcher.isUsingFallbackToken()
+                    ? "⚠️ Currently using *Analytics fallback token*\n\nSend `/token <your_new_token>` to restore primary."
+                    : "✅ Currently using *primary token*\n\nSend `/token <your_new_token>` to update it."));
             return;
         }
-        
+
         String newToken = parts[1].trim();
         marketDataFetcher.setAccessToken(newToken);
-        
+
         String rates = getCurrentMarketRatesSimple();
-        sendMessage(chatId, "✅ **Access Token Updated**\n\n" + rates);
+        sendMessage(chatId, "✅ *Primary Token Updated* — switched back from fallback if needed.\n\n" + rates);
     }
 
     // Final dead code removal
