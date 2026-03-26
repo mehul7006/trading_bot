@@ -84,6 +84,11 @@ public class Phase3TelegramBot {
     private static final String SIGNAL_LOG_FILE = "signal_log.csv";
     private final Map<String, Integer> todayCallsBySymbol = new ConcurrentHashMap<>();
 
+    // Stage-based call caps: Stage1=9:15-11:00, Stage2=11:00-13:00, Stage3=14:30-15:30
+    // Max 2 calls per symbol per stage — preserves prime window slots
+    // Keys: "SYMBOL_S1", "SYMBOL_S2", "SYMBOL_S3"
+    private final Map<String, Integer> stageCallsBySymbol = new ConcurrentHashMap<>();
+
     // Expiry session cooldown — separate from regular cooldown (20-min per symbol)
     private final Map<String, Long> expiryLastAlertMap = new ConcurrentHashMap<>();
 
@@ -535,6 +540,7 @@ public class Phase3TelegramBot {
             todayCallsGenerated.set(0);
             slotsTriggered.clear();
             todayCallsBySymbol.clear();
+            stageCallsBySymbol.clear();
             lastResetDate = today;
         }
 
@@ -717,9 +723,10 @@ public class Phase3TelegramBot {
             todayCallsGenerated.set(0);
             slotsTriggered.clear();
             todayCallsBySymbol.clear();
+            stageCallsBySymbol.clear();
             lastResetDate = today;
         }
-        if (todayCallsGenerated.get() >= 10) return;
+        if (todayCallsGenerated.get() >= 18) return; // 3 symbols × 3 stages × 2 calls = 18 max
         
         try {
             String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
@@ -749,8 +756,13 @@ public class Phase3TelegramBot {
 
     private void scanEquitySymbol(long chatId, String symbol) {
         try {
-            // Per-symbol daily limit: max 3 calls/symbol — quality over quantity
-            if (todayCallsBySymbol.getOrDefault(symbol, 0) >= 3) return;
+            // Stage-based cap: max 2 calls per symbol per stage
+            // Stage1=9:15-11:00, Stage2=11:00-13:00, Stage3=14:30-15:30
+            LocalTime nowForStage = LocalTime.now(ZoneId.of("Asia/Kolkata"));
+            int stage = getMarketStage(nowForStage);
+            if (stage == 0) return; // dead zone (13:00-14:30) or outside market hours
+            String stageKey = symbol + "_S" + stage;
+            if (stageCallsBySymbol.getOrDefault(stageKey, 0) >= 2) return; // stage cap reached
 
             List<SimpleMarketData> data5 = marketDataFetcher.getRealMarketData5Min(symbol);
             if (data5 == null || data5.isEmpty()) {
@@ -947,6 +959,9 @@ public class Phase3TelegramBot {
             lastAlertTimeMap.put(symbol, currentTime);
             todayCallsGenerated.incrementAndGet();
             todayCallsBySymbol.merge(symbol, 1, Integer::sum);
+            // Increment stage counter so the per-stage cap is enforced
+            String sentStageKey = symbol + "_S" + getMarketStage(LocalTime.now(ZoneId.of("Asia/Kolkata")));
+            stageCallsBySymbol.merge(sentStageKey, 1, Integer::sum);
             saveDailyState(); // persist so restarts don't duplicate signals
             // slotsTriggered.add(slot); // Slot restriction removed
             
@@ -1165,6 +1180,16 @@ public class Phase3TelegramBot {
         } catch (Exception e) {
             logger.error("Error in expiry scan for " + symbol, e);
         }
+    }
+
+    // ── Market stage for time-weighted call caps ──────────────────────────────
+    // Stage 1: 9:15–11:00  Stage 2: 11:00–13:00  Stage 3: 14:30–15:30
+    // Returns 0 when outside all stages (dead zone 13:00–14:30, or after 15:30)
+    private int getMarketStage(LocalTime t) {
+        if (!t.isBefore(LocalTime.of(9, 15))  && t.isBefore(LocalTime.of(11, 0)))  return 1;
+        if (!t.isBefore(LocalTime.of(11, 0))  && t.isBefore(LocalTime.of(13, 0)))  return 2;
+        if (!t.isBefore(LocalTime.of(14, 30)) && !t.isAfter(LocalTime.of(15, 30))) return 3;
+        return 0; // dead zone (13:00–14:30) or after 15:30
     }
 
     // ── Indicator helpers for expiry session (self-contained, no AIPredictor) ──

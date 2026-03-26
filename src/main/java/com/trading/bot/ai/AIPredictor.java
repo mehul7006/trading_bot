@@ -253,10 +253,9 @@ public class AIPredictor {
         boolean macdBull = macd[0] > macd[1];
         boolean macdBear = macd[0] < macd[1];
 
-        // ── BankNifty: prime window tightened 11:15-12:30 (removes early noise + lunch-hour chop)
-        // WR analysis shows 11:00-11:15 and 12:30-13:00 have lower hit rate; 11:15-12:30 is the sweet spot
-        boolean isPrimeWindow_BN = !ct.isBefore(java.time.LocalTime.of(11, 15))
-                                 && !ct.isAfter(java.time.LocalTime.of(12, 30));
+        // ── BankNifty: full market hours 9:15-15:30 — signal quality enforced by Tier 1/2 confluence gates
+        boolean isPrimeWindow_BN = !ct.isBefore(java.time.LocalTime.of(9, 15))
+                                 && !ct.isAfter(java.time.LocalTime.of(15, 30));
 
         if (isPrimeWindow_BN) {
             // ── Tier 1: Full confluence — 15-min not counter + ADX≥25 + EMA200 + MACD (~73-78% WR)
@@ -373,10 +372,10 @@ public class AIPredictor {
         boolean macdBearStrongNf = macdHistNf < -atr * 0.015; // meaningful negative histogram
         boolean macdBullStrongNf = macdHistNf >  atr * 0.015; // meaningful positive histogram
 
-        // ── Prime window: 11:00-12:15 (tightened from 12:29 — last 15 min has lower WR due to pre-lunch exits)
-        // ORB disabled; afternoon blocked due to historically low WR
-        boolean isPrimeWindow_NF = !ctNf.isBefore(java.time.LocalTime.of(11, 0))
-                                && !ctNf.isAfter(java.time.LocalTime.of(12, 15));
+        // ── Nifty: full market hours 9:15-15:30 — signal quality enforced by Tier 1/2 confluence gates
+        // ORB (before 11:00) handled separately above; this covers the rest of the session
+        boolean isPrimeWindow_NF = !ctNf.isBefore(java.time.LocalTime.of(9, 15))
+                                && !ctNf.isAfter(java.time.LocalTime.of(15, 30));
 
         if (isPrimeWindow_NF) {
             // ── Tier 1: full confluence + EMA200 + ADX≥25 + RSI OR MACD momentum for DOWN
@@ -499,9 +498,10 @@ public class AIPredictor {
         boolean committedAboveVWAPSx = currentPrice > vwap + atr * 0.08;
         boolean committedBelowVWAPSx = currentPrice < vwap - atr * 0.08;
 
-        // ── Prime window tightened: 11:00-12:30 (was 13:00 — last 30 min is lunch-hour chop, lower WR)
-        boolean isPrimeWindow_SX = !ctSx.isBefore(java.time.LocalTime.of(11, 0))
-                                 && !ctSx.isAfter(java.time.LocalTime.of(12, 30));
+        // ── Sensex: full market hours 9:15-15:30 — signal quality enforced by Tier 1/2 confluence gates
+        // ORB (before 11:00) handled separately above; this covers the rest of the session
+        boolean isPrimeWindow_SX = !ctSx.isBefore(java.time.LocalTime.of(9, 15))
+                                 && !ctSx.isAfter(java.time.LocalTime.of(15, 30));
 
         if (isPrimeWindow_SX) {
             // ── Tier 1: full confluence + EMA200 + ADX≥25 + committed VWAP + momentum gate
