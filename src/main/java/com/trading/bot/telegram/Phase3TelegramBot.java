@@ -72,6 +72,7 @@ public class Phase3TelegramBot {
         public double targetPoints;
         public double stopLossPoints;
         public long createdAt;
+        public double confidence;   // AI confidence % at signal time
     }
 
     private final Map<String, ActiveSignal> activeSignals = new ConcurrentHashMap<>();
@@ -96,6 +97,10 @@ public class Phase3TelegramBot {
     private static final double NIFTY_MOVE_THRESHOLD   = 0.35; // 0.35% ~ 85 pts on Nifty
     private static final double BANKNIFTY_MOVE_THRESHOLD = 0.40; // 0.40% ~ 200 pts on BankNifty
     private static final double SENSEX_MOVE_THRESHOLD  = 0.30; // 0.30% ~ 230 pts on Sensex
+
+    // ADX trend state alerts — "STRONG", "CHOPPY", "NORMAL"
+    private final Map<String, Long>   lastTrendAlertTime  = new ConcurrentHashMap<>();
+    private final Map<String, String> lastTrendState      = new ConcurrentHashMap<>();
 
     /**
      * Checks if an active signal's target or SL has been hit.
@@ -149,7 +154,7 @@ public class Phase3TelegramBot {
                 "💰 Position closed. Re-scanning for next opportunity...",
                 symbol, s.direction, entry, targetPrice, pnlPoints, durationMin);
             sendMessage(chatId, msg);
-            updateSignalLog(symbol, s.createdAt, "WIN", pnlPoints);
+            updateSignalLog(symbol, s.createdAt, "WIN", pnlPoints, System.currentTimeMillis());
             activeSignals.remove(symbol);
             lastAlertTimeMap.remove(symbol);   // reset cooldown → scan again immediately
             return true;
@@ -169,7 +174,7 @@ public class Phase3TelegramBot {
                 "⚠️ Trend invalidated. Re-scanning for next opportunity...",
                 symbol, s.direction, entry, slPrice, lossPoints, durationMin);
             sendMessage(chatId, msg);
-            updateSignalLog(symbol, s.createdAt, "LOSS", -lossPoints);
+            updateSignalLog(symbol, s.createdAt, "LOSS", -lossPoints, System.currentTimeMillis());
             activeSignals.remove(symbol);
             lastAlertTimeMap.remove(symbol);   // reset cooldown → scan again immediately
             return true;
@@ -239,6 +244,9 @@ public class Phase3TelegramBot {
 
         // Schedule end-of-day data snapshot at 3:35 PM IST to capture today's full session
         scheduleEndOfDaySnapshot();
+
+        // Schedule pre-market summary at 9:15 AM IST (PDH/PDL, gap %, key levels)
+        schedulePreMarketSummary();
         
         logger.info("✅ Phase 3 Telegram Bot started successfully");
         logger.info("🏦 Available features: Smart Money Analysis, Order Blocks, FVGs, Liquidity Analysis");
@@ -515,7 +523,7 @@ public class Phase3TelegramBot {
 
     
     protected void handleStatusCommand(long chatId) {
-        // Clear slots triggered if it's a new day (Safety check)
+        // Daily reset safety check
         java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
         if (!today.equals(lastResetDate)) {
             todayCallsGenerated.set(0);
@@ -525,14 +533,116 @@ public class Phase3TelegramBot {
         }
 
         String rates = getCurrentMarketRatesSimple();
-        String status = "📊 **Market Status Report**\n\n" +
-                       rates + "\n\n" +
-                       "📢 **Today's Activity**\n" +
-                       "• Calls Generated: `" + todayCallsGenerated.get() + "`\n" +
-                       "• Active Slots: `" + slotsTriggered.size() + "/4`\n" +
-                       "• Bot Instance: `V29.0-INSTITUTIONAL` (70%+ WR All Segments)";
-        
-        sendMessage(chatId, status);
+        String todayStr = today.toString();
+        long nowMs = System.currentTimeMillis();
+
+        // Read today's signals from CSV (source of truth — survives restarts)
+        int total = 0, wins = 0, losses = 0, open = 0;
+        double netPoints = 0;
+        StringBuilder callDetail = new StringBuilder();
+
+        try {
+            java.nio.file.Path path = java.nio.file.Path.of(SIGNAL_LOG_FILE);
+            if (path.toFile().exists()) {
+                List<String> lines = java.nio.file.Files.readAllLines(path);
+                int callNo = 0;
+                for (String line : lines) {
+                    String[] p = line.split(",", -1);
+                    if (p.length < 10 || !p[0].equals(todayStr)) continue;
+                    callNo++;
+                    total++;
+
+                    String sym     = p[2];
+                    String dir     = p[3];
+                    String entry   = p[4];
+                    String tgtPts  = p[5];
+                    String slPts   = p[6];
+                    String status  = p[7];
+                    double pts     = Double.parseDouble(p[8]);
+                    long createdAt = Long.parseLong(p[9]);
+                    double conf    = (p.length >= 11 && !p[10].isEmpty()) ? Double.parseDouble(p[10]) : 0.0;
+                    long resolvedAt= (p.length >= 12 && !p[11].isEmpty()) ? Long.parseLong(p[11]) : 0L;
+
+                    netPoints += pts;
+
+                    // Entry time (HH:mm from col 1)
+                    String entryTime = p[1];
+
+                    // Status icon + outcome line
+                    String icon;
+                    String outcomeStr;
+                    if ("WIN".equals(status)) {
+                        wins++;
+                        icon = "✅";
+                        long durMin = resolvedAt > 0 ? (resolvedAt - createdAt) / 60000 : 0;
+                        String resolvedTime = resolvedAt > 0
+                            ? java.time.Instant.ofEpochMilli(resolvedAt)
+                                .atZone(ZoneId.of("Asia/Kolkata"))
+                                .toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"))
+                            : "?";
+                        outcomeStr = String.format("WIN +%.0f pts | %d min | hit @ %s", pts, durMin, resolvedTime);
+                    } else if ("LOSS".equals(status)) {
+                        losses++;
+                        icon = "❌";
+                        long durMin = resolvedAt > 0 ? (resolvedAt - createdAt) / 60000 : 0;
+                        String resolvedTime = resolvedAt > 0
+                            ? java.time.Instant.ofEpochMilli(resolvedAt)
+                                .atZone(ZoneId.of("Asia/Kolkata"))
+                                .toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"))
+                            : "?";
+                        outcomeStr = String.format("LOSS %.0f pts | %d min | hit @ %s", pts, durMin, resolvedTime);
+                    } else {
+                        open++;
+                        icon = "🔄";
+                        long runMin = (nowMs - createdAt) / 60000;
+                        outcomeStr = String.format("OPEN — running %d min", runMin);
+                    }
+
+                    String confStr = conf > 0 ? String.format("%.1f%%", conf) : "N/A";
+                    String dirArrow = "UP".equals(dir) ? "⬆" : "⬇";
+
+                    callDetail.append(String.format(
+                        "%d. %s *%s* %s %s @ `%s` [%s]\n" +
+                        "   Tgt: +%s pts | SL: %s pts | Conf: %s\n" +
+                        "   %s %s\n",
+                        callNo, icon, sym, dir, dirArrow, entry, entryTime,
+                        tgtPts.contains(".") ? String.valueOf((int) Double.parseDouble(tgtPts)) : tgtPts,
+                        slPts.contains(".")  ? String.valueOf((int) Double.parseDouble(slPts))  : slPts,
+                        confStr, icon, outcomeStr));
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Error reading signal log for /status: {}", e.getMessage());
+        }
+
+        int resolved = wins + losses;
+        double winRate = resolved > 0 ? (wins * 100.0 / resolved) : 0;
+
+        String scanState = isScanning ? "🟢 Active" : "🔴 Stopped";
+
+        StringBuilder status = new StringBuilder();
+        status.append("📊 *Market Status Report*\n\n");
+        status.append(rates).append("\n\n");
+        status.append("📢 *Today's Activity (").append(todayStr).append(")*\n");
+        status.append("┌─────────────────────────\n");
+        status.append(String.format("│ 📞 Calls Generated : *%d*%n", total));
+        status.append(String.format("│ ✅ Wins            : *%d*%n", wins));
+        status.append(String.format("│ ❌ Losses          : *%d*%n", losses));
+        status.append(String.format("│ 🔄 Open/Pending    : *%d*%n", open));
+        status.append(String.format("│ 📈 Win Rate        : *%.1f%%*%n",  winRate));
+        status.append(String.format("│ 💰 Net Points      : *%+.0f pts*%n", netPoints));
+        status.append("│ 🤖 Scan            : ").append(scanState).append("\n");
+        status.append("└─────────────────────────\n");
+
+        if (total > 0) {
+            status.append("\n*📋 Call-by-Call Breakdown:*\n");
+            status.append(callDetail);
+        } else {
+            status.append("\n_No calls generated today yet._\n");
+        }
+
+        status.append("\n`V29.0-INSTITUTIONAL` | 70%+ WR All Segments");
+        sendMessage(chatId, status.toString());
     }
     
     /**
@@ -800,7 +910,17 @@ public class Phase3TelegramBot {
                 ? entryPrice - chosenPrediction.suggestedStopLoss
                 : entryPrice + chosenPrediction.suggestedStopLoss;
 
-            String alert = signalEmoji + " *TRADE SIGNAL* [" + alertId + "]\n" +
+            // Signal strength label based on confidence
+            String strengthLabel;
+            if (chosenPrediction.confidence >= 92) {
+                strengthLabel = "💪 *STRONG SIGNAL*";
+            } else if (chosenPrediction.confidence >= 85) {
+                strengthLabel = "📊 *MODERATE SIGNAL*";
+            } else {
+                strengthLabel = "🔔 *SIGNAL*";
+            }
+
+            String alert = signalEmoji + " *TRADE SIGNAL* [" + alertId + "] — " + strengthLabel + "\n" +
                           "🕒 *Time:* " + timestamp + " IST\n" +
                           "📡 *Source:* REAL-TIME Data\n\n" +
                           "📌 *Symbol:* " + symbol + "\n" +
@@ -831,12 +951,13 @@ public class Phase3TelegramBot {
             s.targetPoints = chosenPrediction.estimatedMovePoints;
             s.stopLossPoints = chosenPrediction.suggestedStopLoss;
             s.createdAt = System.currentTimeMillis();
+            s.confidence = chosenPrediction.confidence;
             activeSignals.put(symbol, s);
 
             // Persist signal to log file for /today and /yesterday reports
             appendSignalLog(symbol, chosenPrediction.predictedDirection, entryPrice,
                 chosenPrediction.estimatedMovePoints, chosenPrediction.suggestedStopLoss,
-                s.createdAt);
+                s.createdAt, chosenPrediction.confidence);
         } catch (Exception e) {
             logger.error("Error scanning equity " + symbol, e);
         }
@@ -1033,7 +1154,7 @@ public class Phase3TelegramBot {
             sig.stopLossPoints = slPts;
             sig.createdAt    = now2;
             activeSignals.put(symbol, sig);
-            appendSignalLog(symbol, direction, entryPrice, targetPts, slPts, now2);
+            appendSignalLog(symbol, direction, entryPrice, targetPts, slPts, now2, 0.0);
 
         } catch (Exception e) {
             logger.error("Error in expiry scan for " + symbol, e);
@@ -1158,6 +1279,51 @@ public class Phase3TelegramBot {
                 // Reset baseline every 15 minutes to keep alerts relevant
                 if ((System.currentTimeMillis() - lastAlert) > 15 * 60 * 1000L && changePct < threshold) {
                     movementBaselinePrice.put(sym, currentPrice);
+                }
+
+                // ── ADX Trend State Alert (every 3 hours max per symbol) ──────────
+                long lastTrendAlert = lastTrendAlertTime.getOrDefault(sym, 0L);
+                boolean trendCooldownOk = (System.currentTimeMillis() - lastTrendAlert) > 3 * 60 * 60 * 1000L;
+                if (trendCooldownOk && data.size() >= 30) {
+                    double adxVal = quickADX14(data);
+                    String newTrend;
+                    String trendMsg = null;
+                    String symLabel = switch (sym) {
+                        case "NIFTY50"   -> "NIFTY 50";
+                        case "BANKNIFTY" -> "BANK NIFTY";
+                        default          -> sym;
+                    };
+                    if (adxVal > 30) {
+                        newTrend = "STRONG";
+                        if (!"STRONG".equals(lastTrendState.get(sym))) {
+                            trendMsg = String.format(
+                                "💪 *STRONG TREND DETECTED* — %s\n\n" +
+                                "📊 ADX: `%.1f` (> 30 = trending market)\n" +
+                                "🚀 Trending conditions active — bot signals carry higher follow-through.\n" +
+                                "🕒 Time: %s IST",
+                                symLabel, adxVal,
+                                now.format(DateTimeFormatter.ofPattern("HH:mm")));
+                        }
+                    } else if (adxVal < 20) {
+                        newTrend = "CHOPPY";
+                        if (!"CHOPPY".equals(lastTrendState.get(sym))) {
+                            trendMsg = String.format(
+                                "⚠️ *CHOPPY MARKET* — %s\n\n" +
+                                "📊 ADX: `%.1f` (< 20 = ranging/choppy market)\n" +
+                                "🔄 Low-trend conditions — be selective, tighter SL advised.\n" +
+                                "🕒 Time: %s IST",
+                                symLabel, adxVal,
+                                now.format(DateTimeFormatter.ofPattern("HH:mm")));
+                        }
+                    } else {
+                        newTrend = "NORMAL";
+                    }
+                    if (trendMsg != null) {
+                        sendMessage(activeChatId, trendMsg);
+                        lastTrendAlertTime.put(sym, System.currentTimeMillis());
+                        logger.info("📊 Trend alert sent for {}: {} (ADX={})", sym, newTrend, String.format("%.1f", adxVal));
+                    }
+                    lastTrendState.put(sym, newTrend);
                 }
 
             } catch (Exception e) {
@@ -1341,6 +1507,151 @@ public class Phase3TelegramBot {
      * At 3:35 PM IST (5 min after market close), do a final data refresh so today's
      * complete session is merged and saved into the 120-day rolling disk store.
      */
+    // -----------------------------------------------------------------------
+    // Pre-Market Summary — fires at 9:15 AM IST (PDH/PDL, prev close, gap %)
+    // -----------------------------------------------------------------------
+
+    private void schedulePreMarketSummary() {
+        LocalTime fireTime = LocalTime.of(9, 15);
+        LocalDateTime now  = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+        LocalDateTime next = now.toLocalDate().atTime(fireTime).atZone(ZoneId.of("Asia/Kolkata")).toLocalDateTime();
+        if (now.isAfter(next)) next = next.plusDays(1);
+        long initialDelay = java.time.Duration.between(now, next).toSeconds();
+        scheduler.scheduleAtFixedRate(() -> {
+            if (activeChatId != 0) sendPreMarketSummary(activeChatId);
+        }, initialDelay, 24 * 60 * 60, TimeUnit.SECONDS);
+    }
+
+    private void sendPreMarketSummary(long chatId) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("🌅 *PRE-MARKET SUMMARY* — ")
+          .append(LocalDateTime.now(ZoneId.of("Asia/Kolkata"))
+              .format(DateTimeFormatter.ofPattern("dd-MMM-yyyy")))
+          .append("\n\n");
+
+        String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
+        for (String sym : symbols) {
+            try {
+                List<SimpleMarketData> all = marketDataFetcher.getRealMarketData5Min(sym);
+                if (all == null || all.size() < 10) {
+                    sb.append("⚠️ *").append(sym).append("* — data unavailable\n\n");
+                    continue;
+                }
+
+                java.time.LocalDate today = java.time.LocalDate.now(ZoneId.of("Asia/Kolkata"));
+                // Separate today's candles from previous day's candles
+                List<SimpleMarketData> todayCandles = new ArrayList<>();
+                List<SimpleMarketData> prevCandles  = new ArrayList<>();
+                for (SimpleMarketData c : all) {
+                    if (c.timestamp == null) continue;
+                    java.time.LocalDate cd = c.timestamp.atZone(ZoneId.of("Asia/Kolkata")).toLocalDate();
+                    if (cd.equals(today))           todayCandles.add(c);
+                    else if (cd.isBefore(today))    prevCandles.add(c);
+                }
+
+                // Find yesterday's candles (most recent previous trading day)
+                java.time.LocalDate prevDay = prevCandles.isEmpty() ? null
+                    : prevCandles.get(prevCandles.size() - 1).timestamp
+                          .atZone(ZoneId.of("Asia/Kolkata")).toLocalDate();
+                List<SimpleMarketData> yesterdayCandles = new ArrayList<>();
+                if (prevDay != null) {
+                    for (SimpleMarketData c : prevCandles) {
+                        if (c.timestamp.atZone(ZoneId.of("Asia/Kolkata")).toLocalDate().equals(prevDay))
+                            yesterdayCandles.add(c);
+                    }
+                }
+
+                if (yesterdayCandles.isEmpty()) {
+                    sb.append("⚠️ *").append(sym).append("* — no previous day data\n\n");
+                    continue;
+                }
+
+                double pdh = yesterdayCandles.stream().mapToDouble(c -> c.high).max().orElse(0);
+                double pdl = yesterdayCandles.stream().mapToDouble(c -> c.low).min().orElse(0);
+                double prevClose = yesterdayCandles.get(yesterdayCandles.size() - 1).price;
+
+                // Today's open — first 9:15 candle or live snapshot
+                double todayOpen = 0;
+                if (!todayCandles.isEmpty()) {
+                    todayOpen = todayCandles.get(0).open > 0
+                        ? todayCandles.get(0).open : todayCandles.get(0).price;
+                } else {
+                    try {
+                        Map<String, Double> snap = marketDataFetcher.getHonestMarketSnapshot();
+                        todayOpen = snap.getOrDefault(sym, 0.0);
+                    } catch (Exception ignored) {}
+                }
+
+                double gapPts = todayOpen > 0 ? todayOpen - prevClose : 0;
+                double gapPct = prevClose > 0 && todayOpen > 0 ? (gapPts / prevClose) * 100 : 0;
+                String gapStr = todayOpen > 0
+                    ? String.format("%s%.0f pts (%s%.2f%%)",
+                        gapPts >= 0 ? "+" : "", gapPts,
+                        gapPct >= 0 ? "+" : "", gapPct)
+                    : "Awaiting open";
+                String gapEmoji = gapPts > 50 ? "🟢" : gapPts < -50 ? "🔴" : "⚪";
+
+                String symLabel = switch (sym) {
+                    case "NIFTY50"   -> "NIFTY 50";
+                    case "BANKNIFTY" -> "BANK NIFTY";
+                    default          -> sym;
+                };
+                sb.append("📌 *").append(symLabel).append("*\n");
+                sb.append(String.format("  Prev Close : `%.2f`%n", prevClose));
+                sb.append(String.format("  PDH        : `%.2f`%n", pdh));
+                sb.append(String.format("  PDL        : `%.2f`%n", pdl));
+                sb.append(String.format("  PDH-PDL    : `%.0f pts`%n", pdh - pdl));
+                sb.append(String.format("  Gap        : %s %s%n", gapEmoji, gapStr));
+                sb.append("\n");
+            } catch (Exception e) {
+                sb.append("⚠️ *").append(sym).append("* error: ").append(e.getMessage()).append("\n\n");
+                logger.warn("Pre-market summary error for {}: {}", sym, e.getMessage());
+            }
+        }
+        sb.append("🤖 `V29.0-INSTITUTIONAL` | Market opens in ~0 min\n");
+        sb.append("_Watch PDH/PDL as key breakout levels for today's calls_");
+        sendMessage(chatId, sb.toString());
+    }
+
+    /**
+     * Quick 14-period ADX calculation from candle data.
+     * Returns value in range ~10–50; >30 = strong trend, <20 = choppy.
+     */
+    private double quickADX14(List<SimpleMarketData> data) {
+        int period = 14;
+        if (data.size() < period * 2 + 1) return 25.0;
+        int n = data.size();
+        double[] tr = new double[n];
+        double[] plusDM = new double[n];
+        double[] minusDM = new double[n];
+        for (int i = 1; i < n; i++) {
+            double h = data.get(i).high, l = data.get(i).low;
+            double ph = data.get(i-1).high, pl = data.get(i-1).low;
+            double pc = data.get(i-1).price;
+            tr[i] = Math.max(h - l, Math.max(Math.abs(h - pc), Math.abs(l - pc)));
+            double up = h - ph, dn = pl - l;
+            plusDM[i]  = (up > dn && up > 0) ? up : 0;
+            minusDM[i] = (dn > up && dn > 0) ? dn : 0;
+        }
+        // Initial sums
+        double sTR = 0, sPlus = 0, sMinus = 0;
+        for (int i = 1; i <= period; i++) { sTR += tr[i]; sPlus += plusDM[i]; sMinus += minusDM[i]; }
+        List<Double> dxList = new ArrayList<>();
+        for (int i = period + 1; i < n; i++) {
+            sTR    = sTR    - (sTR / period)    + tr[i];
+            sPlus  = sPlus  - (sPlus / period)  + plusDM[i];
+            sMinus = sMinus - (sMinus / period) + minusDM[i];
+            double pDI = sTR > 0 ? (sPlus  / sTR) * 100 : 0;
+            double mDI = sTR > 0 ? (sMinus / sTR) * 100 : 0;
+            double diSum = pDI + mDI;
+            dxList.add(diSum > 0 ? Math.abs(pDI - mDI) / diSum * 100 : 0);
+        }
+        if (dxList.size() < period) return 25.0;
+        double sum = 0;
+        for (int i = dxList.size() - period; i < dxList.size(); i++) sum += dxList.get(i);
+        return sum / period;
+    }
+
     private void scheduleEndOfDaySnapshot() {
         LocalTime snapshotTime = LocalTime.of(15, 35);
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
@@ -1369,17 +1680,19 @@ public class Phase3TelegramBot {
     // -----------------------------------------------------------------------
 
     private synchronized void appendSignalLog(String symbol, String direction,
-            double entry, double targetPts, double slPts, long createdAt) {
+            double entry, double targetPts, double slPts, long createdAt, double confidence) {
         try {
             java.time.ZonedDateTime zdt = java.time.Instant.ofEpochMilli(createdAt)
                     .atZone(ZoneId.of("Asia/Kolkata"));
             String date = zdt.toLocalDate().toString();
             String time = zdt.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"));
+            // Columns: date,time,symbol,direction,entry,targetPts,slPts,status,points,createdAt,confidence,resolvedAt
             String line = String.join(",", date, time, symbol, direction,
                     String.format("%.2f", entry),
                     String.format("%.2f", targetPts),
                     String.format("%.2f", slPts),
-                    "OPEN", "0.00", String.valueOf(createdAt));
+                    "OPEN", "0.00", String.valueOf(createdAt),
+                    String.format("%.1f", confidence), "");
             java.nio.file.Files.writeString(java.nio.file.Path.of(SIGNAL_LOG_FILE),
                     line + System.lineSeparator(),
                     java.nio.file.StandardOpenOption.CREATE,
@@ -1390,7 +1703,7 @@ public class Phase3TelegramBot {
     }
 
     private synchronized void updateSignalLog(String symbol, long createdAt,
-            String status, double points) {
+            String status, double points, long resolvedAt) {
         try {
             java.nio.file.Path path = java.nio.file.Path.of(SIGNAL_LOG_FILE);
             if (!path.toFile().exists()) return;
@@ -1404,6 +1717,13 @@ public class Phase3TelegramBot {
                         && parts[9].equals(createdAtStr)) {
                     parts[7] = status;
                     parts[8] = String.format("%.2f", points);
+                    // Extend array if needed (old rows may only have 10 cols)
+                    if (parts.length < 12) {
+                        parts = Arrays.copyOf(parts, 12);
+                        if (parts[10] == null) parts[10] = "0.0";
+                        if (parts[11] == null) parts[11] = "";
+                    }
+                    parts[11] = String.valueOf(resolvedAt);
                     line = String.join(",", parts);
                 }
                 updated.add(line);
