@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class MasterIntegratedTelegramBot {
     
     // Telegram Bot Configuration
-    private static final String BOT_TOKEN = "7921964521:AAGNk_jIcV9V5nvxSTdK4xSzeO_yS4AKZ9E";
+    private static final String BOT_TOKEN = "8637694931:AAFrY3BM7GSVVFeXonR_vT4I6eE0Ys_fKTc";
     private static final String TELEGRAM_API_URL = "https://api.telegram.org/bot" + BOT_TOKEN;
     
     // Bot components

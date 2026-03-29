@@ -9,9 +9,9 @@ import java.util.Properties;
 public class UpstoxApiUpdater {
     
     // Updated Upstox API Credentials
-    private static final String API_KEY = "768a303b-80f1-46d6-af16-f847f9341213";
-    private static final String API_SECRET = "j0w9ga2m9w";
-    private static final String ACCESS_TOKEN = "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OTc2MTFiMzg5M2Y0MDY1MjE3YmUxOGMiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2OTM0NTQ1OSwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzY5Mzc4NDAwfQ.Z06g0_XML5Y0zKpqZ-3artglaX-qtsFic_gvaWt3iUE";
+    private static final String API_KEY = "3954b352-747f-4d01-91d2-78365c79cc95";
+    private static final String API_SECRET = "mdefgew8sv";
+    private static final String ACCESS_TOKEN = "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OWM5Mjc2OGFiZTEwNzY4YTMwMzlhMGEiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc3NDc5MDUwNCwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzc0ODIxNjAwfQ.-TEeYkh5dIrsymF46Wugc9Cjvw2JeWMcI5qjhaB3_dg";
     
     private static final String BASE_URL = "https://api.upstox.com/v2";
     

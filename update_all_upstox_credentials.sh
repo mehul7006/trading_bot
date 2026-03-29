@@ -6,9 +6,9 @@ echo "======================================"
 echo ""
 
 # New credentials
-API_KEY="768a303b-80f1-46d6-af16-f847f9341213"
-API_SECRET="j0w9ga2m9w"
-ACCESS_TOKEN="eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OTc2MTFiMzg5M2Y0MDY1MjE3YmUxOGMiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2OTM0NTQ1OSwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzY5Mzc4NDAwfQ.Z06g0_XML5Y0zKpqZ-3artglaX-qtsFic_gvaWt3iUE"
+API_KEY="3954b352-747f-4d01-91d2-78365c79cc95"
+API_SECRET="mdefgew8sv"
+ACCESS_TOKEN="eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OWM5Mjc2OGFiZTEwNzY4YTMwMzlhMGEiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc3NDc5MDUwNCwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzc0ODIxNjAwfQ.-TEeYkh5dIrsymF46Wugc9Cjvw2JeWMcI5qjhaB3_dg"
 
 echo "🔑 API Key: $API_KEY"
 echo "🔐 API Secret: ${API_SECRET:0:4}****"

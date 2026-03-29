@@ -18,9 +18,9 @@ public class CompleteFreshTelegramBot {
     private static final String TELEGRAM_API_URL = "https://api.telegram.org/bot" + BOT_TOKEN;
     
     // Upstox API Configuration - REAL CREDENTIALS
-    private static final String UPSTOX_API_KEY = "768a303b-80f1-46d6-af16-f847f9341213";
-    private static final String UPSTOX_API_SECRET = "j0w9ga2m9w";
-    private static final String UPSTOX_ACCESS_TOKEN = "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OTE3MzVjZmI1MTBhZDM2MDNhMTJkNjciLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2MzEyODc4MywiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzYzMTU3NjAwfQ.E40et7KwwJ9htWG_ppgtoYQMdmdtLopNuiU_wmBPnqA";
+    private static final String UPSTOX_API_KEY = "3954b352-747f-4d01-91d2-78365c79cc95";
+    private static final String UPSTOX_API_SECRET = "mdefgew8sv";
+    private static final String UPSTOX_ACCESS_TOKEN = "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OWM5Mjc2OGFiZTEwNzY4YTMwMzlhMGEiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc3NDc5MDUwNCwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzc0ODIxNjAwfQ.-TEeYkh5dIrsymF46Wugc9Cjvw2JeWMcI5qjhaB3_dg";
     private static final String UPSTOX_BASE_URL = "https://api.upstox.com/v2";
     
     // Real Market Instrument Keys (NO MOCK DATA)
