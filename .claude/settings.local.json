@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(java -version)",
+      "Bash(echo $ANDROID_HOME)",
+      "Read(//c/Users/bunty/AppData/Local/Android/**)",
+      "Read(//c/Android/**)",
+      "Bash(gradle --version)",
+      "Bash(npm --version)",
+      "Bash(curl:*)",
+      "Bash(cd:*)"
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+web-app/node_modules
+web-app/dist
+target
+*.txt
+*.log
+android-app

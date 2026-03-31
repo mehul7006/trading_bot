@@ -1,0 +1,30 @@
+target/
+*.class
+*.log
+.idea/
+*.iml
+.DS_Store
+upstox_token.txt
+upstox_config.properties
+upstox_config.properties.bak
+upstox_config_updated.properties
+upstox_config*.properties
+cp.txt
+.vscode/
+.env
+
+# Web app build artifacts and downloaded Node.js (frontend-maven-plugin)
+web-app/node/
+web-app/node_modules/
+web-app/dist/
+
+# Auto-generated market data cache (rebuilt on first run)
+market_data_cache/
+
+# Maven shade plugin artifact
+dependency-reduced-pom.xml
+
+# Runtime state files (auto-created at startup)
+daily_signal_state.properties
+active_chat_id.txt
+signal_log.csv
