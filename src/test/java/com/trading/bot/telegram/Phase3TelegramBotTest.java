@@ -41,11 +41,21 @@ class Phase3TelegramBotTest {
     }
 
     @Test
-    void nonAdminCanUseStatusScanToday() {
+    void approvedNonAdminCanUseStatus() {
         TestBot bot = new TestBot();
-        bot.handleCommand(1L, "/status"); // non-admin — should work
+        // Pre-approve chatId 1L so they can access market commands
+        bot.approvedUsers.add(1L);
+        bot.handleCommand(1L, "/status");
         assertFalse(bot.sent.isEmpty());
         assertTrue(bot.sent.get(0).contains("Market Status Report"));
+    }
+
+    @Test
+    void unapprovedNonAdminIsBlockedFromStatus() {
+        TestBot bot = new TestBot();
+        bot.handleCommand(1L, "/status"); // not approved — should be blocked
+        assertFalse(bot.sent.isEmpty());
+        assertTrue(bot.sent.get(0).contains("Access Required") || bot.sent.get(0).contains("Access Denied"));
     }
 
     @Test
@@ -53,7 +63,7 @@ class Phase3TelegramBotTest {
         TestBot bot = new TestBot();
         bot.handleCommand(1L, "/token abc123"); // non-admin — should be blocked
         assertFalse(bot.sent.isEmpty());
-        assertTrue(bot.sent.get(0).contains("Access Denied"));
+        assertTrue(bot.sent.get(0).contains("Access Denied") || bot.sent.get(0).contains("Access Required"));
     }
 
     @Test

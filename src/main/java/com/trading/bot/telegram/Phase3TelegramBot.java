@@ -82,6 +82,15 @@ public class Phase3TelegramBot {
     private java.time.LocalDate lastResetDate = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
     private final java.util.Set<Integer> slotsTriggered = java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
 
+    // User access control
+    private static final String APPROVED_USERS_FILE = "approved_users.txt";
+    // package-private for test access
+    final Set<Long> approvedUsers = java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
+    // chatId → "Name|timestamp"
+    private final Map<Long, String> pendingRequests = new ConcurrentHashMap<>();
+    // chatId → display name (populated from Telegram update JSON)
+    private final Map<Long, String> userNameCache = new ConcurrentHashMap<>();
+
     // Per-symbol call tracking for daily guarantee mechanism
     private static final String CHAT_ID_FILE  = "active_chat_id.txt";
     private static final String SIGNAL_LOG_FILE = "signal_log.csv";
@@ -243,6 +252,9 @@ public class Phase3TelegramBot {
         // Restore today's signal counts/cooldowns so restarts don't duplicate signals
         loadDailyState();
 
+        // Load previously approved users from disk
+        loadApprovedUsers();
+
         // Silent Startup - No spamming user on restart
         // sendStartupMessage();
         
@@ -382,10 +394,14 @@ public class Phase3TelegramBot {
                         if (updateId <= lastUpdateId) continue;
                         if (updateId > maxUpdateId) maxUpdateId = updateId;
                         
-                        // Extract chatId and messageText
+                        // Extract chatId, messageText, and user display name
                         long chatId = extractChatId(update);
                         String text = extractMessageText(update);
-                        
+                        String userName = extractUserName(update);
+                        if (chatId != 0 && userName != null) {
+                            userNameCache.put(chatId, userName);
+                        }
+
                         if (chatId != 0 && text != null) {
                             // Filter out messages older than 90 seconds — prevents replaying old
                             // commands after a bot restart (lastUpdateId resets to 0 on restart).
@@ -426,18 +442,24 @@ public class Phase3TelegramBot {
 
         logger.info("📩 Received command from {}: {}", chatId, command);
 
-        // Open to everyone
+        // Open to everyone — no auth required
         if (cmdKey.startsWith("/start")) {
             handleStartCommand(chatId);
             return;
-        } else if (cmdKey.startsWith("/scan")) {
-            handleScanCommand(chatId);
+        } else if (cmdKey.startsWith("/join")) {
+            handleJoinCommand(chatId);
             return;
-        } else if (cmdKey.startsWith("/status")) {
-            handleStatusCommand(chatId);
-            return;
-        } else if (cmdKey.startsWith("/today")) {
-            sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata"))));
+        }
+
+        // Commands for approved users + admin
+        if (cmdKey.startsWith("/scan") || cmdKey.startsWith("/status") || cmdKey.startsWith("/today")) {
+            if (!isAuthorized(chatId)) {
+                sendMessage(chatId, "🔒 *Access Required*\n\nSend /join to request access from the admin.");
+                return;
+            }
+            if (cmdKey.startsWith("/scan"))        handleScanCommand(chatId);
+            else if (cmdKey.startsWith("/status")) handleStatusCommand(chatId);
+            else sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata"))));
             return;
         }
 
@@ -447,15 +469,17 @@ public class Phase3TelegramBot {
             return;
         }
 
-        if (cmdKey.startsWith("/token")) {
-            handleTokenCommand(chatId, command);
-        } else if (cmdKey.startsWith("/stop")) {
-            handleStopScanCommand(chatId);
-        } else if (cmdKey.startsWith("/yesterday")) {
+        if      (cmdKey.startsWith("/token"))    handleTokenCommand(chatId, command);
+        else if (cmdKey.startsWith("/stop"))     handleStopScanCommand(chatId);
+        else if (cmdKey.startsWith("/approve"))  handleApproveCommand(chatId, command);
+        else if (cmdKey.startsWith("/reject"))   handleRejectCommand(chatId, command);
+        else if (cmdKey.startsWith("/revoke"))   handleRevokeCommand(chatId, command);
+        else if (cmdKey.startsWith("/users"))    handleUsersCommand(chatId);
+        else if (cmdKey.startsWith("/pending"))  handlePendingCommand(chatId);
+        else if (cmdKey.startsWith("/yesterday"))
             sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(1)));
-        } else {
-            sendMessage(chatId, "⚠️ *Unknown command*\n\nAvailable: /scan /status /today /stop /token /yesterday");
-        }
+        else
+            sendMessage(chatId, "⚠️ *Unknown command*\n\nUser: /scan /status /today /join\nAdmin: /stop /token /approve /reject /revoke /users /pending");
     }
     
     /**
@@ -464,7 +488,7 @@ public class Phase3TelegramBot {
     protected void handleCommand(long chatId, String command) {
         logger.info("📱 Received command: {} from chat: {}", command, chatId);
         System.out.println("DEBUG: Received command: " + command + " from chat: " + chatId);
-        
+
         try {
             // Dedup identical commands quickly repeated (e.g., double taps)
             long now = System.currentTimeMillis();
@@ -473,17 +497,27 @@ public class Phase3TelegramBot {
                 return;
             }
             lastCommandByChat.put(chatId, new DedupCommand(command.trim(), now));
-            
+
             // Split command and arguments
             String[] parts = command.trim().split("\\s+", 2);
             String cmd = parts[0].toLowerCase();
-            
-            // Open to everyone
-            switch (cmd) {
-                case "/start"  -> { handleStartCommand(chatId); return; }
-                case "/scan"   -> { handleScanCommand(chatId);  return; }
-                case "/status" -> { handleStatusCommand(chatId); return; }
-                case "/today"  -> { sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")))); return; }
+
+            // Open to everyone — no auth required
+            if (cmd.equals("/start")) { handleStartCommand(chatId); return; }
+            if (cmd.equals("/join"))  { handleJoinCommand(chatId); return; }
+
+            // Approved users + admin — market commands
+            if (cmd.equals("/scan") || cmd.equals("/status") || cmd.equals("/today")) {
+                if (!isAuthorized(chatId)) {
+                    sendMessage(chatId, "🔒 *Access Required*\n\nYou need approval to use this bot.\nSend /join to request access from the admin.");
+                    return;
+                }
+                switch (cmd) {
+                    case "/scan"   -> handleScanCommand(chatId);
+                    case "/status" -> handleStatusCommand(chatId);
+                    case "/today"  -> sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata"))));
+                }
+                return;
             }
 
             // Admin-only commands
@@ -496,7 +530,12 @@ public class Phase3TelegramBot {
                 case "/stop_scan", "/stop" -> handleStopScanCommand(chatId);
                 case "/token"              -> handleTokenCommand(chatId, command);
                 case "/yesterday"          -> sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(1)));
-                default -> sendMessage(chatId, "⚠️ *Unknown Command*\n\nAvailable: /scan /status /today /stop /token /yesterday");
+                case "/approve"            -> handleApproveCommand(chatId, command);
+                case "/reject"             -> handleRejectCommand(chatId, command);
+                case "/revoke"             -> handleRevokeCommand(chatId, command);
+                case "/users"              -> handleUsersCommand(chatId);
+                case "/pending"            -> handlePendingCommand(chatId);
+                default -> sendMessage(chatId, "⚠️ *Unknown Command*\n\nUser: /scan /status /today /join\nAdmin: /stop /token /approve /reject /revoke /users /pending /yesterday");
             }
         } catch (Exception e) {
             logger.error("Error handling command: {}", e.getMessage(), e);
@@ -508,6 +547,212 @@ public class Phase3TelegramBot {
      */
     private boolean isAdmin(long chatId) {
         return chatId == ADMIN_CHAT_ID;
+    }
+
+    /** Returns true if chatId is admin or has been approved. */
+    private boolean isAuthorized(long chatId) {
+        return isAdmin(chatId) || approvedUsers.contains(chatId);
+    }
+
+    /** Extract display name from Telegram update JSON. */
+    private String extractUserName(String update) {
+        try {
+            // Look for "from":{..."first_name":"...","last_name":"...","username":"..."}
+            int fromIdx = update.indexOf("\"from\":");
+            if (fromIdx < 0) return null;
+            int braceOpen = update.indexOf('{', fromIdx);
+            if (braceOpen < 0) return null;
+            int braceClose = update.indexOf('}', braceOpen);
+            if (braceClose < 0) return null;
+            String fromObj = update.substring(braceOpen, braceClose + 1);
+
+            String firstName = jsonField(fromObj, "first_name");
+            String lastName  = jsonField(fromObj, "last_name");
+            String username  = jsonField(fromObj, "username");
+
+            StringBuilder name = new StringBuilder();
+            if (firstName != null) name.append(firstName);
+            if (lastName  != null && !lastName.isEmpty()) name.append(" ").append(lastName);
+            if (username  != null && !username.isEmpty()) name.append(" (@").append(username).append(")");
+            return name.length() > 0 ? name.toString() : "Unknown";
+        } catch (Exception e) {
+            return "Unknown";
+        }
+    }
+
+    /** Tiny helper: extract a JSON string field value by key. */
+    private String jsonField(String json, String key) {
+        String search = "\"" + key + "\":\"";
+        int start = json.indexOf(search);
+        if (start < 0) return null;
+        start += search.length();
+        int end = json.indexOf('"', start);
+        if (end < 0) return null;
+        return json.substring(start, end);
+    }
+
+    /** Handle /join — user requests access; admin is notified. */
+    protected void handleJoinCommand(long chatId) {
+        if (isAuthorized(chatId)) {
+            sendMessage(chatId, "✅ *Already Approved*\n\nYou already have access to this bot. Use /scan or /status to get started!");
+            return;
+        }
+        if (pendingRequests.containsKey(chatId)) {
+            sendMessage(chatId, "⏳ *Request Pending*\n\nYour access request is already pending. Please wait for admin approval.");
+            return;
+        }
+        String displayName = userNameCache.getOrDefault(chatId, "Unknown");
+        String timestamp   = DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss")
+                                .format(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
+        pendingRequests.put(chatId, displayName + "|" + timestamp);
+
+        sendMessage(chatId, "📨 *Access Requested*\n\nYour request has been sent to the admin.\nYou'll be notified once approved. Please wait.");
+
+        sendMessage(ADMIN_CHAT_ID,
+            "🔔 *New Access Request*\n\n" +
+            "👤 *Name:* " + displayName + "\n" +
+            "🆔 *Chat ID:* `" + chatId + "`\n" +
+            "🕐 *Time:* " + timestamp + "\n\n" +
+            "➡️ To approve: `/approve " + chatId + "`\n" +
+            "➡️ To reject:  `/reject " + chatId + "`");
+    }
+
+    /** Handle /approve <chatId> — admin approves a pending user. */
+    protected void handleApproveCommand(long adminChatId, String command) {
+        String[] parts = command.trim().split("\\s+");
+        if (parts.length < 2) {
+            sendMessage(adminChatId, "⚠️ Usage: `/approve <chatId>`");
+            return;
+        }
+        long targetId;
+        try { targetId = Long.parseLong(parts[1]); }
+        catch (NumberFormatException e) {
+            sendMessage(adminChatId, "❌ Invalid chat ID: " + parts[1]);
+            return;
+        }
+        String info = pendingRequests.remove(targetId);
+        approvedUsers.add(targetId);
+        saveApprovedUsers();
+
+        String displayName = info != null ? info.split("\\|")[0] : userNameCache.getOrDefault(targetId, "Unknown");
+        sendMessage(adminChatId, "✅ *Approved* — " + displayName + " (" + targetId + ") now has access.");
+        sendMessage(targetId,
+            "🎉 *Access Granted!*\n\n" +
+            "Welcome! The admin has approved your request.\n" +
+            "You can now use /scan, /status, and /today.");
+    }
+
+    /** Handle /reject <chatId> — admin rejects a pending request. */
+    protected void handleRejectCommand(long adminChatId, String command) {
+        String[] parts = command.trim().split("\\s+");
+        if (parts.length < 2) {
+            sendMessage(adminChatId, "⚠️ Usage: `/reject <chatId>`");
+            return;
+        }
+        long targetId;
+        try { targetId = Long.parseLong(parts[1]); }
+        catch (NumberFormatException e) {
+            sendMessage(adminChatId, "❌ Invalid chat ID: " + parts[1]);
+            return;
+        }
+        String info = pendingRequests.remove(targetId);
+        String displayName = info != null ? info.split("\\|")[0] : userNameCache.getOrDefault(targetId, "Unknown");
+        sendMessage(adminChatId, "🚫 *Rejected* — " + displayName + " (" + targetId + ") request removed.");
+        sendMessage(targetId, "❌ *Access Denied*\n\nYour access request was not approved by the admin.\nContact the admin for more information.");
+    }
+
+    /** Handle /revoke <chatId> — admin removes an approved user's access. */
+    protected void handleRevokeCommand(long adminChatId, String command) {
+        String[] parts = command.trim().split("\\s+");
+        if (parts.length < 2) {
+            sendMessage(adminChatId, "⚠️ Usage: `/revoke <chatId>`");
+            return;
+        }
+        long targetId;
+        try { targetId = Long.parseLong(parts[1]); }
+        catch (NumberFormatException e) {
+            sendMessage(adminChatId, "❌ Invalid chat ID: " + parts[1]);
+            return;
+        }
+        boolean removed = approvedUsers.remove(targetId);
+        saveApprovedUsers();
+        String displayName = userNameCache.getOrDefault(targetId, "Unknown");
+        if (removed) {
+            sendMessage(adminChatId, "🔒 *Revoked* — " + displayName + " (" + targetId + ") access removed.");
+            sendMessage(targetId, "🔒 *Access Revoked*\n\nYour access to this bot has been removed by the admin.\nSend /join to request access again.");
+        } else {
+            sendMessage(adminChatId, "⚠️ Chat ID " + targetId + " was not in the approved list.");
+        }
+    }
+
+    /** Handle /users — list all approved users. */
+    protected void handleUsersCommand(long adminChatId) {
+        if (approvedUsers.isEmpty()) {
+            sendMessage(adminChatId, "📋 *Approved Users*\n\nNo approved users yet.");
+            return;
+        }
+        StringBuilder sb = new StringBuilder("📋 *Approved Users* (" + approvedUsers.size() + ")\n\n");
+        int i = 1;
+        for (long uid : approvedUsers) {
+            String name = userNameCache.getOrDefault(uid, "Unknown");
+            sb.append(i++).append(". ").append(name).append(" — `").append(uid).append("`\n");
+        }
+        sb.append("\nUse `/revoke <chatId>` to remove access.");
+        sendMessage(adminChatId, sb.toString());
+    }
+
+    /** Handle /pending — list all pending access requests. */
+    protected void handlePendingCommand(long adminChatId) {
+        if (pendingRequests.isEmpty()) {
+            sendMessage(adminChatId, "📋 *Pending Requests*\n\nNo pending requests.");
+            return;
+        }
+        StringBuilder sb = new StringBuilder("📋 *Pending Requests* (" + pendingRequests.size() + ")\n\n");
+        int i = 1;
+        for (Map.Entry<Long, String> entry : pendingRequests.entrySet()) {
+            String[] parts = entry.getValue().split("\\|", 2);
+            String name = parts[0];
+            String time = parts.length > 1 ? parts[1] : "—";
+            sb.append(i++).append(". *").append(name).append("*\n")
+              .append("   🆔 `").append(entry.getKey()).append("`\n")
+              .append("   🕐 ").append(time).append("\n\n");
+        }
+        sb.append("Use `/approve <chatId>` or `/reject <chatId>`.");
+        sendMessage(adminChatId, sb.toString());
+    }
+
+    /** Load approved user IDs from disk on startup. */
+    private void loadApprovedUsers() {
+        try {
+            java.io.File file = new java.io.File(APPROVED_USERS_FILE);
+            if (!file.exists()) return;
+            java.util.List<String> lines = java.nio.file.Files.readAllLines(file.toPath());
+            for (String line : lines) {
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    try { approvedUsers.add(Long.parseLong(line)); }
+                    catch (NumberFormatException ignored) {}
+                }
+            }
+            logger.info("Loaded {} approved users from disk", approvedUsers.size());
+        } catch (Exception e) {
+            logger.warn("Could not load approved users file: {}", e.getMessage());
+        }
+    }
+
+    /** Persist approved user IDs to disk. */
+    private void saveApprovedUsers() {
+        try {
+            StringBuilder sb = new StringBuilder();
+            for (long uid : approvedUsers) sb.append(uid).append("\n");
+            java.nio.file.Files.writeString(
+                java.nio.file.Paths.get(APPROVED_USERS_FILE),
+                sb.toString(),
+                java.nio.file.StandardOpenOption.CREATE,
+                java.nio.file.StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (Exception e) {
+            logger.warn("Could not save approved users file: {}", e.getMessage());
+        }
     }
 
     /**
