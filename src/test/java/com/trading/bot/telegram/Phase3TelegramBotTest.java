@@ -41,9 +41,17 @@ class Phase3TelegramBotTest {
     }
 
     @Test
-    void nonAdminIsBlockedFromStatus() {
+    void nonAdminCanUseStatusScanToday() {
         TestBot bot = new TestBot();
-        bot.handleCommand(1L, "/status"); // non-admin
+        bot.handleCommand(1L, "/status"); // non-admin — should work
+        assertFalse(bot.sent.isEmpty());
+        assertTrue(bot.sent.get(0).contains("Market Status Report"));
+    }
+
+    @Test
+    void nonAdminIsBlockedFromToken() {
+        TestBot bot = new TestBot();
+        bot.handleCommand(1L, "/token abc123"); // non-admin — should be blocked
         assertFalse(bot.sent.isEmpty());
         assertTrue(bot.sent.get(0).contains("Access Denied"));
     }
@@ -87,7 +95,7 @@ class Phase3TelegramBotTest {
     @Test
     void tokenCommandSendsAccessTokenUpdated() {
         TestBot bot = new TestBot();
-        bot.handleCommand(ADMIN, "/token abc123");
+        bot.handleCommand(ADMIN, "/token abc123"); // admin — should work
         assertFalse(bot.sent.isEmpty());
         String msg = bot.sent.get(0);
         assertTrue(msg.contains("Token") || msg.contains("token"), "Expected token message, got: " + msg);

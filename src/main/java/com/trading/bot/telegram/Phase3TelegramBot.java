@@ -426,32 +426,35 @@ public class Phase3TelegramBot {
 
         logger.info("📩 Received command from {}: {}", chatId, command);
 
-        // /start is open to everyone — so any user can see bot info
+        // Open to everyone
         if (cmdKey.startsWith("/start")) {
             handleStartCommand(chatId);
             return;
+        } else if (cmdKey.startsWith("/scan")) {
+            handleScanCommand(chatId);
+            return;
+        } else if (cmdKey.startsWith("/status")) {
+            handleStatusCommand(chatId);
+            return;
+        } else if (cmdKey.startsWith("/today")) {
+            sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata"))));
+            return;
         }
 
-        // All other commands are admin-only
+        // Admin-only commands
         if (!isAdmin(chatId)) {
-            sendMessage(chatId, "🔒 *Access Denied*\n\nThis bot is private. Only the admin can use it.");
+            sendMessage(chatId, "🔒 *Access Denied*\n\nThis command is for admin only.");
             return;
         }
 
         if (cmdKey.startsWith("/token")) {
             handleTokenCommand(chatId, command);
-        } else if (cmdKey.startsWith("/status")) {
-            handleStatusCommand(chatId);
-        } else if (cmdKey.startsWith("/scan")) {
-            handleScanCommand(chatId);
         } else if (cmdKey.startsWith("/stop")) {
             handleStopScanCommand(chatId);
-        } else if (cmdKey.startsWith("/today")) {
-            sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata"))));
         } else if (cmdKey.startsWith("/yesterday")) {
             sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(1)));
         } else {
-            sendMessage(chatId, "⚠️ *Unknown command*\n\nAvailable: /scan /stop /status /token /today /yesterday");
+            sendMessage(chatId, "⚠️ *Unknown command*\n\nAvailable: /scan /status /today /stop /token /yesterday");
         }
     }
     
@@ -475,24 +478,25 @@ public class Phase3TelegramBot {
             String[] parts = command.trim().split("\\s+", 2);
             String cmd = parts[0].toLowerCase();
             
-            if (cmd.equals("/start")) {
-                handleStartCommand(chatId);
-                return;
+            // Open to everyone
+            switch (cmd) {
+                case "/start"  -> { handleStartCommand(chatId); return; }
+                case "/scan"   -> { handleScanCommand(chatId);  return; }
+                case "/status" -> { handleStatusCommand(chatId); return; }
+                case "/today"  -> { sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")))); return; }
             }
 
+            // Admin-only commands
             if (!isAdmin(chatId)) {
-                sendMessage(chatId, "🔒 *Access Denied*\n\nThis bot is private. Only the admin can use it.");
+                sendMessage(chatId, "🔒 *Access Denied*\n\nThis command is for admin only.");
                 return;
             }
 
             switch (cmd) {
-                case "/status" -> handleStatusCommand(chatId);
-                case "/scan" -> handleScanCommand(chatId);
                 case "/stop_scan", "/stop" -> handleStopScanCommand(chatId);
-                case "/token" -> handleTokenCommand(chatId, command);
-                default -> {
-                    sendMessage(chatId, "⚠️ *Unknown Command*\n\nAvailable: /scan /stop /status /token /today /yesterday");
-                }
+                case "/token"              -> handleTokenCommand(chatId, command);
+                case "/yesterday"          -> sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(1)));
+                default -> sendMessage(chatId, "⚠️ *Unknown Command*\n\nAvailable: /scan /status /today /stop /token /yesterday");
             }
         } catch (Exception e) {
             logger.error("Error handling command: {}", e.getMessage(), e);
