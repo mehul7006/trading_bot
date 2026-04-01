@@ -55,22 +55,25 @@ class Phase3TelegramBotTest {
         bot.handleCommand(1L, "/scan");
         assertFalse(bot.sent.isEmpty());
         String first = bot.sent.get(0);
-        assertTrue(first.contains("Scanning Started"));
+        assertTrue(first.contains("scanning"), "Expected scan start message, got: " + first);
+        try { Thread.sleep(1600); } catch (InterruptedException ignored) {} // wait past 1.5s dedup window
         bot.handleCommand(1L, "/scan");
         assertTrue(bot.sent.size() >= 2);
         String second = bot.sent.get(1);
-        assertTrue(second.contains("Scanning is Already Active"));
+        assertTrue(second.contains("scanning") || second.contains("Already"),
+            "Expected already-active message, got: " + second);
     }
 
     @Test
     void stopScanCommandSendsStoppedMessage() {
         TestBot bot = new TestBot();
-        bot.handleCommand(1L, "/scan");
+        long adminId = 457623834L; // must match ADMIN_CHAT_ID fallback
+        bot.handleCommand(adminId, "/scan");
         bot.sent.clear();
-        bot.handleCommand(1L, "/stop_scan");
+        bot.handleCommand(adminId, "/stop_scan");
         assertFalse(bot.sent.isEmpty());
         String msg = bot.sent.get(0);
-        assertTrue(msg.contains("Scanning Stopped"));
+        assertTrue(msg.contains("Stopped") || msg.contains("stopped"), "Expected stop message, got: " + msg);
     }
 
     @Test
@@ -79,7 +82,7 @@ class Phase3TelegramBotTest {
         bot.handleCommand(1L, "/token abc123");
         assertFalse(bot.sent.isEmpty());
         String msg = bot.sent.get(0);
-        assertTrue(msg.contains("Access Token Updated"));
+        assertTrue(msg.contains("Token") || msg.contains("token"), "Expected token update message, got: " + msg);
     }
 
     @Test

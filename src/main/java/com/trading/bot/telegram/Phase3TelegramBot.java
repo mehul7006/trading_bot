@@ -35,8 +35,13 @@ public class Phase3TelegramBot {
     private static final Logger logger = LoggerFactory.getLogger(Phase3TelegramBot.class);
     
     // Telegram Bot Configuration
-    private static final String BOT_TOKEN = System.getenv("TELEGRAM_BOT_TOKEN") != null ? System.getenv("TELEGRAM_BOT_TOKEN") : "8637694931:AAFrY3BM7GSVVFeXonR_vT4I6eE0Ys_fKTc";
+    private static final String BOT_TOKEN = System.getenv("TELEGRAM_BOT_TOKEN") != null ? System.getenv("TELEGRAM_BOT_TOKEN") : "8637694931:AAE7SWmYFZmUPj0rxkghiS2R1RuezUPo1wc";
     private static final String TELEGRAM_API_URL = "https://api.telegram.org/bot" + BOT_TOKEN;
+
+    // Admin configuration — set ADMIN_CHAT_ID env var on your server
+    private static final long ADMIN_CHAT_ID = System.getenv("ADMIN_CHAT_ID") != null
+        ? Long.parseLong(System.getenv("ADMIN_CHAT_ID"))
+        : 457623834L; // fallback: your personal chat ID
     
     // Bot components
     private final HttpClient httpClient;
@@ -55,8 +60,6 @@ public class Phase3TelegramBot {
     private final java.util.concurrent.atomic.AtomicInteger todayCallsGenerated = new java.util.concurrent.atomic.AtomicInteger(0);
     private final Map<String, Long> lastAlertTimeMap = new ConcurrentHashMap<>();
     private final Map<String, Long> lastWatchlistAlertMap = new ConcurrentHashMap<>();
-    private final Map<Long, String> lastSentMessageByChat = new ConcurrentHashMap<>();
-    private final Map<Long, Long> lastSentMessageTime = new ConcurrentHashMap<>();
     private final Map<Long, DedupCommand> lastCommandByChat = new ConcurrentHashMap<>();
     
     private static class DedupCommand {
@@ -188,7 +191,6 @@ public class Phase3TelegramBot {
         return false;  // signal still open
     }
     private ScheduledFuture<?> scanFuture;
-    private final Map<Long, String> pendingCommands = new ConcurrentHashMap<>();
     
     public Phase3TelegramBot() {
         this(false);
@@ -411,19 +413,19 @@ public class Phase3TelegramBot {
     }
 
     private synchronized void processCommand(long chatId, String text) {
-        // Simple case-insensitive match for the command part
         String command = text.trim();
         String cmdKey = command.toLowerCase().split("\\s+")[0];
-        
-        // Check for exact duplicate in the last 5 seconds to prevent rapid double-processing
-        String lastCmd = pendingCommands.get(chatId);
-        if (command.equals(lastCmd)) {
+
+        // Block only rapid double-taps (same command within 1.5s) — nothing longer
+        long now = System.currentTimeMillis();
+        DedupCommand last = lastCommandByChat.get(chatId);
+        if (last != null && command.equalsIgnoreCase(last.cmd) && (now - last.at) < 1500) {
             return;
         }
-        pendingCommands.put(chatId, command);
-        
+        lastCommandByChat.put(chatId, new DedupCommand(command, now));
+
         logger.info("📩 Received command from {}: {}", chatId, command);
-        
+
         if (cmdKey.startsWith("/start")) {
             handleStartCommand(chatId);
         } else if (cmdKey.startsWith("/token")) {
@@ -439,9 +441,6 @@ public class Phase3TelegramBot {
         } else if (cmdKey.startsWith("/yesterday")) {
             sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(1)));
         }
-        
-        // Auto-clear from pending after a short delay to allow future valid same commands
-        scheduler.schedule(() -> pendingCommands.remove(chatId), 5, TimeUnit.SECONDS);
     }
     
     /**
@@ -484,7 +483,14 @@ public class Phase3TelegramBot {
             logger.error("Error handling command: {}", e.getMessage(), e);
         }
     }
-    
+
+    /**
+     * Returns true if the given chatId belongs to the admin.
+     */
+    private boolean isAdmin(long chatId) {
+        return chatId == ADMIN_CHAT_ID;
+    }
+
     /**
      * Handle /start command
      */
@@ -706,12 +712,15 @@ public class Phase3TelegramBot {
     }
 
     protected void handleStopScanCommand(long chatId) {
+        if (!isAdmin(chatId)) {
+            sendMessage(chatId, "🚫 *Admin Only*\n\nOnly the admin can stop the scan.");
+            return;
+        }
         isScanning = false;
         if (scanFuture != null) {
             scanFuture.cancel(false);
         }
-        sendMessage(chatId, "🛑 **Scanning Stopped**\n\n" +
-                          "Bot is now idle. Use `/scan` to resume monitoring.");
+        sendMessage(chatId, "🛑 *Scanning Stopped*\n\nBot is now idle. Use `/scan` to resume monitoring.");
     }
 
     private void performScan(long chatId) {
@@ -1416,14 +1425,6 @@ public class Phase3TelegramBot {
             if (text != null && text.length() > 4000) {
                 text = text.substring(0, 3997) + "...";
             }
-            long now = System.currentTimeMillis();
-            String lastText = lastSentMessageByChat.get(chatId);
-            Long lastTime = lastSentMessageTime.get(chatId);
-            if (lastText != null && lastText.equals(text) && lastTime != null && (now - lastTime) < 10000) {
-                return;
-            }
-            lastSentMessageByChat.put(chatId, text);
-            lastSentMessageTime.put(chatId, now);
 
             boolean success = sendRequest(chatId, text, "Markdown");
 
