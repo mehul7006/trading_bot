@@ -426,9 +426,19 @@ public class Phase3TelegramBot {
 
         logger.info("📩 Received command from {}: {}", chatId, command);
 
+        // /start is open to everyone — so any user can see bot info
         if (cmdKey.startsWith("/start")) {
             handleStartCommand(chatId);
-        } else if (cmdKey.startsWith("/token")) {
+            return;
+        }
+
+        // All other commands are admin-only
+        if (!isAdmin(chatId)) {
+            sendMessage(chatId, "🔒 *Access Denied*\n\nThis bot is private. Only the admin can use it.");
+            return;
+        }
+
+        if (cmdKey.startsWith("/token")) {
             handleTokenCommand(chatId, command);
         } else if (cmdKey.startsWith("/status")) {
             handleStatusCommand(chatId);
@@ -440,6 +450,8 @@ public class Phase3TelegramBot {
             sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata"))));
         } else if (cmdKey.startsWith("/yesterday")) {
             sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(1)));
+        } else {
+            sendMessage(chatId, "⚠️ *Unknown command*\n\nAvailable: /scan /stop /status /token /today /yesterday");
         }
     }
     
@@ -463,20 +475,23 @@ public class Phase3TelegramBot {
             String[] parts = command.trim().split("\\s+", 2);
             String cmd = parts[0].toLowerCase();
             
+            if (cmd.equals("/start")) {
+                handleStartCommand(chatId);
+                return;
+            }
+
+            if (!isAdmin(chatId)) {
+                sendMessage(chatId, "🔒 *Access Denied*\n\nThis bot is private. Only the admin can use it.");
+                return;
+            }
+
             switch (cmd) {
-                case "/start" -> handleStartCommand(chatId);
                 case "/status" -> handleStatusCommand(chatId);
                 case "/scan" -> handleScanCommand(chatId);
-                case "/stop_scan" -> handleStopScanCommand(chatId);
+                case "/stop_scan", "/stop" -> handleStopScanCommand(chatId);
                 case "/token" -> handleTokenCommand(chatId, command);
                 default -> {
-                    sendMessage(chatId, "⚠️ **Unknown Command**\n\n" +
-                                      "Please use one of the valid commands:\n" +
-                                      "✅ `/start` - Initialize Bot\n" +
-                                      "🔍 `/scan` - Start Market Scanning\n" +
-                                      "🛑 `/stop_scan` - Stop Scanning\n" +
-                                      "📊 `/status` - Check Market Status\n" +
-                                      "🔑 `/token [token]` - Update Access Token");
+                    sendMessage(chatId, "⚠️ *Unknown Command*\n\nAvailable: /scan /stop /status /token /today /yesterday");
                 }
             }
         } catch (Exception e) {

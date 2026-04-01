@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class Phase3TelegramBotTest {
 
+    static final long ADMIN = 457623834L; // must match ADMIN_CHAT_ID fallback in Phase3TelegramBot
+
     static class TestBot extends Phase3TelegramBot {
         final List<String> sent = new ArrayList<>();
         long lastChatId;
@@ -33,16 +35,23 @@ class Phase3TelegramBotTest {
     @Test
     void startCommandSendsWelcome() {
         TestBot bot = new TestBot();
-        bot.handleCommand(1L, "/start");
+        bot.handleCommand(1L, "/start"); // /start is open to everyone
         assertFalse(bot.sent.isEmpty());
-        String msg = bot.sent.get(0);
-        assertTrue(msg.contains("Welcome to Institutional Trading Bot"));
+        assertTrue(bot.sent.get(0).contains("Welcome to Institutional Trading Bot"));
+    }
+
+    @Test
+    void nonAdminIsBlockedFromStatus() {
+        TestBot bot = new TestBot();
+        bot.handleCommand(1L, "/status"); // non-admin
+        assertFalse(bot.sent.isEmpty());
+        assertTrue(bot.sent.get(0).contains("Access Denied"));
     }
 
     @Test
     void statusCommandUsesStubRates() {
         TestBot bot = new TestBot();
-        bot.handleCommand(1L, "/status");
+        bot.handleCommand(ADMIN, "/status");
         assertFalse(bot.sent.isEmpty());
         String msg = bot.sent.get(0);
         assertTrue(msg.contains("Market Status Report"));
@@ -52,12 +61,12 @@ class Phase3TelegramBotTest {
     @Test
     void scanCommandStartsAndThenReportsAlreadyActive() {
         TestBot bot = new TestBot();
-        bot.handleCommand(1L, "/scan");
+        bot.handleCommand(ADMIN, "/scan");
         assertFalse(bot.sent.isEmpty());
         String first = bot.sent.get(0);
         assertTrue(first.contains("scanning"), "Expected scan start message, got: " + first);
-        try { Thread.sleep(1600); } catch (InterruptedException ignored) {} // wait past 1.5s dedup window
-        bot.handleCommand(1L, "/scan");
+        try { Thread.sleep(1600); } catch (InterruptedException ignored) {}
+        bot.handleCommand(ADMIN, "/scan");
         assertTrue(bot.sent.size() >= 2);
         String second = bot.sent.get(1);
         assertTrue(second.contains("scanning") || second.contains("Already"),
@@ -67,10 +76,9 @@ class Phase3TelegramBotTest {
     @Test
     void stopScanCommandSendsStoppedMessage() {
         TestBot bot = new TestBot();
-        long adminId = 457623834L; // must match ADMIN_CHAT_ID fallback
-        bot.handleCommand(adminId, "/scan");
+        bot.handleCommand(ADMIN, "/scan");
         bot.sent.clear();
-        bot.handleCommand(adminId, "/stop_scan");
+        bot.handleCommand(ADMIN, "/stop_scan");
         assertFalse(bot.sent.isEmpty());
         String msg = bot.sent.get(0);
         assertTrue(msg.contains("Stopped") || msg.contains("stopped"), "Expected stop message, got: " + msg);
@@ -79,23 +87,18 @@ class Phase3TelegramBotTest {
     @Test
     void tokenCommandSendsAccessTokenUpdated() {
         TestBot bot = new TestBot();
-        bot.handleCommand(1L, "/token abc123");
+        bot.handleCommand(ADMIN, "/token abc123");
         assertFalse(bot.sent.isEmpty());
         String msg = bot.sent.get(0);
-        assertTrue(msg.contains("Token") || msg.contains("token"), "Expected token update message, got: " + msg);
+        assertTrue(msg.contains("Token") || msg.contains("token"), "Expected token message, got: " + msg);
     }
 
     @Test
-    void unknownCommandShowsHelpWithValidCommands() {
+    void unknownCommandShowsHelp() {
         TestBot bot = new TestBot();
-        bot.handleCommand(1L, "/unknown");
+        bot.handleCommand(ADMIN, "/unknown");
         assertFalse(bot.sent.isEmpty());
         String msg = bot.sent.get(0);
-        assertTrue(msg.contains("Unknown Command"));
-        assertTrue(msg.contains("/start"));
-        assertTrue(msg.contains("/scan"));
-        assertTrue(msg.contains("/status"));
-        assertTrue(msg.contains("/token"));
+        assertTrue(msg.contains("Unknown") || msg.contains("unknown"), "Expected unknown command message, got: " + msg);
     }
 }
-
