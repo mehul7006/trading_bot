@@ -999,7 +999,7 @@ public class Phase3TelegramBot {
             stageCallsBySymbol.clear();
             lastResetDate = today;
         }
-        if (todayCallsGenerated.get() >= 18) return; // 3 symbols × 3 stages × 2 calls = 18 max
+        if (todayCallsGenerated.get() >= 36) return; // 3 symbols × 4 stages × 3 calls = 36 max
         
         try {
             String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
@@ -1035,7 +1035,7 @@ public class Phase3TelegramBot {
             int stage = getMarketStage(nowForStage);
             if (stage == 0) return; // dead zone (13:00-14:30) or outside market hours
             String stageKey = symbol + "_S" + stage;
-            if (stageCallsBySymbol.getOrDefault(stageKey, 0) >= 2) return; // stage cap reached
+            if (stageCallsBySymbol.getOrDefault(stageKey, 0) >= 3) return; // max 3 calls per symbol per stage
 
             List<SimpleMarketData> data5 = marketDataFetcher.getRealMarketData5Min(symbol);
             if (data5 == null || data5.isEmpty()) {
@@ -1115,12 +1115,12 @@ public class Phase3TelegramBot {
             }
             
             if (chosenPrediction == null) {
-                // Daily guarantee: after 13:00, if still no call for this symbol, use relaxed EMA signal
-                // Pushed from 9:30 → 13:00 so prime window (11-12:30) always gets first chance.
-                // Also requires conf ≥ 78 — avoids firing low-quality fallback signals.
+                // Daily guarantee: after 14:30, if still no call for this symbol, use relaxed EMA signal
+                // Stage 4 (13:00-14:30) now fires real signals, so guarantee only kicks in after 14:30.
+                // Requires conf ≥ 78 — avoids firing low-quality fallback signals.
                 LocalTime nowIst = LocalTime.now(ZoneId.of("Asia/Kolkata"));
                 boolean noCallToday = todayCallsBySymbol.getOrDefault(symbol, 0) == 0;
-                boolean isGuaranteeWindow = nowIst.isAfter(LocalTime.of(13, 0)) && nowIst.isBefore(LocalTime.of(14, 45));
+                boolean isGuaranteeWindow = nowIst.isAfter(LocalTime.of(14, 30)) && nowIst.isBefore(LocalTime.of(15, 15));
 
                 if (noCallToday && isGuaranteeWindow) {
                     List<SimpleMarketData> dataForGuarantee = (data5 != null && !data5.isEmpty()) ? data5 : data1;
@@ -1308,21 +1308,12 @@ public class Phase3TelegramBot {
             String ts        = nowIst.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
 
             String msg =
-                "📚 *\\[EDUCATION PURPOSE ONLY\\]*\n" +
-                "⚠️ *DO NOT BUY OR SELL BASED ON THIS SIGNAL*\n" +
-                "━━━━━━━━━━━━━━━━━━━━━━\n" +
-                "🕐 *1-Min Signal* | " + ts + " IST\n\n" +
-                "📌 *Symbol:* " + symbol + "\n" +
-                "🚀 *Direction:* " + pred.predictedDirection + " " + arrow + "\n\n" +
-                "💰 *Entry:*     " + String.format("%.2f", entryPrice) + "\n" +
-                "🎯 *Target:*    " + String.format("%.2f", targetPx) + "  (+" + String.format("%.0f", targetPts) + " pts)\n" +
-                "🛑 *Stop Loss:* " + String.format("%.2f", slPx) + "  (-" + String.format("%.0f", slPts) + " pts)\n" +
-                "📊 *R:R:* 1:" + String.format("%.1f", rrRatio) + "\n\n" +
-                "🤖 *AI Confidence:* " + String.format("%.1f%%", pred.confidence) + "\n" +
-                "📝 *Reason:* " + (pred.predictionReasoning != null ? pred.predictionReasoning : "Technical signal") + "\n\n" +
-                "━━━━━━━━━━━━━━━━━━━━━━\n" +
-                "📚 _This is for learning/observation only._\n" +
-                "_This call does NOT count toward win rate or net points._";
+                "📚 *EDUCATION ONLY* | " + symbol + " " + arrow + " | " + ts + "\n" +
+                "💰 Entry: `" + String.format("%.2f", entryPrice) + "`\n" +
+                "🎯 Target: `" + String.format("%.2f", targetPx) + "` (+" + String.format("%.0f", targetPts) + ")\n" +
+                "🛑 SL: `" + String.format("%.2f", slPx) + "` (-" + String.format("%.0f", slPts) + ")\n" +
+                "R:R 1:" + String.format("%.1f", rrRatio) + " | Conf: " + String.format("%.0f%%", pred.confidence) + "\n" +
+                "_⚠️ Do not trade — observation only_";
 
             sendMessage(chatId, msg);
             edu1MinLastAlertMap.put(symbol, System.currentTimeMillis());
@@ -1461,8 +1452,9 @@ public class Phase3TelegramBot {
     private int getMarketStage(LocalTime t) {
         if (!t.isBefore(LocalTime.of(9, 15))  && t.isBefore(LocalTime.of(11, 0)))  return 1;
         if (!t.isBefore(LocalTime.of(11, 0))  && t.isBefore(LocalTime.of(13, 0)))  return 2;
+        if (!t.isBefore(LocalTime.of(13, 0))  && t.isBefore(LocalTime.of(14, 30))) return 4; // midday window
         if (!t.isBefore(LocalTime.of(14, 30)) && !t.isAfter(LocalTime.of(15, 30))) return 3;
-        return 0; // dead zone (13:00–14:30) or after 15:30
+        return 0; // outside market hours
     }
 
     // ── Indicator helpers for expiry session (self-contained, no AIPredictor) ──
