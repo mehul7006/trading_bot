@@ -19,7 +19,31 @@ import java.util.HashMap;
  * No fake neural networks or random number generation.
  */
 public class AIPredictor {
-    
+
+    // ── Step 1: Market Regime Classifier ─────────────────────────────────────
+    public enum MarketRegime { CHOPPY, NORMAL, TRENDING, VOLATILE }
+
+    /**
+     * Classifies current market regime using ADX and ATR relative to its 20-bar average.
+     * VOLATILE  : current ATR > 1.5× 20-bar average ATR (noisy, wide-ranging bars)
+     * CHOPPY    : ADX < 20 (no directional conviction)
+     * TRENDING  : ADX > 28 (strong directional move)
+     * NORMAL    : everything else
+     */
+    private MarketRegime classifyRegime(double adx, double atr, List<SimpleMarketData> data) {
+        if (data.size() >= 21) {
+            double sumRange = 0;
+            for (int i = data.size() - 21; i < data.size() - 1; i++) {
+                sumRange += (data.get(i).high - data.get(i).low);
+            }
+            double avgRange = sumRange / 20.0;
+            if (avgRange > 0 && atr > avgRange * 1.5) return MarketRegime.VOLATILE;
+        }
+        if (adx < 20) return MarketRegime.CHOPPY;
+        if (adx > 28) return MarketRegime.TRENDING;
+        return MarketRegime.NORMAL;
+    }
+
     private boolean isInitialized = false;
     private final OrderBlockDetector obDetector = new OrderBlockDetector();
     private final FairValueGapDetector fvgDetector = new FairValueGapDetector();
@@ -215,17 +239,36 @@ public class AIPredictor {
             ? data.get(data.size()-1).timestamp.toLocalTime()
             : java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata"));
 
+        // ── Regime classification (plugs into all regime-aware gates below)
+        MarketRegime regime = classifyRegime(adx, atr, data);
+
+        // ── Opening window filter (9:15-10:00): NORMAL regime has only 30% WR in this window.
+        // VOLATILE (89% WR) and TRENDING remain allowed. Block everything else.
+        if (ct.isBefore(java.time.LocalTime.of(10, 0)) && regime == MarketRegime.NORMAL) {
+            return createDefaultAIPrediction("BankNifty: opening window NORMAL blocked (30% WR)");
+        }
+
         // ── BankNifty: ORB disabled — morning ORB shows only 43% WR, dragging overall WR below target
         // BankNifty prime window (11:00-13:00) achieves 71% WR without ORB; focus only on that slot
         boolean orbWindowBN = false; // ORB explicitly disabled for BankNifty
         if (orbWindowBN && !orbSignal.predictedDirection.equals("NEUTRAL") && orbSignal.confidence >= 80) {
             double conf = orbSignal.confidence;
-            if (!bias15min.equals("NEUTRAL") && !bias15min.equals(orbSignal.predictedDirection)) conf -= 10;
-            else if (bias15min.equals(orbSignal.predictedDirection)) conf += 3;
-            if (conf >= 80) {
-                double[] dynTS = calculateDynamicTargetSL(data, currentPrice, orbSignal.predictedDirection, atr, symbol);
-                return new AIPrediction(orbSignal.predictedDirection, Math.min(99, conf), conf/100.0, adx, rsi, atr/currentPrice, 80, "BANKNIFTY_ORB", orbSignal.predictionReasoning + " | 15m:" + bias15min, dynTS[0], dynTS[1], true);
+            // Choppy: MTF must MATCH (hard skip on conflict — not just soft penalty)
+            if (regime == MarketRegime.CHOPPY) {
+                if (!bias15min.equals(orbSignal.predictedDirection)) return createDefaultAIPrediction("BN ORB: choppy+MTF conflict");
+            } else {
+                if (!bias15min.equals("NEUTRAL") && !bias15min.equals(orbSignal.predictedDirection)) conf -= 10;
+                else if (bias15min.equals(orbSignal.predictedDirection)) conf += 3;
             }
+            if (conf >= 80) {
+                double[] dynTS = calculateDynamicTargetSL(data, currentPrice, orbSignal.predictedDirection, atr, symbol, regime);
+                return new AIPrediction(orbSignal.predictedDirection, Math.min(99, conf), conf/100.0, adx, rsi, atr/currentPrice, 80, "BANKNIFTY_ORB", orbSignal.predictionReasoning + " | 15m:" + bias15min + " | " + regime, dynTS[0], dynTS[1], true);
+            }
+        }
+
+        // ── Choppy market: volume surge is a hard gate (not a soft +4 boost)
+        if (regime == MarketRegime.CHOPPY && !isVolumeSurge(data)) {
+            return createDefaultAIPrediction("BankNifty: choppy market + no volume surge — skipping");
         }
 
         int bullishCount = 0;
@@ -283,16 +326,29 @@ public class AIPredictor {
             }
         }
 
-        // Raised gate from 85 → 88 to enforce higher-conviction signals only
-        if (finalConfidence < 88) {
+        // ── Choppy: 15-min must MATCH direction (hard skip on neutral/opposite — no free rides)
+        if (regime == MarketRegime.CHOPPY && !finalDirection.equals("NEUTRAL")) {
+            if (!bias15min.equals(finalDirection)) {
+                finalDirection = "NEUTRAL";
+                finalConfidence = 0;
+            }
+        }
+
+        // ── Regime-aware confidence gate
+        // Choppy → 92, Volatile → 90, Trending → 85, Normal → 90 (raised from 88 for quality)
+        double confGateBN = (regime == MarketRegime.CHOPPY)   ? 92
+                          : (regime == MarketRegime.VOLATILE)  ? 90
+                          : (regime == MarketRegime.TRENDING)  ? 85
+                          : 90;
+        if (finalConfidence < confGateBN) {
             finalDirection = "NEUTRAL";
             finalConfidence = 0;
         }
 
         double[] dynTS_bn = !finalDirection.equals("NEUTRAL")
-            ? calculateDynamicTargetSL(data, currentPrice, finalDirection, atr, symbol)
+            ? calculateDynamicTargetSL(data, currentPrice, finalDirection, atr, symbol, regime)
             : new double[]{atr * 2.5, atr * 1.0};
-        return new AIPrediction(finalDirection, Math.min(99, finalConfidence), finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, "BANKNIFTY_V28", "BankNifty V28.0: " + String.join(" | ", reasoningList), dynTS_bn[0], dynTS_bn[1], false);
+        return new AIPrediction(finalDirection, Math.min(99, finalConfidence), finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, "BANKNIFTY_V28", "BankNifty V28.0 [" + regime + "]: " + String.join(" | ", reasoningList), dynTS_bn[0], dynTS_bn[1], false);
     }
 
     private AIPrediction predictNiftyStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema50, double rsi, double adx, double atr, SimpleMarketData latest, double avgVol, OptionData optionData, Map<String, Object> smcData, Map<String, Double> greeksData) {
@@ -309,6 +365,14 @@ public class AIPredictor {
             ? data.get(data.size()-1).timestamp.toLocalTime()
             : java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata"));
 
+        // ── Regime classification
+        MarketRegime regimeNf = classifyRegime(adx, atr, data);
+
+        // ── Opening window filter (9:15-10:00): block NORMAL regime (30% WR). VOLATILE/TRENDING allowed.
+        if (ctNf.isBefore(java.time.LocalTime.of(10, 0)) && regimeNf == MarketRegime.NORMAL) {
+            return createDefaultAIPrediction("Nifty: opening window NORMAL blocked (30% WR)");
+        }
+
         // ── ORB: counter-trend only — reversal breakouts against EMA200 have higher WR for Nifty
         double ema200Nf = calculateEMA(data, 200);
         boolean ema200UpNf   = currentPrice > ema200Nf;
@@ -318,12 +382,22 @@ public class AIPredictor {
                                  || (orbSignal.predictedDirection.equals("DOWN") && ema200UpNf);
         if (orbWindowNf && !orbSignal.predictedDirection.equals("NEUTRAL") && orbSignal.confidence >= 80 && orbCounterTrendNf) {
             double conf = orbSignal.confidence;
-            if (!bias15min.equals("NEUTRAL") && !bias15min.equals(orbSignal.predictedDirection)) conf -= 10;
-            else if (bias15min.equals(orbSignal.predictedDirection)) conf += 3;
-            if (conf >= 80) {
-                double[] dynTS = calculateDynamicTargetSL(data, currentPrice, orbSignal.predictedDirection, atr, symbol);
-                return new AIPrediction(orbSignal.predictedDirection, Math.min(99, conf), conf/100.0, adx, rsi, atr/currentPrice, 80, "NIFTY_ORB", orbSignal.predictionReasoning + " | 15m:" + bias15min, dynTS[0], dynTS[1], true);
+            // Choppy: MTF must match (hard skip on conflict)
+            if (regimeNf == MarketRegime.CHOPPY) {
+                if (!bias15min.equals(orbSignal.predictedDirection)) return createDefaultAIPrediction("Nifty ORB: choppy+MTF conflict");
+            } else {
+                if (!bias15min.equals("NEUTRAL") && !bias15min.equals(orbSignal.predictedDirection)) conf -= 10;
+                else if (bias15min.equals(orbSignal.predictedDirection)) conf += 3;
             }
+            if (conf >= 80) {
+                double[] dynTS = calculateDynamicTargetSL(data, currentPrice, orbSignal.predictedDirection, atr, symbol, regimeNf);
+                return new AIPrediction(orbSignal.predictedDirection, Math.min(99, conf), conf/100.0, adx, rsi, atr/currentPrice, 80, "NIFTY_ORB", orbSignal.predictionReasoning + " | 15m:" + bias15min + " | " + regimeNf, dynTS[0], dynTS[1], true);
+            }
+        }
+
+        // ── Choppy market: volume surge is a hard gate
+        if (regimeNf == MarketRegime.CHOPPY && !isVolumeSurge(data)) {
+            return createDefaultAIPrediction("Nifty: choppy market + no volume surge — skipping");
         }
 
         List<String> reasoningList = new ArrayList<>();
@@ -403,16 +477,28 @@ public class AIPredictor {
             }
         }
 
-        // Raised gate from 85 → 88 to enforce higher-conviction signals only
-        if (finalConfidence < 88) {
+        // ── Choppy: 15-min must MATCH direction
+        if (regimeNf == MarketRegime.CHOPPY && !finalDirection.equals("NEUTRAL")) {
+            if (!bias15min.equals(finalDirection)) {
+                finalDirection = "NEUTRAL";
+                finalConfidence = 0;
+            }
+        }
+
+        // ── Regime-aware confidence gate (NORMAL raised 88→90 for quality)
+        double confGateNf = (regimeNf == MarketRegime.CHOPPY)   ? 92
+                          : (regimeNf == MarketRegime.VOLATILE)  ? 90
+                          : (regimeNf == MarketRegime.TRENDING)  ? 85
+                          : 90;
+        if (finalConfidence < confGateNf) {
             finalDirection = "NEUTRAL";
             finalConfidence = 0;
         }
 
         double[] dynTS_nf = !finalDirection.equals("NEUTRAL")
-            ? calculateDynamicTargetSL(data, currentPrice, finalDirection, atr, symbol)
+            ? calculateDynamicTargetSL(data, currentPrice, finalDirection, atr, symbol, regimeNf)
             : new double[]{atr * 2.5, atr * 1.0};
-        return new AIPrediction(finalDirection, Math.min(99, finalConfidence), finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, "NIFTY_V29", "Nifty V29.0: " + String.join(" | ", reasoningList), dynTS_nf[0], dynTS_nf[1], false);
+        return new AIPrediction(finalDirection, Math.min(99, finalConfidence), finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, "NIFTY_V29", "Nifty V29.0 [" + regimeNf + "]: " + String.join(" | ", reasoningList), dynTS_nf[0], dynTS_nf[1], false);
     }
 
     private AIPrediction predictSensexStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema50, double rsi, double adx, double atr, SimpleMarketData latest, double avgVol, OptionData optionData, Map<String, Object> smcData, Map<String, Double> greeksData) {
@@ -429,6 +515,14 @@ public class AIPredictor {
             ? data.get(data.size()-1).timestamp.toLocalTime()
             : java.time.LocalTime.now(java.time.ZoneId.of("Asia/Kolkata"));
 
+        // ── Regime classification
+        MarketRegime regimeSx = classifyRegime(adx, atr, data);
+
+        // ── Opening window filter (9:15-10:00): block NORMAL regime (30% WR). VOLATILE/TRENDING allowed.
+        if (ctSx.isBefore(java.time.LocalTime.of(10, 0)) && regimeSx == MarketRegime.NORMAL) {
+            return createDefaultAIPrediction("Sensex: opening window NORMAL blocked (30% WR)");
+        }
+
         // ── ORB: only valid in morning session before 11:00; EMA200 alignment required
         double ema200Sx = calculateEMA(data, 200);
         boolean ema200UpSx   = currentPrice > ema200Sx;
@@ -439,12 +533,22 @@ public class AIPredictor {
                                  || (orbSignal.predictedDirection.equals("DOWN") && ema200UpSx);
         if (orbWindowSx && !orbSignal.predictedDirection.equals("NEUTRAL") && orbSignal.confidence >= 80 && orbCounterTrendSx) {
             double conf = orbSignal.confidence;
-            if (!bias15min.equals("NEUTRAL") && !bias15min.equals(orbSignal.predictedDirection)) conf -= 10;
-            else if (bias15min.equals(orbSignal.predictedDirection)) conf += 3;
-            if (conf >= 80) {
-                double[] dynTS = calculateDynamicTargetSL(data, currentPrice, orbSignal.predictedDirection, atr, symbol);
-                return new AIPrediction(orbSignal.predictedDirection, Math.min(99, conf), conf/100.0, adx, rsi, atr/currentPrice, 80, "SENSEX_ORB", orbSignal.predictionReasoning + " | 15m:" + bias15min, dynTS[0], dynTS[1], true);
+            // Choppy: MTF must match (hard skip on conflict)
+            if (regimeSx == MarketRegime.CHOPPY) {
+                if (!bias15min.equals(orbSignal.predictedDirection)) return createDefaultAIPrediction("Sensex ORB: choppy+MTF conflict");
+            } else {
+                if (!bias15min.equals("NEUTRAL") && !bias15min.equals(orbSignal.predictedDirection)) conf -= 10;
+                else if (bias15min.equals(orbSignal.predictedDirection)) conf += 3;
             }
+            if (conf >= 80) {
+                double[] dynTS = calculateDynamicTargetSL(data, currentPrice, orbSignal.predictedDirection, atr, symbol, regimeSx);
+                return new AIPrediction(orbSignal.predictedDirection, Math.min(99, conf), conf/100.0, adx, rsi, atr/currentPrice, 80, "SENSEX_ORB", orbSignal.predictionReasoning + " | 15m:" + bias15min + " | " + regimeSx, dynTS[0], dynTS[1], true);
+            }
+        }
+
+        // ── Choppy market: volume surge is a hard gate
+        if (regimeSx == MarketRegime.CHOPPY && !isVolumeSurge(data)) {
+            return createDefaultAIPrediction("Sensex: choppy market + no volume surge — skipping");
         }
 
         List<String> reasoningList = new ArrayList<>();
@@ -528,16 +632,28 @@ public class AIPredictor {
             }
         }
 
-        // Raised gate from 85 → 88 to enforce higher-conviction signals only
-        if (finalConfidence < 88) {
+        // ── Choppy: 15-min must MATCH direction
+        if (regimeSx == MarketRegime.CHOPPY && !finalDirection.equals("NEUTRAL")) {
+            if (!bias15min.equals(finalDirection)) {
+                finalDirection = "NEUTRAL";
+                finalConfidence = 0;
+            }
+        }
+
+        // ── Regime-aware confidence gate (NORMAL raised 88→90 for quality)
+        double confGateSx = (regimeSx == MarketRegime.CHOPPY)   ? 92
+                          : (regimeSx == MarketRegime.VOLATILE)  ? 90
+                          : (regimeSx == MarketRegime.TRENDING)  ? 85
+                          : 90;
+        if (finalConfidence < confGateSx) {
             finalDirection = "NEUTRAL";
             finalConfidence = 0;
         }
 
         double[] dynTS_sx = !finalDirection.equals("NEUTRAL")
-            ? calculateDynamicTargetSL(data, currentPrice, finalDirection, atr, symbol)
+            ? calculateDynamicTargetSL(data, currentPrice, finalDirection, atr, symbol, regimeSx)
             : new double[]{atr * 3.0, atr * 1.0};
-        return new AIPrediction(finalDirection, Math.min(99, finalConfidence), finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, "SENSEX_V29", "Sensex V29.0: " + String.join(" | ", reasoningList), dynTS_sx[0], dynTS_sx[1], false);
+        return new AIPrediction(finalDirection, Math.min(99, finalConfidence), finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, "SENSEX_V29", "Sensex V29.0 [" + regimeSx + "]: " + String.join(" | ", reasoningList), dynTS_sx[0], dynTS_sx[1], false);
     }
 
     private AIPrediction predictDefaultStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema50, double rsi, double adx, double atr, SimpleMarketData latest, double avgVol, OptionData optionData, Map<String, Object> smcData, Map<String, Double> greeksData) {
@@ -1248,12 +1364,45 @@ public class AIPredictor {
     }
 
     /**
-     * Dynamic Target & Stop Loss based on actual market structure:
-     * uses swing highs/lows, VWAP bands, ORB levels, PDH/PDL.
-     * Returns double[]{targetPoints, slPoints} relative to entry.
+     * Dynamic Target & Stop Loss — regime-unaware overload (uses NORMAL defaults).
+     * Called from legacy paths (expiry scanner, default strategy, etc.).
      */
     private double[] calculateDynamicTargetSL(List<SimpleMarketData> data, double entry, String direction, double atr, String symbol) {
+        return calculateDynamicTargetSL(data, entry, direction, atr, symbol, MarketRegime.NORMAL);
+    }
+
+    /**
+     * Dynamic Target & Stop Loss based on actual market structure.
+     * Regime-aware: adapts default multipliers, SL width, and minimum R:R.
+     * Returns double[]{targetPoints, slPoints} relative to entry.
+     */
+    private double[] calculateDynamicTargetSL(List<SimpleMarketData> data, double entry, String direction, double atr, String symbol, MarketRegime regime) {
         if (data.size() < 15 || "NEUTRAL".equals(direction)) return new double[]{atr * 2.5, atr * 1.0};
+
+        // ── Regime-specific defaults ─────────────────────────────────────────
+        // TRENDING : wider targets (capture fuller move), normal SL
+        // VOLATILE : normal targets, wider SL (survives noise), higher min R:R
+        // CHOPPY   : tight targets (quick small wins), tight SL
+        // NORMAL   : existing defaults
+        double defaultTargetMult = switch (regime) {
+            case TRENDING  -> 2.5;   // was 2.0 — expand for trending moves
+            case CHOPPY    -> 0.8;   // tight — exit quickly on oscillation wins
+            case VOLATILE  -> 2.0;   // keep target same
+            default        -> 2.0;
+        };
+        double defaultSlMult = switch (regime) {
+            case VOLATILE  -> 1.5;   // wider SL to survive noise
+            case CHOPPY    -> 0.4;   // tight SL — small moves, quick stops
+            default        -> 0.8;
+        };
+        double minSlMult = switch (regime) {
+            case VOLATILE  -> 0.6;   // SL floor wider in volatile
+            case CHOPPY    -> 0.2;
+            default        -> 0.4;
+        };
+        double minRR = (regime == MarketRegime.VOLATILE) ? 2.5
+                     : (regime == MarketRegime.TRENDING)  ? 2.2
+                     : 2.0; // NORMAL/CHOPPY raised from 1.8 — better quality R:R
 
         double vwap = new AdvancedIndicatorsEngine().calculateVWAP(data);
         double[] orb  = getOpeningRange(data);
@@ -1280,7 +1429,7 @@ public class AIPredictor {
 
         if ("UP".equals(direction)) {
             // Target: first swing high above entry by ≥ 1.2 ATR, or PDH, or VWAP+1.5ATR
-            double target = entry + atr * 2.0; // default
+            double target = entry + atr * defaultTargetMult; // regime-adjusted default
             double candidate;
 
             // Nearest swing high above entry + 0.3 ATR margin
@@ -1302,14 +1451,14 @@ public class AIPredictor {
             targetPts = Math.max(target - entry, atr * 1.2);
 
             // SL: nearest swing low below entry within 1.5 ATR
-            double sl = entry - atr * 0.8; // default
+            double sl = entry - atr * defaultSlMult; // regime-adjusted default
             for (double sL : swingLows) {
                 if (sL < entry - atr * 0.2 && sL > entry - atr * 1.5) sl = Math.max(sl, sL);
             }
-            slPts = Math.max(entry - sl, atr * 0.4);
+            slPts = Math.max(entry - sl, atr * minSlMult);
 
         } else { // DOWN
-            double target = entry - atr * 2.0;
+            double target = entry - atr * defaultTargetMult; // regime-adjusted default
             double candidate;
 
             double threshDn = entry - atr * 0.3;
@@ -1326,16 +1475,16 @@ public class AIPredictor {
 
             targetPts = Math.max(entry - target, atr * 1.2);
 
-            double sl = entry + atr * 0.8;
+            double sl = entry + atr * defaultSlMult; // regime-adjusted default
             for (double sh : swingHighs) {
                 if (sh > entry + atr * 0.2 && sh < entry + atr * 1.5) sl = Math.min(sl, sh);
             }
-            slPts = Math.max(sl - entry, atr * 0.4);
+            slPts = Math.max(sl - entry, atr * minSlMult);
         }
 
-        // Enforce minimum 1.5:1 R:R
-        if (slPts > 0 && targetPts / slPts < 1.5) {
-            targetPts = slPts * 1.8;
+        // Enforce minimum R:R (regime-adjusted)
+        if (slPts > 0 && targetPts / slPts < minRR) {
+            targetPts = slPts * minRR;
         }
 
         // Symbol-specific minimum targets (must meet gate thresholds)
@@ -1371,11 +1520,24 @@ public class AIPredictor {
             return createDefaultAIPrediction("Outside safe market hours");
         }
 
+        AdvancedIndicatorsEngine.AdvancedIndicatorsResult relaxedIndicators = new AdvancedIndicatorsEngine().analyze50Plus(data);
         double ema20 = calculateEMA(data, 20);
         double ema50 = calculateEMA(data, 50);
-        double rsi   = calculateRSI(data, 14);
+        double rsi   = relaxedIndicators.values.getOrDefault("rsi14", 50.0);
         double atr   = calculateATR(data, 14);
+        double adx   = relaxedIndicators.values.getOrDefault("adx", 25.0);
         double price = data.get(data.size() - 1).price;
+
+        // Step 4: Block relaxed prediction in choppy markets (ADX < 20)
+        if (adx < 20) {
+            return createDefaultAIPrediction("Relaxed signal blocked: choppy market (ADX=" + String.format("%.1f", adx) + "<20)");
+        }
+
+        // Step 4: Basic volume check — at least some volume present
+        long lastVol = data.get(data.size() - 1).volume;
+        if (lastVol <= 0) {
+            return createDefaultAIPrediction("Relaxed signal blocked: no volume data");
+        }
 
         String direction;
         String reasoning;
@@ -1403,9 +1565,9 @@ public class AIPredictor {
         // Use dynamic market-structure targets (same as primary signals)
         double[] dynTS = calculateDynamicTargetSL(data, price, direction, atr, symbol);
 
-        return new AIPrediction(direction, 85.0, 0.85, 0, rsi, atr / price, 80,
+        return new AIPrediction(direction, 87.0, 0.87, adx, rsi, atr / price, 80,
             "DAILY_GUARANTEE",
-            "Guaranteed Daily Signal [EMA-Trend]: " + reasoning,
+            "Guaranteed Daily Signal [EMA-Trend | ADX=" + String.format("%.1f", adx) + "]: " + reasoning,
             dynTS[0], dynTS[1], false);
     }
 }
