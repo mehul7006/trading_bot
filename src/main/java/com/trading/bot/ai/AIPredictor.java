@@ -248,6 +248,13 @@ public class AIPredictor {
             return createDefaultAIPrediction("BankNifty: opening window NORMAL blocked (30% WR)");
         }
 
+        // ── Dead slots: 15:10, 15:15, 15:20 have 37% average WR — statistically noise
+        // 15:20 is worst (17% WR). Keep 15:05 (67%) and 15:25 (60%) which are fine.
+        if (ct.equals(java.time.LocalTime.of(15, 10)) || ct.equals(java.time.LocalTime.of(15, 15))
+                || ct.equals(java.time.LocalTime.of(15, 20))) {
+            return createDefaultAIPrediction("BankNifty: dead slot (15:10/15:15/15:20 blocked — 37% avg WR)");
+        }
+
         // ── BankNifty: ORB disabled — morning ORB shows only 43% WR, dragging overall WR below target
         // BankNifty prime window (11:00-13:00) achieves 71% WR without ORB; focus only on that slot
         boolean orbWindowBN = false; // ORB explicitly disabled for BankNifty
@@ -373,6 +380,13 @@ public class AIPredictor {
             return createDefaultAIPrediction("Nifty: opening window NORMAL blocked (30% WR)");
         }
 
+        // ── Dead slots: 15:10, 15:15, 15:20 have 37% average WR — statistically noise
+        // 15:20 is worst (17% WR). Keep 15:05 (67%) and 15:25 (60%) which are fine.
+        if (ctNf.equals(java.time.LocalTime.of(15, 10)) || ctNf.equals(java.time.LocalTime.of(15, 15))
+                || ctNf.equals(java.time.LocalTime.of(15, 20))) {
+            return createDefaultAIPrediction("Nifty: dead slot (15:10/15:15/15:20 blocked — 37% avg WR)");
+        }
+
         // ── ORB: counter-trend only — reversal breakouts against EMA200 have higher WR for Nifty
         double ema200Nf = calculateEMA(data, 200);
         boolean ema200UpNf   = currentPrice > ema200Nf;
@@ -477,6 +491,18 @@ public class AIPredictor {
             }
         }
 
+        // ── NORMAL regime UP gate: require price above EMA200 for UP signals
+        // Nifty UP in NORMAL has only 53% WR vs 69% for DOWN — counter-trend UPs are the main leak
+        if (regimeNf == MarketRegime.NORMAL && finalDirection.equals("UP") && !ema200UpNf) {
+            finalDirection = "NEUTRAL";
+            finalConfidence = 0;
+        }
+        // ── NORMAL regime DOWN gate: require price below EMA200 for DOWN signals
+        if (regimeNf == MarketRegime.NORMAL && finalDirection.equals("DOWN") && !ema200DownNf) {
+            finalDirection = "NEUTRAL";
+            finalConfidence = 0;
+        }
+
         // ── Choppy: 15-min must MATCH direction
         if (regimeNf == MarketRegime.CHOPPY && !finalDirection.equals("NEUTRAL")) {
             if (!bias15min.equals(finalDirection)) {
@@ -521,6 +547,13 @@ public class AIPredictor {
         // ── Opening window filter (9:15-10:00): block NORMAL regime (30% WR). VOLATILE/TRENDING allowed.
         if (ctSx.isBefore(java.time.LocalTime.of(10, 0)) && regimeSx == MarketRegime.NORMAL) {
             return createDefaultAIPrediction("Sensex: opening window NORMAL blocked (30% WR)");
+        }
+
+        // ── Dead slots: 15:10, 15:15, 15:20 have 37% average WR — statistically noise
+        // 15:20 is worst (17% WR). Keep 15:05 (67%) and 15:25 (60%) which are fine.
+        if (ctSx.equals(java.time.LocalTime.of(15, 10)) || ctSx.equals(java.time.LocalTime.of(15, 15))
+                || ctSx.equals(java.time.LocalTime.of(15, 20))) {
+            return createDefaultAIPrediction("Sensex: dead slot (15:10/15:15/15:20 blocked — 37% avg WR)");
         }
 
         // ── ORB: only valid in morning session before 11:00; EMA200 alignment required

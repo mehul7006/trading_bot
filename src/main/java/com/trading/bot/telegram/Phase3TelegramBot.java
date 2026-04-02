@@ -101,6 +101,11 @@ public class Phase3TelegramBot {
     // Keys: "SYMBOL_S1", "SYMBOL_S2", "SYMBOL_S3"
     private final Map<String, Integer> stageCallsBySymbol = new ConcurrentHashMap<>();
 
+    // Consecutive loss brake: after 2 straight losses on a symbol, pause it for 30 min
+    // Key: symbol, Value: timestamp of 2nd consecutive loss (epoch ms)
+    private final Map<String, Long>    consecutiveLossBrakeUntil  = new ConcurrentHashMap<>();
+    private final Map<String, Integer> consecutiveLossCount       = new ConcurrentHashMap<>();
+
     // Expiry session cooldown — separate from regular cooldown (20-min per symbol)
     private final Map<String, Long> expiryLastAlertMap = new ConcurrentHashMap<>();
 
@@ -172,6 +177,7 @@ public class Phase3TelegramBot {
                 symbol, s.direction, entry, targetPrice, pnlPoints, durationMin);
             sendMessage(chatId, msg);
             updateSignalLog(symbol, s.createdAt, "WIN", pnlPoints, System.currentTimeMillis());
+            consecutiveLossCount.put(symbol, 0); // WIN resets the consecutive loss counter
             activeSignals.remove(symbol);
             lastAlertTimeMap.remove(symbol);   // reset cooldown → scan again immediately
             return true;
@@ -192,6 +198,13 @@ public class Phase3TelegramBot {
                 symbol, s.direction, entry, slPrice, lossPoints, durationMin);
             sendMessage(chatId, msg);
             updateSignalLog(symbol, s.createdAt, "LOSS", -lossPoints, System.currentTimeMillis());
+            // Track consecutive losses for brake logic
+            int lossStreak = consecutiveLossCount.merge(symbol, 1, Integer::sum);
+            if (lossStreak >= 2) {
+                consecutiveLossBrakeUntil.put(symbol, System.currentTimeMillis() + 30 * 60 * 1000L);
+                consecutiveLossCount.put(symbol, 0); // reset after activating brake
+                logger.warn("Consecutive loss brake activated for {} — pausing 30 min", symbol);
+            }
             activeSignals.remove(symbol);
             lastAlertTimeMap.remove(symbol);   // reset cooldown → scan again immediately
             return true;
@@ -811,6 +824,8 @@ public class Phase3TelegramBot {
             slotsTriggered.clear();
             todayCallsBySymbol.clear();
             stageCallsBySymbol.clear();
+            consecutiveLossBrakeUntil.clear();
+            consecutiveLossCount.clear();
             lastResetDate = today;
         }
 
@@ -997,6 +1012,8 @@ public class Phase3TelegramBot {
             slotsTriggered.clear();
             todayCallsBySymbol.clear();
             stageCallsBySymbol.clear();
+            consecutiveLossBrakeUntil.clear();
+            consecutiveLossCount.clear();
             lastResetDate = today;
         }
         if (todayCallsGenerated.get() >= 36) return; // 3 symbols × 4 stages × 3 calls = 36 max
@@ -1036,6 +1053,9 @@ public class Phase3TelegramBot {
             if (stage == 0) return; // dead zone (13:00-14:30) or outside market hours
             String stageKey = symbol + "_S" + stage;
             if (stageCallsBySymbol.getOrDefault(stageKey, 0) >= 3) return; // max 3 calls per symbol per stage
+
+            // Consecutive loss circuit breaker: skip if symbol is in cooldown after 2 straight losses
+            if (consecutiveLossBrakeUntil.getOrDefault(symbol, 0L) > System.currentTimeMillis()) return;
 
             List<SimpleMarketData> data5 = marketDataFetcher.getRealMarketData5Min(symbol);
             if (data5 == null || data5.isEmpty()) {
