@@ -5,6 +5,7 @@ import com.trading.bot.market.SimpleMarketData;
 import com.trading.bot.market.OptionData;
 import com.trading.bot.market.HonestMarketDataFetcher;
 import com.trading.bot.ai.AIPredictor;
+import com.trading.bot.ai.OptionSignalEnhancer;
 import com.trading.bot.strategy.NewsSentimentUtils;
 import com.trading.bot.util.MarketHours;
 import org.slf4j.Logger;
@@ -49,6 +50,7 @@ public class Phase3TelegramBot {
     private final Phase3IntegratedBot phase3Bot;
     private final HonestMarketDataFetcher marketDataFetcher;
     private final AIPredictor aiPredictor;
+    private final OptionSignalEnhancer optionEnhancer = new OptionSignalEnhancer();
     
     // Bot state
     private long lastUpdateId = 0;
@@ -482,7 +484,8 @@ public class Phase3TelegramBot {
             return;
         }
 
-        if      (cmdKey.startsWith("/token"))    handleTokenCommand(chatId, command);
+        if      (cmdKey.startsWith("/tokendhan")) handleDhanTokenCommand(chatId, command);
+        else if (cmdKey.startsWith("/token"))    handleTokenCommand(chatId, command);
         else if (cmdKey.startsWith("/stop"))     handleStopScanCommand(chatId);
         else if (cmdKey.startsWith("/approve"))  handleApproveCommand(chatId, command);
         else if (cmdKey.startsWith("/reject"))   handleRejectCommand(chatId, command);
@@ -492,7 +495,7 @@ public class Phase3TelegramBot {
         else if (cmdKey.startsWith("/yesterday"))
             sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(1)));
         else
-            sendMessage(chatId, "⚠️ *Unknown command*\n\nUser: /scan /status /today /join\nAdmin: /stop /token /approve /reject /revoke /users /pending");
+            sendMessage(chatId, "⚠️ *Unknown command*\n\nUser: /scan /status /today /join\nAdmin: /stop /token /tokendhan /approve /reject /revoke /users /pending");
     }
     
     /**
@@ -542,13 +545,14 @@ public class Phase3TelegramBot {
             switch (cmd) {
                 case "/stop_scan", "/stop" -> handleStopScanCommand(chatId);
                 case "/token"              -> handleTokenCommand(chatId, command);
+                case "/tokendhan"          -> handleDhanTokenCommand(chatId, command);
                 case "/yesterday"          -> sendMessage(chatId, buildDayReport(java.time.LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(1)));
                 case "/approve"            -> handleApproveCommand(chatId, command);
                 case "/reject"             -> handleRejectCommand(chatId, command);
                 case "/revoke"             -> handleRevokeCommand(chatId, command);
                 case "/users"              -> handleUsersCommand(chatId);
                 case "/pending"            -> handlePendingCommand(chatId);
-                default -> sendMessage(chatId, "⚠️ *Unknown Command*\n\nUser: /scan /status /today /join\nAdmin: /stop /token /approve /reject /revoke /users /pending /yesterday");
+                default -> sendMessage(chatId, "⚠️ *Unknown Command*\n\nUser: /scan /status /today /join\nAdmin: /stop /token /tokendhan /approve /reject /revoke /users /pending /yesterday");
             }
         } catch (Exception e) {
             logger.error("Error handling command: {}", e.getMessage(), e);
@@ -1248,7 +1252,60 @@ public class Phase3TelegramBot {
                           greeksInfo +
                           "📝 *Reason:* " + chosenPrediction.predictionReasoning;
             
-            sendMessage(chatId, alert);
+            // ── OPTION MARKET INTELLIGENCE LAYER ──────────────────────────────
+            // Enhance the signal with full options market analysis:
+            // VIX, Max Pain, GEX, IV Rank, OI Chain, IV Skew
+            String finalMessage = alert;
+            double finalConfidence = chosenPrediction.confidence;
+            try {
+                OptionSignalEnhancer.EnhancedOptionSignal enhanced =
+                    optionEnhancer.enhance(symbol, chosenPrediction, entryPrice);
+
+                // If options market BLOCKS the signal (e.g., expiry afternoon), skip it
+                if (!enhanced.isActionable) {
+                    logger.info("⛔ Options market blocked signal for {}: {}", symbol, enhanced.skipReason);
+                    sendMessage(chatId, enhanced.telegramMessage); // send the block notice
+                    return;
+                }
+
+                // Build combined message: original technical signal + option intelligence
+                finalMessage = alert + "\n\n" +
+                    "━━━━━━━━━━━━━━━━━━━━━━\n" +
+                    "🏦 *OPTION INTELLIGENCE*\n\n" +
+                    "🏷️ *Buy:* " + String.format("%.0f", enhanced.recommendedStrike) +
+                    " " + enhanced.optionType + " (" + enhanced.strikeType + ")\n" +
+                    "🎯 *Option Target:* +" + String.format("%.0f", enhanced.premiumTarget) + " pts\n" +
+                    "🛑 *Option SL:* -" + String.format("%.0f", enhanced.premiumSL) + " pts\n" +
+                    "📊 *VIX:* " + String.format("%.1f", enhanced.intel.indiaVix) +
+                    " [" + enhanced.intel.vixRegime + "]\n" +
+                    "💰 *IV Rank:* " + String.format("%.0f%%", enhanced.intel.ivRank) + "\n" +
+                    "⚡ *GEX:* " + enhanced.intel.gexRegime +
+                    (enhanced.intel.gexFlipLevel > 0 ? " (Flip: " + String.format("%.0f", enhanced.intel.gexFlipLevel) + ")" : "") + "\n" +
+                    "📊 *OI Trend:* " + enhanced.intel.oiTrend.replace("_", " ") + "\n" +
+                    (enhanced.intel.maxPainStrike > 0 ?
+                        "🎯 *Max Pain:* " + String.format("%.0f", enhanced.intel.maxPainStrike) +
+                        (enhanced.intel.isExpiryDay ? " ⚠️ EXPIRY!" : "") + "\n" : "") +
+                    "📐 *Skew:* " + enhanced.intel.skewSignal + "\n" +
+                    (enhanced.intel.strongestCallOI > 0 ?
+                        "🧱 Resistance: " + String.format("%.0f", enhanced.intel.strongestCallOI) + "\n" : "") +
+                    (enhanced.intel.strongestPutOI > 0 ?
+                        "🛡️ Support: " + String.format("%.0f", enhanced.intel.strongestPutOI) + "\n" : "") +
+                    "🎯 *Enhanced Conf:* " + String.format("%.1f%%", enhanced.enhancedConfidence) +
+                    (enhanced.enhancedConfidence > enhanced.originalConfidence ?
+                        " (+" + String.format("%.0f", enhanced.enhancedConfidence - enhanced.originalConfidence) + " Options boost)" :
+                        enhanced.enhancedConfidence < enhanced.originalConfidence ?
+                        " (" + String.format("%.0f", enhanced.enhancedConfidence - enhanced.originalConfidence) + " Options caution)" : "");
+
+                finalConfidence = enhanced.enhancedConfidence;
+                logger.info("✅ Options intelligence added for {} — Enhanced conf: {:.1f}%", symbol, finalConfidence);
+
+            } catch (Exception optEx) {
+                logger.warn("Option enhancement failed for {} (will send basic signal): {}", symbol, optEx.getMessage());
+                // Fall through: send the original alert without options layer
+            }
+            // ── END OPTION INTELLIGENCE ────────────────────────────────────────
+
+            sendMessage(chatId, finalMessage);
             lastAlertTimeMap.put(symbol, currentTime);
             todayCallsGenerated.incrementAndGet();
             todayCallsBySymbol.merge(symbol, 1, Integer::sum);
@@ -1257,7 +1314,7 @@ public class Phase3TelegramBot {
             stageCallsBySymbol.merge(sentStageKey, 1, Integer::sum);
             saveDailyState(); // persist so restarts don't duplicate signals
             // slotsTriggered.add(slot); // Slot restriction removed
-            
+
             ActiveSignal s = new ActiveSignal();
             s.symbol = symbol;
             s.direction = chosenPrediction.predictedDirection;
@@ -1265,7 +1322,7 @@ public class Phase3TelegramBot {
             s.targetPoints = chosenPrediction.estimatedMovePoints;
             s.stopLossPoints = chosenPrediction.suggestedStopLoss;
             s.createdAt = System.currentTimeMillis();
-            s.confidence = chosenPrediction.confidence;
+            s.confidence = finalConfidence;
             activeSignals.put(symbol, s);
 
             // Persist signal to log file for /today and /yesterday reports
@@ -1687,6 +1744,93 @@ public class Phase3TelegramBot {
 
         String rates = getCurrentMarketRatesSimple();
         sendMessage(chatId, "✅ *Primary Token Updated* — switched back from fallback if needed.\n\n" + rates);
+    }
+
+    /**
+     * Handle Dhan token update command: /tokendhan <new_token>
+     *
+     * Usage:
+     *   /tokendhan              → show current Dhan token status
+     *   /tokendhan <new_token>  → update Dhan access token live (no restart needed)
+     *
+     * Dhan tokens expire every 30 days. Get a new one at:
+     *   dhan.co → My Profile → DhanHQ Developer → Generate Access Token
+     */
+    protected void handleDhanTokenCommand(long chatId, String command) {
+        String[] parts = command.split("\\s+", 2);
+
+        // ── Status only (no token provided) ──────────────────────────────────
+        if (parts.length < 2 || parts[1].trim().isEmpty()) {
+            com.trading.bot.dhan.DhanApiClient dhan =
+                com.trading.bot.dhan.DhanApiClient.getInstance();
+            String statusMsg =
+                "🔑 *Dhan Token Status*\n\n" +
+                (dhan.isConfigured()
+                    ? "✅ *Configured* — Dhan option chain is *ACTIVE* (primary data source)\n" +
+                      "Client ID: `" + dhan.getClientId() + "`\n" +
+                      "Token preview: `" + dhan.getTokenPreview() + "`\n\n" +
+                      "Dhan tokens last *30 days* — refresh once a month.\n\n" +
+                      "To update: `/tokendhan <new_token>`"
+                    : "❌ *Not Configured* — Dhan option chain is *INACTIVE*\n" +
+                      "Bot is using Upstox as fallback for option chain data.\n\n" +
+                      "To activate Dhan:\n" +
+                      "1. Go to dhan.co → My Profile → DhanHQ Developer\n" +
+                      "2. Click *Generate Access Token*\n" +
+                      "3. Send: `/tokendhan <your_token>`");
+            sendMessage(chatId, statusMsg);
+            return;
+        }
+
+        // ── Update token ──────────────────────────────────────────────────────
+        String newToken = parts[1].trim();
+
+        // Basic validation: Dhan JWT tokens start with eyJ
+        if (!newToken.startsWith("eyJ") || newToken.length() < 50) {
+            sendMessage(chatId,
+                "❌ *Invalid Dhan Token*\n\n" +
+                "Dhan tokens start with `eyJ` and are long JWT strings.\n" +
+                "Please copy the full token from:\n" +
+                "dhan.co → My Profile → DhanHQ Developer\n\n" +
+                "Example:\n`/tokendhan eyJhbGciOiJIUzUxMiI...`");
+            return;
+        }
+
+        // Apply the new token live (no restart required)
+        com.trading.bot.dhan.DhanApiClient dhan =
+            com.trading.bot.dhan.DhanApiClient.getInstance();
+        dhan.updateToken(newToken);
+
+        // Also persist it to dhan_config.properties so it survives restarts
+        boolean saved = saveDhanTokenToFile(newToken, dhan.getClientId());
+
+        sendMessage(chatId,
+            "✅ *Dhan Token Updated Successfully!*\n\n" +
+            "Client ID: `" + dhan.getClientId() + "`\n" +
+            "Token preview: `" + dhan.getTokenPreview() + "`\n" +
+            (saved
+                ? "💾 Token saved to `dhan_config.properties` — will survive restarts.\n\n"
+                : "⚠️ Could not save to file — token active for this session only.\n\n") +
+            "🎯 Dhan option chain is now *ACTIVE* as primary data source.\n" +
+            "Upstox remains as fallback.\n\n" +
+            "Dhan tokens last *30 days* — set a reminder to refresh next month!");
+    }
+
+    /** Write updated Dhan token to dhan_config.properties (survives bot restart). */
+    private boolean saveDhanTokenToFile(String newToken, String clientId) {
+        try {
+            java.io.File f = new java.io.File("dhan_config.properties");
+            String content =
+                "# Dhan API Credentials — auto-updated by /tokendhan command\n" +
+                "# Token expires in 30 days. Use /tokendhan to refresh.\n\n" +
+                "dhan.client.id=" + (clientId != null ? clientId : "") + "\n" +
+                "dhan.access.token=" + newToken + "\n";
+            java.nio.file.Files.writeString(f.toPath(), content,
+                java.nio.charset.StandardCharsets.UTF_8);
+            return true;
+        } catch (Exception e) {
+            System.err.println("⚠️ Could not save Dhan token to file: " + e.getMessage());
+            return false;
+        }
     }
 
     // Final dead code removal
