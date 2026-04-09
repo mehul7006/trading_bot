@@ -1013,9 +1013,9 @@ public class Phase3TelegramBot {
     // ─────────────────────────────────────────────────────────────────────────────
     private void scan1MinEducation(long chatId, String symbol) {
         try {
-            // 5-minute cooldown per symbol for education signals
+            // 30-minute cooldown per symbol — reduces noise significantly
             long lastEduAlert = edu1MinLastAlertMap.getOrDefault(symbol, 0L);
-            if (System.currentTimeMillis() - lastEduAlert < 5 * 60 * 1000L) return;
+            if (System.currentTimeMillis() - lastEduAlert < 30 * 60 * 1000L) return;
 
             List<SimpleMarketData> data1 = marketDataFetcher.getRealMarketData(symbol);
             if (data1 == null || data1.size() < 200) return;
@@ -1051,26 +1051,16 @@ public class Phase3TelegramBot {
             double slPts     = pred.suggestedStopLoss;
             double targetPx  = "UP".equals(pred.predictedDirection) ? entryPrice + targetPts : entryPrice - targetPts;
             double slPx      = "UP".equals(pred.predictedDirection) ? entryPrice - slPts     : entryPrice + slPts;
-            double rrRatio   = slPts > 0 ? targetPts / slPts : 0;
             String arrow     = "UP".equals(pred.predictedDirection) ? "⬆️" : "⬇️";
-            String ts        = nowIst.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+            String ts        = nowIst.format(DateTimeFormatter.ofPattern("HH:mm"));
 
+            // Short, compact message — Entry, Target, SL only
             String msg =
-                "📚 *\\[EDUCATION PURPOSE ONLY\\]*\n" +
-                "⚠️ *DO NOT BUY OR SELL BASED ON THIS SIGNAL*\n" +
-                "━━━━━━━━━━━━━━━━━━━━━━\n" +
-                "🕐 *1-Min Signal* | " + ts + " IST\n\n" +
-                "📌 *Symbol:* " + symbol + "\n" +
-                "🚀 *Direction:* " + pred.predictedDirection + " " + arrow + "\n\n" +
-                "💰 *Entry:*     " + String.format("%.2f", entryPrice) + "\n" +
-                "🎯 *Target:*    " + String.format("%.2f", targetPx) + "  (+" + String.format("%.0f", targetPts) + " pts)\n" +
-                "🛑 *Stop Loss:* " + String.format("%.2f", slPx) + "  (-" + String.format("%.0f", slPts) + " pts)\n" +
-                "📊 *R:R:* 1:" + String.format("%.1f", rrRatio) + "\n\n" +
-                "🤖 *AI Confidence:* " + String.format("%.1f%%", pred.confidence) + "\n" +
-                "📝 *Reason:* " + (pred.predictionReasoning != null ? pred.predictionReasoning : "Technical signal") + "\n\n" +
-                "━━━━━━━━━━━━━━━━━━━━━━\n" +
-                "📚 _This is for learning/observation only._\n" +
-                "_This call does NOT count toward win rate or net points._";
+                "📚 *[EDU]* " + symbol + " " + pred.predictedDirection + " " + arrow + " | " + ts + " IST\n" +
+                "💰 Entry: `" + String.format("%.2f", entryPrice) + "`\n" +
+                "🎯 Target: `" + String.format("%.2f", targetPx) + "` (+" + String.format("%.0f", targetPts) + " pts)\n" +
+                "🛑 SL: `" + String.format("%.2f", slPx) + "` (-" + String.format("%.0f", slPts) + " pts)\n" +
+                "_AI: " + String.format("%.1f%%", pred.confidence) + " conf | Edu only — do not trade_";
 
             broadcastSignal(msg);
             edu1MinLastAlertMap.put(symbol, System.currentTimeMillis());
@@ -1256,9 +1246,9 @@ public class Phase3TelegramBot {
 
     /**
      * Market movement monitor — runs every 2 minutes.
-     * Sends alerts when NIFTY50 / BANKNIFTY / SENSEX move significantly
-     * (>= threshold %) compared to the price captured at the start of each
-     * monitoring window. Alerts at most once every 10 minutes per symbol.
+     * Sends alerts ONLY for SUDDEN moves: compares current price to the price
+     * 3 candles ago (~15 min on 5-min data) so gradual drift never triggers.
+     * Cooldown: 45 minutes per symbol to avoid repeated alerts on the same move.
      */
     private void monitorMarketMovement() {
         if (activeChatId == 0) return; // No chat registered yet
@@ -1272,15 +1262,17 @@ public class Phase3TelegramBot {
         for (String sym : symbols) {
             try {
                 List<SimpleMarketData> data = marketDataFetcher.getRealMarketData5Min(sym);
-                if (data == null || data.isEmpty()) continue;
-                double currentPrice = data.get(data.size() - 1).price;
-                if (currentPrice <= 0) continue;
+                // Need at least 4 candles to compare current vs ~15-min-ago price
+                if (data == null || data.size() < 4) continue;
 
-                // Establish baseline on first call
-                movementBaselinePrice.putIfAbsent(sym, currentPrice);
-                double baseline = movementBaselinePrice.get(sym);
+                int n = data.size();
+                double currentPrice  = data.get(n - 1).price;
+                // Reference price = 3 candles back (~15 min for 5-min candles)
+                // This detects only SUDDEN moves, not gradual drift over hours
+                double referencePrice = data.get(n - 4).price;
+                if (currentPrice <= 0 || referencePrice <= 0) continue;
 
-                double changePct = Math.abs((currentPrice - baseline) / baseline * 100.0);
+                double changePct = Math.abs((currentPrice - referencePrice) / referencePrice * 100.0);
                 double threshold = switch (sym) {
                     case "NIFTY50"   -> NIFTY_MOVE_THRESHOLD;
                     case "BANKNIFTY" -> BANKNIFTY_MOVE_THRESHOLD;
@@ -1288,12 +1280,12 @@ public class Phase3TelegramBot {
                     default          -> 0.40;
                 };
 
-                // Minimum 10 minutes between movement alerts for same symbol
+                // 45 minutes between movement alerts per symbol
                 long lastAlert = lastMovementAlertTime.getOrDefault(sym, 0L);
-                boolean cooldownOk = (System.currentTimeMillis() - lastAlert) > 10 * 60 * 1000L;
+                boolean cooldownOk = (System.currentTimeMillis() - lastAlert) > 45 * 60 * 1000L;
 
                 if (changePct >= threshold && cooldownOk) {
-                    double changePoints = currentPrice - baseline;
+                    double changePoints = currentPrice - referencePrice;
                     String direction = changePoints > 0 ? "📈 UP" : "📉 DOWN";
                     String emoji = changePoints > 0 ? "🟢" : "🔴";
                     String changeStr = (changePoints > 0 ? "+" : "") + String.format("%.0f", changePoints);
@@ -1303,24 +1295,14 @@ public class Phase3TelegramBot {
                         case "SENSEX"    -> "SENSEX";
                         default          -> sym;
                     };
-                    String msg = emoji + " *MARKET MOVEMENT ALERT*\n\n" +
-                        "📌 *Index:* " + symLabel + "\n" +
-                        "🚀 *Move:* " + direction + "\n" +
-                        "📊 *Change:* " + changeStr + " pts (" + String.format("%.2f%%", Math.abs(changePct)) + ")\n" +
-                        "💰 *Current Price:* " + String.format("%.2f", currentPrice) + "\n" +
-                        "📍 *From:* " + String.format("%.2f", baseline) + "\n" +
-                        "🕒 *Time:* " + now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) + " IST";
+                    String msg = emoji + " *SUDDEN MOVE — " + symLabel + "*\n" +
+                        direction + " *" + changeStr + " pts* (" + String.format("%.2f%%", Math.abs(changePct)) + " in ~15 min)\n" +
+                        "💰 " + String.format("%.2f", currentPrice) + " | " +
+                        now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) + " IST";
                     broadcastSignal(msg);
                     lastMovementAlertTime.put(sym, System.currentTimeMillis());
-                    // Reset baseline after alert so next move is measured from here
-                    movementBaselinePrice.put(sym, currentPrice);
-                    logger.info("📡 Movement alert sent for {}: {} pts ({} %)",
+                    logger.info("📡 Sudden movement alert for {}: {} pts ({} %)",
                         sym, changeStr, String.format("%.2f", changePct));
-                }
-
-                // Reset baseline every 15 minutes to keep alerts relevant
-                if ((System.currentTimeMillis() - lastAlert) > 15 * 60 * 1000L && changePct < threshold) {
-                    movementBaselinePrice.put(sym, currentPrice);
                 }
 
                 // ── ADX Trend State Alert (every 3 hours max per symbol) ──────────
