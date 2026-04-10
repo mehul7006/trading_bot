@@ -522,7 +522,7 @@ public class Phase3TelegramBot {
             StringBuilder sb = new StringBuilder();
             LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
 
-            for (String symbol : Arrays.asList("NIFTY50", "BANKNIFTY", "SENSEX")) {
+            for (String symbol : Arrays.asList("NIFTY50", "SENSEX")) {  // BankNifty removed
                 if (prices.containsKey(symbol)) {
                     LocalDateTime lastTime = marketDataFetcher.getLastValidTime(symbol);
                     boolean isFresh = lastTime != null && lastTime.isAfter(now.minusMinutes(5));
@@ -682,14 +682,14 @@ public class Phase3TelegramBot {
         if (isScanning && scanFuture != null && !scanFuture.isCancelled() && !scanFuture.isDone()) {
             sendMessage(chatId,
                 "✅ *Scan Already Running*\n\n" +
-                "📡 Monitoring NIFTY50, SENSEX, BANKNIFTY.\n" +
+                "📡 Monitoring NIFTY50, SENSEX.\n" +
                 "🔔 You are now subscribed — signals will be sent to you.");
             return;
         }
         startScanSilently(chatId);
         sendMessage(chatId,
             "🔍 *Scanning Started*\n\n" +
-            "📡 Monitoring NIFTY50, SENSEX, BANKNIFTY...\n" +
+            "📡 Monitoring NIFTY50, SENSEX...\n" +
             "🤖 AI analyzing patterns...\n" +
             "🔔 You will be notified of high-confidence signals.");
     }
@@ -758,7 +758,7 @@ public class Phase3TelegramBot {
         if (todayCallsGenerated.get() >= 10) return;
         
         try {
-            String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
+            String[] symbols = {"NIFTY50", "SENSEX"};  // BankNifty removed
             for (String symbol : symbols) {
                 if (!isScanning) break;
                 scanEquitySymbol(chatId, symbol);
@@ -1258,7 +1258,7 @@ public class Phase3TelegramBot {
                             && now.isBefore(java.time.LocalTime.of(15, 35));
         if (!isMarketOpen) return;
 
-        String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
+        String[] symbols = {"NIFTY50", "SENSEX"};  // BankNifty removed
         for (String sym : symbols) {
             try {
                 List<SimpleMarketData> data = marketDataFetcher.getRealMarketData5Min(sym);
@@ -1814,7 +1814,7 @@ public class Phase3TelegramBot {
               .format(DateTimeFormatter.ofPattern("dd-MMM-yyyy")))
           .append("\n\n");
 
-        String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
+        String[] symbols = {"NIFTY50", "SENSEX"};  // BankNifty removed
         for (String sym : symbols) {
             try {
                 List<SimpleMarketData> all = marketDataFetcher.getRealMarketData5Min(sym);
@@ -1947,7 +1947,7 @@ public class Phase3TelegramBot {
         long initialDelay = java.time.Duration.between(now, next).toSeconds();
         scheduler.scheduleAtFixedRate(() -> {
             logger.info("📦 End-of-day snapshot: saving today's candles to 120-day local store...");
-            String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
+            String[] symbols = {"NIFTY50", "SENSEX"};  // BankNifty removed
             for (String sym : symbols) {
                 try {
                     marketDataFetcher.getRealMarketData5Min(sym);
