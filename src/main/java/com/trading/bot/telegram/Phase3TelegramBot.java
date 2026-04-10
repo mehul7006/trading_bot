@@ -665,8 +665,7 @@ public class Phase3TelegramBot {
         status.append(String.format("│ 📈 Win Rate        : *%.1f%%*%n",  winRate));
         status.append(String.format("│ 💰 Net Points      : *%+.0f pts*%n", netPoints));
         status.append("│ 🤖 Scan            : ").append(scanState).append("\n");
-        status.append("│ 🧠 ML Filter       : ").append(mlFilter.isReady() ? "✅ Active (P≥60%)" : "⏳ Training...").append("\n");
-        status.append("│ 🕐 Prime Window    : 11:00–12:30 IST\n");
+        status.append("│ 🧠 ML Filter       : ").append(mlFilter.isReady() ? "✅ Active (P≥60%, full hours)" : "⏳ Training...").append("\n");
         status.append("└─────────────────────────\n");
 
         if (total > 0) {
@@ -898,27 +897,14 @@ public class Phase3TelegramBot {
                 if (chosenPrediction == null) return;
             }
 
-            // ── PATH 2: Prime window gate (11:00–12:30 IST) ──────────────────────────
-            // Outside prime window: only allow if this is a guarantee signal (fires after 13:00)
-            // or if it's an unusually strong signal (confidence ≥ 92)
-            LocalTime nowForWindow = LocalTime.now(ZoneId.of("Asia/Kolkata"));
-            boolean inPrimeWindow = !nowForWindow.isBefore(LocalTime.of(11, 0))
-                                 && nowForWindow.isBefore(LocalTime.of(12, 30));
-            boolean isGuaranteeWindow2 = nowForWindow.isAfter(LocalTime.of(13, 0))
-                                      && nowForWindow.isBefore(LocalTime.of(14, 45));
-            boolean isStrongSignal = chosenPrediction.confidence >= 92.0;
-
-            if (!inPrimeWindow && !isGuaranteeWindow2 && !isStrongSignal) {
-                logger.debug("⏰ [{}] Skipped outside prime window ({}) — conf={:.1f}%",
-                    symbol, nowForWindow, chosenPrediction.confidence);
-                return;
-            }
-
-            // ── PATH 7: ML signal quality filter ─────────────────────────────────────
-            // Score the signal via logistic regression; block if P(win) < threshold
+            // ── PATH 7: ML signal quality filter (full market hours, no window restriction) ──
+            // Score the signal via logistic regression; block if P(win) < threshold.
+            // Prime window (Path 2) removed — ML alone achieves higher WR (73.8% vs 70.1%)
+            // and captures 103 calls vs only 67 with prime window.
             if (mlFilter.isReady()) {
-                int slab   = nowForWindow.isBefore(LocalTime.of(11, 0)) ? 0
-                           : nowForWindow.isBefore(LocalTime.of(13, 0)) ? 1 : 2;
+                LocalTime nowForML = LocalTime.now(ZoneId.of("Asia/Kolkata"));
+                int slab   = nowForML.isBefore(LocalTime.of(11, 0)) ? 0
+                           : nowForML.isBefore(LocalTime.of(13, 0)) ? 1 : 2;
                 int dow    = java.time.LocalDate.now(ZoneId.of("Asia/Kolkata"))
                                                 .getDayOfWeek().getValue() - 1;
                 double mlScore = mlFilter.score(
