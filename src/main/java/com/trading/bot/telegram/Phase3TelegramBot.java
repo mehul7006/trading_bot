@@ -5,6 +5,7 @@ import com.trading.bot.market.SimpleMarketData;
 import com.trading.bot.market.OptionData;
 import com.trading.bot.market.HonestMarketDataFetcher;
 import com.trading.bot.ai.AIPredictor;
+import com.trading.bot.ai.MLSignalFilter;
 import com.trading.bot.strategy.NewsSentimentUtils;
 import com.trading.bot.util.MarketHours;
 import org.slf4j.Logger;
@@ -44,6 +45,7 @@ public class Phase3TelegramBot {
     private final Phase3IntegratedBot phase3Bot;
     private final HonestMarketDataFetcher marketDataFetcher;
     private final AIPredictor aiPredictor;
+    private final MLSignalFilter mlFilter = new MLSignalFilter();  // Path 7 — trained at startup
     
     // Bot state
     private long lastUpdateId = 0;
@@ -245,6 +247,11 @@ public class Phase3TelegramBot {
 
         // Restore today's signal counts/cooldowns so restarts don't duplicate signals
         loadDailyState();
+
+        // Train ML signal filter in background (Path 7 — logistic regression on 45-day history)
+        mlFilter.trainAsync();
+        System.out.println("🧠 ML signal filter training started in background (Path 2+7)...");
+        logger.info("🧠 ML signal filter training started in background...");
 
         // Silent Startup - No spamming user on restart
         // sendStartupMessage();
@@ -658,6 +665,8 @@ public class Phase3TelegramBot {
         status.append(String.format("│ 📈 Win Rate        : *%.1f%%*%n",  winRate));
         status.append(String.format("│ 💰 Net Points      : *%+.0f pts*%n", netPoints));
         status.append("│ 🤖 Scan            : ").append(scanState).append("\n");
+        status.append("│ 🧠 ML Filter       : ").append(mlFilter.isReady() ? "✅ Active (P≥60%)" : "⏳ Training...").append("\n");
+        status.append("│ 🕐 Prime Window    : 11:00–12:30 IST\n");
         status.append("└─────────────────────────\n");
 
         if (total > 0) {
@@ -887,6 +896,44 @@ public class Phase3TelegramBot {
                 }
 
                 if (chosenPrediction == null) return;
+            }
+
+            // ── PATH 2: Prime window gate (11:00–12:30 IST) ──────────────────────────
+            // Outside prime window: only allow if this is a guarantee signal (fires after 13:00)
+            // or if it's an unusually strong signal (confidence ≥ 92)
+            LocalTime nowForWindow = LocalTime.now(ZoneId.of("Asia/Kolkata"));
+            boolean inPrimeWindow = !nowForWindow.isBefore(LocalTime.of(11, 0))
+                                 && nowForWindow.isBefore(LocalTime.of(12, 30));
+            boolean isGuaranteeWindow2 = nowForWindow.isAfter(LocalTime.of(13, 0))
+                                      && nowForWindow.isBefore(LocalTime.of(14, 45));
+            boolean isStrongSignal = chosenPrediction.confidence >= 92.0;
+
+            if (!inPrimeWindow && !isGuaranteeWindow2 && !isStrongSignal) {
+                logger.debug("⏰ [{}] Skipped outside prime window ({}) — conf={:.1f}%",
+                    symbol, nowForWindow, chosenPrediction.confidence);
+                return;
+            }
+
+            // ── PATH 7: ML signal quality filter ─────────────────────────────────────
+            // Score the signal via logistic regression; block if P(win) < threshold
+            if (mlFilter.isReady()) {
+                int slab   = nowForWindow.isBefore(LocalTime.of(11, 0)) ? 0
+                           : nowForWindow.isBefore(LocalTime.of(13, 0)) ? 1 : 2;
+                int dow    = java.time.LocalDate.now(ZoneId.of("Asia/Kolkata"))
+                                                .getDayOfWeek().getValue() - 1;
+                double mlScore = mlFilter.score(
+                    chosenPrediction.confidence,
+                    chosenPrediction.estimatedMovePoints,
+                    chosenPrediction.suggestedStopLoss,
+                    slab, dow, symbol, chosenPrediction.predictedDirection);
+
+                if (mlScore < MLSignalFilter.ML_THRESHOLD) {
+                    logger.info("🤖 [{}] ML filter rejected signal — P(win)={:.2f} < {:.2f} (conf={:.1f}%)",
+                        symbol, mlScore, MLSignalFilter.ML_THRESHOLD, chosenPrediction.confidence);
+                    return;
+                }
+                logger.info("🤖 [{}] ML filter PASSED — P(win)={:.2f} (conf={:.1f}%)",
+                    symbol, mlScore, chosenPrediction.confidence);
             }
 
             long currentTime = System.currentTimeMillis();
