@@ -24,7 +24,7 @@ public class StabilityAudit {
         AIPredictor predictor = new AIPredictor();
         predictor.initialize();
 
-        String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
+        String[] symbols = {"NIFTY50", "SENSEX"};
         
         // 120 Days Range
         String toDate = LocalDate.now().plusDays(1).toString();

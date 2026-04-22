@@ -83,7 +83,6 @@ public class CallExtractor {
 
     // Helper methods copied from AuditAgent to ensure EXACT same logic
     private static long getCooldownMillis(String symbol, int slab) {
-        if ("BANKNIFTY".equals(symbol) && slab == 1) return 12L * 60 * 1000;
         return 10L * 60 * 1000;
     }
 
@@ -92,7 +91,6 @@ public class CallExtractor {
         double minPts = switch (symbol) {
             case "NIFTY50" -> 35.0;
             case "SENSEX" -> 100.0;
-            case "BANKNIFTY" -> 80.0;
             default -> 20.0;
         };
         if (p.predictedDirection.equals("NEUTRAL")) return false;

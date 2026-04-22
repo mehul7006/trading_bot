@@ -87,7 +87,6 @@ public class AuditRunner {
         return switch (symbol) {
             case "NIFTY50"   -> 20.0;
             case "SENSEX"    -> 50.0;
-            case "BANKNIFTY" -> 55.0;
             default          -> 25.0;
         };
     }

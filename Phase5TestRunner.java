@@ -22,15 +22,12 @@ public class Phase5TestRunner {
             System.out.println("🤖 Testing with AI-enhanced portfolio data...");
             System.out.println("   NIFTY50: " + portfolioTestData.get("NIFTY50").size() + " data points");
             System.out.println("   SENSEX: " + portfolioTestData.get("SENSEX").size() + " data points");
-            System.out.println("   BANKNIFTY: " + portfolioTestData.get("BANKNIFTY").size() + " data points");
             System.out.println();
             
             // Test Phase 5 AI execution features
             testAIExecution(phase5Bot, "NIFTY50", portfolioTestData);
             System.out.println();
             testAIExecution(phase5Bot, "SENSEX", portfolioTestData);
-            System.out.println();
-            testAIExecution(phase5Bot, "BANKNIFTY", portfolioTestData);
             
             System.out.println();
             System.out.println("✅ PHASE 5 AI EXECUTION SYSTEM TEST COMPLETED SUCCESSFULLY!");

@@ -25,7 +25,6 @@ public class VixAuditRunner {
         "NIFTY50", 25.0, "SENSEX", 60.0, "BANKNIFTY", 70.0
     );
     private static final long COOLDOWN_MS         = 10L * 60 * 1000;
-    private static final long BNF_PRIME_COOLDOWN  = 12L * 60 * 1000;
     private static final int  LOOKAHEAD           = 24;
 
     // ── VIX thresholds ────────────────────────────────────────────────────
@@ -62,7 +61,7 @@ public class VixAuditRunner {
         printVixStats(vixProxy);
 
         // ── Run audit for each symbol ──────────────────────────────────
-        String[]  symbols   = {"NIFTY50", "BANKNIFTY", "SENSEX"};
+        String[]  symbols   = {"NIFTY50", "SENSEX"};
         RunResult baseTotal = new RunResult();
         RunResult vixTotal  = new RunResult();
 

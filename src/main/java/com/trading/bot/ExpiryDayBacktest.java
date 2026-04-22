@@ -65,7 +65,7 @@ public class ExpiryDayBacktest {
         System.out.println("Loading candle data for expiry-day backtest...");
         MarketDataAgent mdAgent = new MarketDataAgent();
 
-        String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
+        String[] symbols = {"NIFTY50", "SENSEX"};
         List<ExpirySignal> allSignals = new ArrayList<>();
 
         for (String sym : symbols) {

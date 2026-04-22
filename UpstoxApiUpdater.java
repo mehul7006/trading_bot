@@ -11,7 +11,7 @@ public class UpstoxApiUpdater {
     // Updated Upstox API Credentials
     private static final String API_KEY = "768a303b-80f1-46d6-af16-f847f9341213";
     private static final String API_SECRET = "j0w9ga2m9w";
-    private static final String ACCESS_TOKEN = "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OTc2MTFiMzg5M2Y0MDY1MjE3YmUxOGMiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc2OTM0NTQ1OSwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzY5Mzc4NDAwfQ.Z06g0_XML5Y0zKpqZ-3artglaX-qtsFic_gvaWt3iUE";
+    private static final String ACCESS_TOKEN = "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzNkIyWlgiLCJqdGkiOiI2OWU4NDkyMDdjNDE5ZDFjNWQwMGIxYjYiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6ZmFsc2UsImlhdCI6MTc3NjgzMDc1MiwiaXNzIjoidWRhcGktZ2F0ZXdheS1zZXJ2aWNlIiwiZXhwIjoxNzc2ODk1MjAwfQ.ZrzQH8sCDVXxeCaeTKSvqVEZIf8YzMrZAsW9Qy5GrPc";
     
     private static final String BASE_URL = "https://api.upstox.com/v2";
     

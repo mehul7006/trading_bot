@@ -20,7 +20,7 @@ public class ManualScanRunner {
         AIPredictor predictor = new AIPredictor();
         predictor.initialize();
 
-        String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
+        String[] symbols = {"NIFTY50", "SENSEX"};
 
         for (String symbol : symbols) {
             System.out.println("👉 Scanning " + symbol + "...");

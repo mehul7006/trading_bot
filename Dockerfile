@@ -5,14 +5,10 @@ WORKDIR /app
 # Copy Maven descriptor first (layer cache)
 COPY pom.xml .
 
-# Copy web-app source (node_modules excluded via .dockerignore)
-COPY web-app ./web-app
-
 # Copy Java source
 COPY src ./src
 
-# Build everything: frontend-maven-plugin downloads Node, builds React,
-# then Maven compiles Java and shades all into one fat JAR.
+# Build everything: Maven compiles Java and shades all into one fat JAR.
 RUN mvn clean package -DskipTests
 
 # ── Stage 2: Runtime ─────────────────────────────────────────────────────────

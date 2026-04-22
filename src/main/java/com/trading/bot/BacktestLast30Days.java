@@ -16,11 +16,9 @@ import java.util.*;
  */
 public class BacktestLast30Days {
 
-    private static final double MIN_CONFIDENCE = 86.0;  // raised from 85; AIPredictor gates internally at 88
     private static final Map<String, Double> MIN_POINTS = Map.of(
         "NIFTY50",   28.0,   // raised from 25 — filter tiny-range signals
-        "SENSEX",    65.0,   // raised from 60
-        "BANKNIFTY", 75.0    // raised from 70
+        "SENSEX",    65.0    // raised from 60
     );
     private static final long COOLDOWN_MS             = 10L * 60 * 1000;
     private static final long BNF_PRIME_COOLDOWN_MS   = 12L * 60 * 1000;
@@ -41,7 +39,7 @@ public class BacktestLast30Days {
         MarketDataAgent mdAgent   = new MarketDataAgent();
         PredictionAgent predAgent = new PredictionAgent();
 
-        String[] symbols = {"NIFTY50", "SENSEX"};  // BankNifty removed — consistent loss-maker
+        String[] symbols = {"NIFTY50", "SENSEX"};
         List<SignalRecord> allSignals = new ArrayList<>();
 
         for (String symbol : symbols) {

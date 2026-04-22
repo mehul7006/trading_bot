@@ -5,7 +5,6 @@ import com.trading.bot.market.SimpleMarketData;
 import com.trading.bot.market.OptionData;
 import com.trading.bot.market.HonestMarketDataFetcher;
 import com.trading.bot.ai.AIPredictor;
-import com.trading.bot.ai.MLSignalFilter;
 import com.trading.bot.strategy.NewsSentimentUtils;
 import com.trading.bot.util.MarketHours;
 import org.slf4j.Logger;
@@ -45,7 +44,6 @@ public class Phase3TelegramBot {
     private final Phase3IntegratedBot phase3Bot;
     private final HonestMarketDataFetcher marketDataFetcher;
     private final AIPredictor aiPredictor;
-    private final MLSignalFilter mlFilter = new MLSignalFilter();  // Path 7 — trained at startup
     
     // Bot state
     private long lastUpdateId = 0;
@@ -97,7 +95,6 @@ public class Phase3TelegramBot {
     private final Map<String, Long>   lastMovementAlertTime = new ConcurrentHashMap<>();
     // Movement alert thresholds (%)
     private static final double NIFTY_MOVE_THRESHOLD   = 0.35; // 0.35% ~ 85 pts on Nifty
-    private static final double BANKNIFTY_MOVE_THRESHOLD = 0.40; // 0.40% ~ 200 pts on BankNifty
     private static final double SENSEX_MOVE_THRESHOLD  = 0.30; // 0.30% ~ 230 pts on Sensex
 
     // ADX trend state alerts — "STRONG", "CHOPPY", "NORMAL"
@@ -247,11 +244,6 @@ public class Phase3TelegramBot {
 
         // Restore today's signal counts/cooldowns so restarts don't duplicate signals
         loadDailyState();
-
-        // Train ML signal filter in background (Path 7 — logistic regression on 45-day history)
-        mlFilter.trainAsync();
-        System.out.println("🧠 ML signal filter training started in background (Path 2+7)...");
-        logger.info("🧠 ML signal filter training started in background...");
 
         // Silent Startup - No spamming user on restart
         // sendStartupMessage();
@@ -529,14 +521,13 @@ public class Phase3TelegramBot {
             StringBuilder sb = new StringBuilder();
             LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
 
-            for (String symbol : Arrays.asList("NIFTY50", "SENSEX")) {  // BankNifty removed
+            for (String symbol : Arrays.asList("NIFTY50", "SENSEX")) {
                 if (prices.containsKey(symbol)) {
                     LocalDateTime lastTime = marketDataFetcher.getLastValidTime(symbol);
                     boolean isFresh = lastTime != null && lastTime.isAfter(now.minusMinutes(5));
                     
                     String emoji = switch (symbol) {
                         case "NIFTY50" -> "📉";
-                        case "BANKNIFTY" -> "🏦";
                         case "SENSEX" -> "📊";
                         default -> "📈";
                     };
@@ -665,7 +656,6 @@ public class Phase3TelegramBot {
         status.append(String.format("│ 📈 Win Rate        : *%.1f%%*%n",  winRate));
         status.append(String.format("│ 💰 Net Points      : *%+.0f pts*%n", netPoints));
         status.append("│ 🤖 Scan            : ").append(scanState).append("\n");
-        status.append("│ 🧠 ML Filter       : ").append(mlFilter.isReady() ? "✅ Active (P≥60%, full hours)" : "⏳ Training...").append("\n");
         status.append("└─────────────────────────\n");
 
         if (total > 0) {
@@ -690,7 +680,7 @@ public class Phase3TelegramBot {
         if (isScanning && scanFuture != null && !scanFuture.isCancelled() && !scanFuture.isDone()) {
             sendMessage(chatId,
                 "✅ *Scan Already Running*\n\n" +
-                "📡 Monitoring NIFTY50, SENSEX.\n" +
+                "📡 Monitoring NIFTY50, SENSEX, BANKNIFTY.\n" +
                 "🔔 You are now subscribed — signals will be sent to you.");
             return;
         }
@@ -766,7 +756,7 @@ public class Phase3TelegramBot {
         if (todayCallsGenerated.get() >= 10) return;
         
         try {
-            String[] symbols = {"NIFTY50", "SENSEX"};  // BankNifty removed
+            String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
             for (String symbol : symbols) {
                 if (!isScanning) break;
                 scanEquitySymbol(chatId, symbol);
@@ -897,31 +887,6 @@ public class Phase3TelegramBot {
                 if (chosenPrediction == null) return;
             }
 
-            // ── PATH 7: ML signal quality filter (full market hours, no window restriction) ──
-            // Score the signal via logistic regression; block if P(win) < threshold.
-            // Prime window (Path 2) removed — ML alone achieves higher WR (73.8% vs 70.1%)
-            // and captures 103 calls vs only 67 with prime window.
-            if (mlFilter.isReady()) {
-                LocalTime nowForML = LocalTime.now(ZoneId.of("Asia/Kolkata"));
-                int slab   = nowForML.isBefore(LocalTime.of(11, 0)) ? 0
-                           : nowForML.isBefore(LocalTime.of(13, 0)) ? 1 : 2;
-                int dow    = java.time.LocalDate.now(ZoneId.of("Asia/Kolkata"))
-                                                .getDayOfWeek().getValue() - 1;
-                double mlScore = mlFilter.score(
-                    chosenPrediction.confidence,
-                    chosenPrediction.estimatedMovePoints,
-                    chosenPrediction.suggestedStopLoss,
-                    slab, dow, symbol, chosenPrediction.predictedDirection);
-
-                if (mlScore < MLSignalFilter.ML_THRESHOLD) {
-                    logger.info("🤖 [{}] ML filter rejected signal — P(win)={:.2f} < {:.2f} (conf={:.1f}%)",
-                        symbol, mlScore, MLSignalFilter.ML_THRESHOLD, chosenPrediction.confidence);
-                    return;
-                }
-                logger.info("🤖 [{}] ML filter PASSED — P(win)={:.2f} (conf={:.1f}%)",
-                    symbol, mlScore, chosenPrediction.confidence);
-            }
-
             long currentTime = System.currentTimeMillis();
             long lastAlert = lastAlertTimeMap.getOrDefault(symbol, 0L);
             if (currentTime - lastAlert < 2 * 60 * 1000) return; // 2-min cooldown per symbol
@@ -1040,7 +1005,7 @@ public class Phase3TelegramBot {
 
     // ─────────────────────────────────────────────────────────────────────────────
     // 1-MIN EDUCATION SCANNER — runs alongside main bot, NEVER affects win rate
-    //   Confidence: ≥ 88% | Min pts: NIFTY50:15, SENSEX:40, BANKNIFTY:45
+    //   Confidence: ≥ 88% | Min pts: NIFTY50:15, SENSEX:40
     //   Cooldown:  5 min per symbol (independent of all other cooldowns)
     //   All messages clearly labelled EDUCATION PURPOSE ONLY — DO NOT TRADE
     // ─────────────────────────────────────────────────────────────────────────────
@@ -1069,7 +1034,6 @@ public class Phase3TelegramBot {
             double minPts = switch (symbol) {
                 case "NIFTY50"   -> 15.0;
                 case "SENSEX"    -> 40.0;
-                case "BANKNIFTY" -> 45.0;
                 default          -> 15.0;
             };
             if (pred.estimatedMovePoints < minPts) return;
@@ -1291,7 +1255,7 @@ public class Phase3TelegramBot {
                             && now.isBefore(java.time.LocalTime.of(15, 35));
         if (!isMarketOpen) return;
 
-        String[] symbols = {"NIFTY50", "SENSEX"};  // BankNifty removed
+        String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
         for (String sym : symbols) {
             try {
                 List<SimpleMarketData> data = marketDataFetcher.getRealMarketData5Min(sym);
@@ -1324,7 +1288,6 @@ public class Phase3TelegramBot {
                     String changeStr = (changePoints > 0 ? "+" : "") + String.format("%.0f", changePoints);
                     String symLabel = switch (sym) {
                         case "NIFTY50"   -> "NIFTY 50";
-                        case "BANKNIFTY" -> "BANK NIFTY";
                         case "SENSEX"    -> "SENSEX";
                         default          -> sym;
                     };
@@ -1394,7 +1357,6 @@ public class Phase3TelegramBot {
         double minPoints = switch (symbol) {
             case "NIFTY50"   -> 25.0;
             case "SENSEX"    -> 60.0;
-            case "BANKNIFTY" -> 70.0;
             default          -> 20.0;
         };
         return estimatedPoints >= minPoints;
@@ -1847,7 +1809,7 @@ public class Phase3TelegramBot {
               .format(DateTimeFormatter.ofPattern("dd-MMM-yyyy")))
           .append("\n\n");
 
-        String[] symbols = {"NIFTY50", "SENSEX"};  // BankNifty removed
+        String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
         for (String sym : symbols) {
             try {
                 List<SimpleMarketData> all = marketDataFetcher.getRealMarketData5Min(sym);
@@ -1980,7 +1942,7 @@ public class Phase3TelegramBot {
         long initialDelay = java.time.Duration.between(now, next).toSeconds();
         scheduler.scheduleAtFixedRate(() -> {
             logger.info("📦 End-of-day snapshot: saving today's candles to 120-day local store...");
-            String[] symbols = {"NIFTY50", "SENSEX"};  // BankNifty removed
+            String[] symbols = {"NIFTY50", "SENSEX"};
             for (String sym : symbols) {
                 try {
                     marketDataFetcher.getRealMarketData5Min(sym);

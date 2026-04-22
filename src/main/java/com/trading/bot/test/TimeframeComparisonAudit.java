@@ -40,7 +40,7 @@ public class TimeframeComparisonAudit {
         HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         AIPredictor predictor = new AIPredictor();
         
-        String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
+        String[] symbols = {"NIFTY50", "SENSEX"};
         
         List<ComparisonResult> results = new ArrayList<>();
 

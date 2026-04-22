@@ -26,7 +26,7 @@ class Phase3TelegramBotTest {
 
         @Override
         protected String getCurrentMarketRatesSimple() {
-            return "NIFTY50 22000\nSENSEX 75000\nBANKNIFTY 48000";
+            return "NIFTY50 22000\nSENSEX 75000";
         }
     }
 

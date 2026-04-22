@@ -46,7 +46,7 @@ public class LastWeekHonestAudit {
         HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
         AIPredictor predictor = new AIPredictor();
         
-        String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
+        String[] symbols = {"NIFTY50", "SENSEX"};
         
         List<AuditResult> results3Weeks = new ArrayList<>();
         List<AuditResult> resultsToday = new ArrayList<>();

@@ -114,7 +114,6 @@ public class AuditAgent implements Agent {
     }
 
     private long getCooldownMillis(String symbol, int slab) {
-        if ("BANKNIFTY".equals(symbol) && slab == 1) return 12L * 60 * 1000;
         return 10L * 60 * 1000;
     }
 
@@ -122,9 +121,8 @@ public class AuditAgent implements Agent {
         // V24.1 Audit Gates: Aligned with live bot thresholds for honest win-rate measurement
         double minConf = 85;
         double minPts = switch (symbol) {
-            case "NIFTY50"   -> 25.0;
-            case "SENSEX"    -> 60.0;
-            case "BANKNIFTY" -> 70.0;
+            case "NIFTY50"   -> 35.0;
+            case "SENSEX"    -> 100.0;
             default          -> 20.0;
         };
 

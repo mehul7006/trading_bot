@@ -33,7 +33,6 @@ public class OfficialDataCheck {
         // Simulate V24.0 Logic
         double threshold = switch (symbol) {
             case "NIFTY50" -> 45.0;
-            case "BANKNIFTY" -> 100.0;
             case "SENSEX" -> 120.0;
             default -> 50.0;
         };

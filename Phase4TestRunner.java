@@ -26,15 +26,12 @@ public class Phase4TestRunner {
             System.out.println("📊 Testing with comprehensive portfolio data...");
             System.out.println("   NIFTY50: " + portfolioTestData.get("NIFTY50").size() + " data points");
             System.out.println("   SENSEX: " + portfolioTestData.get("SENSEX").size() + " data points");
-            System.out.println("   BANKNIFTY: " + portfolioTestData.get("BANKNIFTY").size() + " data points");
             System.out.println();
             
             // Test Phase 4 quantitative features for each symbol
             testQuantitativeTrading(phase4Bot, "NIFTY50", portfolioTestData);
             System.out.println();
             testQuantitativeTrading(phase4Bot, "SENSEX", portfolioTestData);
-            System.out.println();
-            testQuantitativeTrading(phase4Bot, "BANKNIFTY", portfolioTestData);
             
             System.out.println();
             System.out.println("✅ PHASE 4 QUANTITATIVE SYSTEM TEST COMPLETED SUCCESSFULLY!");

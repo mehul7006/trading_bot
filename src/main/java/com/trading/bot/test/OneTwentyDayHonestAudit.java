@@ -23,7 +23,7 @@ public class OneTwentyDayHonestAudit {
         System.out.println("--------------------------------------------------------------------------------------");
         
         AuditAgent auditAgent = new AuditAgent();
-        String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
+        String[] symbols = {"NIFTY50", "SENSEX"};
         
         // Parallel execution for speed
         List<AuditAgent.AuditResult> results = Arrays.stream(symbols)

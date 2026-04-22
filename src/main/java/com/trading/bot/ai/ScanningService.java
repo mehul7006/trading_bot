@@ -109,8 +109,6 @@ public class ScanningService {
             return 45.0; // ~0.2% - 0.25% move
         } else if (upperSymbol.contains("SENSEX")) {
             return 120.0; // ~0.15% - 0.2% move
-        } else if (upperSymbol.contains("BANKNIFTY") || upperSymbol.contains("BANK")) {
-            return 100.0; // ~0.2% move
         } else {
             return 30.0;
         }

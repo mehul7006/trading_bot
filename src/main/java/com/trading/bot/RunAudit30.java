@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.ArrayList;
 public class RunAudit30 {
     public static void main(String[] args) {
-        String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
+        String[] symbols = {"NIFTY50", "SENSEX"};
         List<AuditAgent.AuditResult> results = new ArrayList<>();
         AuditAgent agent = new AuditAgent();
         int days = args.length > 0 ? Integer.parseInt(args[0]) : 30;

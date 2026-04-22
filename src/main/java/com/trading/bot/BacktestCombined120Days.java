@@ -15,12 +15,12 @@ import java.util.*;
  * Runs TWO independent strategies back-to-back:
  *
  *  [A] REGULAR strategy  (V29.0)
- *      • Symbols  : NIFTY50, BANKNIFTY, SENSEX
+ *      • Symbols  : NIFTY50, SENSEX
  *      • Window   : all day 09:15–15:25 (AIPredictor gate: conf ≥ 85%, min pts)
- *      • Cooldown : 10 min (BANKNIFTY prime slab: 12 min)
+ *      • Cooldown : 10 min
  *
  *  [B] EXPIRY SESSION strategy  (RSI Exhaustion Reversal V2)
- *      • Symbols  : NIFTY50 (Tuesday), SENSEX (Thursday)  — BANKNIFTY excluded
+ *      • Symbols  : NIFTY50 (Tuesday), SENSEX (Thursday)
  *      • Window   : 14:00–15:10 IST on expiry day
  *      • Signal   : RSI ≥ 68 → SHORT | RSI ≤ 32 → LONG
  *                   + BB 1.8σ touch + bearish/bullish candle + volume ≥ 1.4×
@@ -35,11 +35,9 @@ public class BacktestCombined120Days {
     private static final double  REG_MIN_CONFIDENCE = 85.0;
     private static final Map<String, Double> REG_MIN_POINTS = Map.of(
         "NIFTY50",   25.0,
-        "SENSEX",    60.0,
-        "BANKNIFTY", 70.0
+        "SENSEX",    60.0
     );
     private static final long REG_COOLDOWN_MS     = 10L * 60 * 1000;
-    private static final long BNF_PRIME_COOLDOWN  = 12L * 60 * 1000;
     private static final int  LOOKAHEAD           = 24;
     private static final int  BACKTEST_DAYS       = 120;
     private static final int  LOAD_DAYS           = 140; // warmup + 120-day window

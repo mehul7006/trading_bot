@@ -10,11 +10,10 @@ public class DebugPrices {
         System.out.println("🔍 DEBUG: Fetching latest candle details...");
         
         HonestMarketDataFetcher fetcher = HonestMarketDataFetcher.getInstance();
-        String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
+        String[] symbols = {"NIFTY50", "SENSEX"};
         java.util.Map<String, String> symbolMap = java.util.Map.of(
             "NIFTY50", "NSE_INDEX|Nifty 50",
-            "SENSEX", "BSE_INDEX|SENSEX", 
-            "BANKNIFTY", "NSE_INDEX|Nifty Bank"
+            "SENSEX", "BSE_INDEX|SENSEX"
         );
         
         // Use tomorrow's date to ensure we capture all of today

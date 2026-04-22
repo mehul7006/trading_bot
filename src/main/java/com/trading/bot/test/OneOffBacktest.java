@@ -81,7 +81,6 @@ public class OneOffBacktest {
         
         double minPointsThreshold = switch(symbol) {
             case "SENSEX" -> 100.0;
-            case "BANKNIFTY" -> 60.0;
             default -> 20.0; 
         };
 

@@ -68,7 +68,6 @@ public class BacktestRunner {
         // Determine Min Points based on Symbol
         double minPointsThreshold = switch(symbol) {
             case "SENSEX" -> 100.0;
-            case "BANKNIFTY" -> 50.0;
             default -> 20.0; // NIFTY
         };
 

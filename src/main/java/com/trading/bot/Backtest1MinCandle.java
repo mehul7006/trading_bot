@@ -54,7 +54,7 @@ public class Backtest1MinCandle {
         MarketDataAgent mdAgent   = new MarketDataAgent();
         PredictionAgent predAgent = new PredictionAgent();
 
-        String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
+        String[] symbols = {"NIFTY50", "SENSEX"};
         List<SignalRecord> allSignals = new ArrayList<>();
 
         for (String symbol : symbols) {

@@ -14,7 +14,7 @@
     "marketData": {
         "sources": ["NSE", "BSE", "YAHOO"],
         "updateInterval": 1000,
-        "symbols": ["NIFTY", "BANKNIFTY", "FINNIFTY"],
+        "symbols": ["NIFTY", "FINNIFTY"],
         "historicalDataDays": 100
     },
     "ml": {

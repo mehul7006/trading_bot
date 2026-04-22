@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">TradingBot</string>
-    <string name="nav_dashboard">Dashboard</string>
-    <string name="nav_chart">Chart</string>
-    <string name="nav_signals">Signals</string>
-    <string name="nav_options">Stats</string>
-    <string name="nav_settings">Settings</string>
-</resources>
