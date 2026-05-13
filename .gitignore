@@ -1,0 +1,7 @@
+.venv/
+.env
+upstox_token.json
+__pycache__/
+*.pyc
+.trae/
+.claude-agents/

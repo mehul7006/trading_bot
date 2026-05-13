@@ -1,0 +1,17 @@
+services:
+  - type: worker
+    name: option-analyzer-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: UPSTOX_API_KEY
+        sync: false
+      - key: UPSTOX_API_SECRET
+        sync: false
+      - key: UPSTOX_ACCESS_TOKEN
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.9
