@@ -1,5 +1,5 @@
 services:
-  - type: worker
+  - type: web
     name: option-analyzer-bot
     env: docker
     plan: free
