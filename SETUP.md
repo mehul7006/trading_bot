@@ -58,13 +58,13 @@ Send this to your bot:
 Bot will validate and save it — survives restarts!
 
 ## Step 4: Install Dependencies
-
 ```powershell
 # Create virtual environment
 # (If python is not in your PATH, you may need to use the full path to python.exe)
 python -m venv .venv --copies
 
 # Install requirements
+
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
