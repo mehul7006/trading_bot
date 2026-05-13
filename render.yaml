@@ -1,9 +1,10 @@
 services:
   - type: worker
     name: option-analyzer-bot
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python bot.py
+    env: docker
+    plan: free
+    region: singapore
+    branch: OptionMaster
     envVars:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
@@ -13,5 +14,3 @@ services:
         sync: false
       - key: UPSTOX_ACCESS_TOKEN
         sync: false
-      - key: PYTHON_VERSION
-        value: 3.11.9
