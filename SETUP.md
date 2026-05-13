@@ -79,7 +79,7 @@ python -m venv .venv --copies
 To keep your bot running 24/7 in the cloud:
 
 1. **Push your code to GitHub**:
-   - Your code is already pushed to: `https://github.com/buntythecoder/option-analyzer-bot`
+   - Your code is now on the `OptionMaster` branch at: `https://github.com/mehul7006/trading_bot.git`
 2. **Login to Render** (https://render.com).
 3. **Create a New Blueprint Instance**:
    - Connect your GitHub repository.
