@@ -8,10 +8,11 @@ Message:   nifty 25000 ce 19/05/2026
 import os
 import re
 import math
+import time
 import logging
 import asyncio
 import json
-from datetime import datetime, date
+from datetime import datetime, date, time as dtime
 from pathlib import Path
 from typing import Optional
 import requests
@@ -27,6 +28,10 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"Bot is alive!")
 
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
+
     def log_message(self, format, *args):
         return # Quiet logs
 
@@ -34,6 +39,29 @@ def run_health_server():
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
     server.serve_forever()
+
+
+def run_keepalive():
+    """
+    Render's FREE web service is spun down after ~15 min of no INBOUND traffic.
+    A polling bot makes only outbound calls, so Render would idle (kill) it and
+    the bot stops responding. This self-ping hits the public URL every 10 min to
+    keep the service awake. Set SELF_PING_URL, or rely on RENDER_EXTERNAL_URL
+    (auto-provided by Render).
+    """
+    url = os.environ.get("SELF_PING_URL") or os.environ.get("RENDER_EXTERNAL_URL")
+    if not url:
+        logger.info("Keep-alive: no SELF_PING_URL / RENDER_EXTERNAL_URL set — "
+                    "self-ping disabled (fine for local runs).")
+        return
+    logger.info(f"Keep-alive: self-ping every 10 min → {url}")
+    while True:
+        time.sleep(600)  # 10 minutes (< Render's ~15 min idle window)
+        try:
+            requests.get(url, timeout=15)
+            logger.info("Keep-alive ping OK")
+        except Exception as e:
+            logger.warning(f"Keep-alive ping failed: {e}")
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters, ContextTypes
@@ -201,6 +229,257 @@ def calc_iv_approx(market_price: float, S: float, K: float, T: float, r: float, 
         if abs(hi - lo) < 0.0001:
             break
     return round((lo + hi) / 2 * 100, 2)  # return as percentage
+
+
+# ─── DIRECTIONAL / MARKET-STRUCTURE ENGINE ───────────────────────────────────
+def _f(d: dict, k: str, default: float = 0.0) -> float:
+    """Safe float extractor from a possibly-missing dict key."""
+    try:
+        return float(d.get(k, default) or default)
+    except Exception:
+        return default
+
+
+def _i(d: dict, k: str, default: int = 0) -> int:
+    try:
+        return int(d.get(k, default) or default)
+    except Exception:
+        return default
+
+
+def find_atm_strike(chain: list, spot: float):
+    """Return the chain row whose strike is closest to spot."""
+    if not chain:
+        return None
+    return min(chain, key=lambda r: abs(int(r.get("strike_price", 0)) - spot))
+
+
+def expected_move(chain: list, spot: float, dte: int):
+    """
+    Expected move the market is *pricing in* = ATM straddle (ATM CE LTP + ATM PE LTP).
+    This is the single most honest answer to "will this strike get movement?".
+    Returns (straddle_pts, one_sd_daily_pts, atm_strike).
+    """
+    atm = find_atm_strike(chain, spot)
+    if not atm:
+        return 0.0, 0.0, None
+    ce = atm.get("call_options", {}).get("market_data", {})
+    pe = atm.get("put_options", {}).get("market_data", {})
+    straddle = _f(ce, "ltp") + _f(pe, "ltp")
+    one_sd_daily = straddle / math.sqrt(max(dte, 1))
+    return straddle, one_sd_daily, int(atm.get("strike_price", 0))
+
+
+def max_pain(chain: list):
+    """
+    Strike where total option-writer payout is minimized — price tends to
+    gravitate here at expiry (the expiry 'magnet').
+    """
+    if not chain:
+        return None
+    oi_map = {}
+    for r in chain:
+        k = int(r.get("strike_price", 0))
+        ce_oi = _i(r.get("call_options", {}).get("market_data", {}), "oi")
+        pe_oi = _i(r.get("put_options", {}).get("market_data", {}), "oi")
+        oi_map[k] = (ce_oi, pe_oi)
+    best_strike, best_pain = None, None
+    for expiry_price in oi_map:
+        pain = 0
+        for k, (ce_oi, pe_oi) in oi_map.items():
+            if expiry_price > k:          # calls finish ITM
+                pain += (expiry_price - k) * ce_oi
+            elif expiry_price < k:        # puts finish ITM
+                pain += (k - expiry_price) * pe_oi
+        if best_pain is None or pain < best_pain:
+            best_pain, best_strike = pain, expiry_price
+    return best_strike
+
+
+def oi_walls(chain: list):
+    """Strike with max CALL OI = resistance; max PUT OI = support."""
+    res_strike = res_oi = sup_strike = sup_oi = 0
+    for r in chain:
+        k = int(r.get("strike_price", 0))
+        ce_oi = _i(r.get("call_options", {}).get("market_data", {}), "oi")
+        pe_oi = _i(r.get("put_options", {}).get("market_data", {}), "oi")
+        if ce_oi > res_oi:
+            res_oi, res_strike = ce_oi, k
+        if pe_oi > sup_oi:
+            sup_oi, sup_strike = pe_oi, k
+    return sup_strike, res_strike
+
+
+def compute_direction(chain: list, spot: float, dte: int) -> dict:
+    """
+    Intraday + expiry BLENDED market-direction engine.
+      score > 0  => bullish (CE side favoured)
+      score < 0  => bearish (PE side favoured)
+    Combines: total PCR, fresh OI writing (intraday), ATM premium momentum
+    (intraday), and max-pain pull (expiry).
+    """
+    reasons = []
+    score = 0.0
+
+    tot_ce_oi = tot_pe_oi = 0
+    tot_ce_oichg = tot_pe_oichg = 0
+    for r in chain:
+        ce_md = r.get("call_options", {}).get("market_data", {})
+        pe_md = r.get("put_options", {}).get("market_data", {})
+        tot_ce_oi += _i(ce_md, "oi")
+        tot_pe_oi += _i(pe_md, "oi")
+        tot_ce_oichg += _i(ce_md, "oi_day_change")
+        tot_pe_oichg += _i(pe_md, "oi_day_change")
+
+    pcr = (tot_pe_oi / tot_ce_oi) if tot_ce_oi > 0 else 0.0
+
+    # 1. Total PCR — overall sentiment (expiry weight)
+    if pcr > 1.3:
+        score += 2; reasons.append(f"PCR {pcr:.2f} → put-heavy, strong support (bullish)")
+    elif pcr > 1.05:
+        score += 1; reasons.append(f"PCR {pcr:.2f} → mildly bullish")
+    elif pcr < 0.7:
+        score -= 2; reasons.append(f"PCR {pcr:.2f} → call-heavy, strong resistance (bearish)")
+    elif pcr < 0.95:
+        score -= 1; reasons.append(f"PCR {pcr:.2f} → mildly bearish")
+
+    # 2. Fresh OI writing TODAY — who is selling? (intraday weight)
+    if tot_ce_oichg > 0 and tot_ce_oichg > tot_pe_oichg * 1.2:
+        score -= 1.5
+        reasons.append(f"Fresh CALL writing (+{tot_ce_oichg:,}) → sellers expect ↓ (bearish)")
+    elif tot_pe_oichg > 0 and tot_pe_oichg > tot_ce_oichg * 1.2:
+        score += 1.5
+        reasons.append(f"Fresh PUT writing (+{tot_pe_oichg:,}) → sellers expect ↑ (bullish)")
+
+    # 3. ATM premium momentum TODAY — which side are buyers bidding up? (intraday)
+    atm = find_atm_strike(chain, spot)
+    if atm:
+        ce_md = atm.get("call_options", {}).get("market_data", {})
+        pe_md = atm.get("put_options", {}).get("market_data", {})
+        ce_ltp, ce_pc = _f(ce_md, "ltp"), _f(ce_md, "close_price")
+        pe_ltp, pe_pc = _f(pe_md, "ltp"), _f(pe_md, "close_price")
+        ce_chg = ((ce_ltp - ce_pc) / ce_pc * 100) if ce_pc > 0 else 0
+        pe_chg = ((pe_ltp - pe_pc) / pe_pc * 100) if pe_pc > 0 else 0
+        if ce_chg - pe_chg > 8:
+            score += 1.5
+            reasons.append(f"ATM CE {ce_chg:+.0f}% vs PE {pe_chg:+.0f}% → buyers favour CALLs (bullish)")
+        elif pe_chg - ce_chg > 8:
+            score -= 1.5
+            reasons.append(f"ATM PE {pe_chg:+.0f}% vs CE {ce_chg:+.0f}% → buyers favour PUTs (bearish)")
+
+    # 4. Max-pain pull (expiry magnet)
+    mp = max_pain(chain)
+    if mp:
+        if mp > spot * 1.002:
+            score += 1; reasons.append(f"Max-pain {mp} > spot → expiry pull up (bullish)")
+        elif mp < spot * 0.998:
+            score -= 1; reasons.append(f"Max-pain {mp} < spot → expiry pull down (bearish)")
+
+    if score >= 3:
+        label = "🟢 BULLISH — CE side favoured ↑"
+    elif score >= 1:
+        label = "🟢 MILD BULLISH — slight CE edge"
+    elif score <= -3:
+        label = "🔴 BEARISH — PE side favoured ↓"
+    elif score <= -1:
+        label = "🔴 MILD BEARISH — slight PE edge"
+    else:
+        label = "⚪ NEUTRAL — no clear edge, sideways/theta risk"
+
+    sup, res = oi_walls(chain)
+    return {
+        "score": score, "label": label, "reasons": reasons,
+        "pcr": pcr, "max_pain": mp, "support": sup, "resistance": res,
+    }
+
+
+def theta_decay_projection(ltp: float, theta: float, dte: int, days_ahead: int = 5):
+    """
+    Project premium erosion (depreciation) if spot stays FLAT.
+    Theta is per-day & negative; decay accelerates near expiry (1/sqrt(t)),
+    so we ramp the daily burn instead of using a flat number.
+    """
+    if ltp <= 0 or theta == 0 or dte <= 0:
+        return None
+    daily = abs(theta)
+    lines, prem = [], ltp
+    for d in range(1, min(days_ahead, dte) + 1):
+        remaining = dte - d + 1
+        accel = math.sqrt(dte / max(remaining, 1))
+        erosion = min(daily * accel, prem)
+        prem = max(prem - erosion, 0)
+        pct = (prem / ltp * 100) if ltp > 0 else 0
+        lines.append(f"  +{d}d: ₹{prem:7.2f}  ({pct:3.0f}% left)  −₹{erosion:.1f}/day")
+    return "\n".join(lines)
+
+
+def zero_to_hero(ltp: float, delta: float, dte: int, strike: int, spot: float,
+                 opt_type: str, exp_move: float, direction_score: float):
+    """
+    Assess whether a cheap OTM option realistically has room to MULTIPLY.
+    Grounds the call in: expected move (ATM straddle) vs distance to strike,
+    direction alignment, |delta| as prob-of-ITM, and DTE/theta risk.
+    Returns None if the strike isn't an OTM lottery candidate.
+    """
+    is_otm = (opt_type == "CE" and strike > spot) or (opt_type == "PE" and strike < spot)
+    if not is_otm:
+        return None
+
+    abs_d = abs(delta)
+    distance = abs(strike - spot)
+    prob_itm = abs_d * 100  # standard approximation: P(ITM) ≈ |delta|
+    aligned = (opt_type == "CE" and direction_score > 0) or \
+              (opt_type == "PE" and direction_score < 0)
+    reach = (exp_move / distance) if distance > 0 else 9.0  # does expected move cover the gap?
+
+    if dte < 1:
+        rating = "❌ AVOID — 0DTE: theta destroys it before it can move"
+    elif not aligned:
+        rating = "🔴 LOW — market direction is AGAINST this side"
+    elif reach >= 1.5 and abs(direction_score) >= 2 and dte >= 2:
+        rating = "🟢 HIGH — expected move reaches strike + direction agrees"
+    elif reach >= 0.8 and aligned:
+        rating = "🟡 MEDIUM — reachable IF momentum continues"
+    else:
+        rating = "🟠 LOW-MEDIUM — needs a big/fast move to pay off"
+
+    return {"rating": rating, "prob_itm": prob_itm, "distance": distance,
+            "reach": reach, "aligned": aligned}
+
+
+def side_metrics(row: dict, opt_type: str, spot: float, strike: int,
+                 T: float, dte: int, r_rate: float = 0.065) -> dict:
+    """Extract LTP/greeks/OI for one side of a strike, filling greeks via BS if missing."""
+    side_key = "call_options" if opt_type == "CE" else "put_options"
+    od = row.get(side_key, {})
+    md = od.get("market_data", {})
+    gk = od.get("option_greeks", {})
+
+    ltp  = _f(md, "ltp")
+    prev = _f(md, "close_price", ltp) or ltp
+    iv   = _f(gk, "iv")
+    delta = _f(gk, "delta")
+    theta = _f(gk, "theta")
+    gamma = _f(gk, "gamma")
+    vega  = _f(gk, "vega")
+
+    if ltp > 0 and spot > 0 and (delta == 0 or iv == 0):
+        sigma = (iv / 100) if iv > 0 else 0.15
+        bs = bs_greeks(spot, strike, T, r_rate, sigma, opt_type)
+        delta = delta or bs.get("delta", 0)
+        theta = theta or bs.get("theta", 0)
+        gamma = gamma or bs.get("gamma", 0)
+        vega  = vega  or bs.get("vega", 0)
+        if iv == 0:
+            iv = calc_iv_approx(ltp, spot, strike, T, r_rate, opt_type)
+
+    chg = ltp - prev
+    pct = (chg / prev * 100) if prev > 0 else 0
+    return {
+        "ltp": ltp, "prev": prev, "chg": chg, "pct": pct,
+        "iv": iv, "delta": delta, "theta": theta, "gamma": gamma, "vega": vega,
+        "oi": _i(md, "oi"), "oichg": _i(md, "oi_day_change"), "volume": _i(md, "volume"),
+    }
 
 
 # ─── INPUT PARSER ─────────────────────────────────────────────────────────────
@@ -529,6 +808,26 @@ def run_analysis(parsed: dict) -> str:
     else:
         target = stoploss = rr = 0
 
+    # ── NEW: direction context, expected move, depreciation, zero-to-hero ──
+    direction = compute_direction(chain, spot, dte)
+    straddle, one_sd, atm_strike = expected_move(chain, spot, dte)
+    decay = theta_decay_projection(ltp, theta, dte)
+    zth = zero_to_hero(ltp, delta, dte, strike, spot, opt_type, straddle, direction["score"])
+
+    decay_block = (f"🔻 *DEPRECIATION (if spot stays flat):*\n{decay}"
+                   if decay else "🔻 *DEPRECIATION:* n/a (check LTP/theta)")
+    if zth:
+        zth_block = (f"🚀 *ZERO-TO-HERO:* {zth['rating']}\n"
+                     f"  Spot must travel {zth['distance']:.0f} pts; market prices "
+                     f"~{straddle:.0f} pts (reach {zth['reach']:.1f}x), P(ITM) ≈ {zth['prob_itm']:.0f}%")
+    else:
+        zth_block = "🚀 *ZERO-TO-HERO:* Not OTM — not a lottery candidate"
+
+    aligned = (opt_type == "CE" and direction["score"] > 0) or \
+              (opt_type == "PE" and direction["score"] < 0)
+    align_txt = "✅ matches your side" if aligned else \
+                ("⚠️ AGAINST your side" if direction["score"] != 0 else "⚪ neutral")
+
     # ─────────────────────────────────────────────────────
     # FORMAT RESPONSE
     # ─────────────────────────────────────────────────────
@@ -582,6 +881,12 @@ Score: Bull {bull} vs Bear {bear}
 {verdict}
 Confidence : *{confidence}*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧭 *MARKET DIRECTION:* {direction['label']}
+  Your {opt_type} side → {align_txt}
+🌐 *EXPECTED MOVE:* ± {straddle:.0f} pts by expiry (~{one_sd:.0f}/day)
+{zth_block}
+{decay_block}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 *SUGGESTED TRADE PLAN*
   Entry    : ₹{ltp:.2f}
   Target   : ₹{target:.2f}
@@ -594,6 +899,361 @@ _Trade at your own risk._
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
 
     return msg
+
+
+def run_compare_analysis(parsed: dict) -> str:
+    """
+    CE vs PE side-by-side for a strike. Tells which side has the higher
+    probability of moving (direction engine), shows expected move, depreciation
+    for both, and a zero-to-hero verdict — so you know which side to BUY.
+    """
+    index   = parsed["index"]
+    strike  = parsed["strike"]
+    expiry  = parsed["expiry"]
+    index_key = INDEX_KEYS[index]
+    display   = INDEX_DISPLAY[index]
+
+    spot  = fetch_spot_price(index_key)
+    chain = fetch_option_chain(index_key, expiry)
+    if spot is None:
+        return "❌ Could not fetch live spot price.\nCheck: market open? token valid?"
+    if chain is None:
+        return "❌ Could not fetch option chain.\nCheck: expiry date valid? token valid?"
+
+    row = next((r for r in chain if int(r.get("strike_price", 0)) == strike), None)
+    if not row:
+        available = sorted({int(r["strike_price"]) for r in chain})
+        near = [s for s in available if abs(s - strike) <= 500][:6]
+        return (f"❌ Strike {strike} not found for expiry {expiry}.\n"
+                f"Nearby strikes: {', '.join(map(str, near)) or 'none'}")
+
+    try:
+        exp_date = datetime.strptime(expiry, "%Y-%m-%d").date()
+        dte = max((exp_date - date.today()).days, 0)
+        T = dte / 365.0
+    except Exception:
+        dte, T = 7, 7 / 365.0
+
+    direction = compute_direction(chain, spot, dte)
+    dscore    = direction["score"]
+    straddle, one_sd, atm_strike = expected_move(chain, spot, dte)
+
+    ce = side_metrics(row, "CE", spot, strike, T, dte)
+    pe = side_metrics(row, "PE", spot, strike, T, dte)
+
+    # ── Recommendation: the side aligned with market direction ──
+    adv = abs(dscore)
+    if adv >= 4:
+        conf = "HIGH"
+    elif adv >= 2:
+        conf = "MEDIUM-HIGH"
+    elif adv >= 1:
+        conf = "MEDIUM"
+    else:
+        conf = "LOW"
+
+    if dscore >= 1:
+        rec_side, rec = "CE", ce
+        rec_line = f"✅ *BUY {strike} CE*  (premium ₹{ce['ltp']:.2f}) — bias UP ↑"
+    elif dscore <= -1:
+        rec_side, rec = "PE", pe
+        rec_line = f"✅ *BUY {strike} PE*  (premium ₹{pe['ltp']:.2f}) — bias DOWN ↓"
+    else:
+        rec_side, rec = None, None
+        rec_line = ("⚪ *NO directional buy.* Bias is flat — buying either side "
+                    "mostly bleeds theta. Wait for a breakout.")
+
+    # ── Zero-to-hero check for both sides ──
+    z_ce = zero_to_hero(ce["ltp"], ce["delta"], dte, strike, spot, "CE", straddle, dscore)
+    z_pe = zero_to_hero(pe["ltp"], pe["delta"], dte, strike, spot, "PE", straddle, dscore)
+
+    def _z(z):
+        if not z:
+            return "  Not OTM here — not a zero-to-hero candidate"
+        return (f"  {z['rating']}\n"
+                f"    • Spot must travel {z['distance']:.0f} pts; "
+                f"market is pricing ~{straddle:.0f} pts move (reach {z['reach']:.1f}x)\n"
+                f"    • Rough chance of finishing ITM ≈ {z['prob_itm']:.0f}%")
+
+    # ── Depreciation projection for the recommended (or both) ──
+    if rec_side:
+        decay = theta_decay_projection(rec["ltp"], rec["theta"], dte)
+        decay_block = (f"🔻 *DEPRECIATION — {strike} {rec_side}* (if spot stays flat):\n{decay}"
+                       if decay else "🔻 Depreciation: n/a")
+    else:
+        decay_ce = theta_decay_projection(ce["ltp"], ce["theta"], dte)
+        decay_pe = theta_decay_projection(pe["ltp"], pe["theta"], dte)
+        decay_block = (f"🔻 *DEPRECIATION CE:*\n{decay_ce or '  n/a'}\n"
+                       f"🔻 *DEPRECIATION PE:*\n{decay_pe or '  n/a'}")
+
+    # ── Breakeven / required move for the recommended side ──
+    if rec_side == "CE":
+        be = strike + rec["ltp"]; need = be - spot
+    elif rec_side == "PE":
+        be = strike - rec["ltp"]; need = spot - be
+    else:
+        be = need = 0
+
+    diff = strike - spot
+    pos = "ATM" if abs(diff) <= spot * 0.004 else ("above spot" if diff > 0 else "below spot")
+    dir_reasons = "\n".join(f"  • {r}" for r in direction["reasons"]) or "  • No strong signals"
+    now = datetime.now().strftime("%d-%b-%Y %H:%M:%S")
+
+    be_block = ""
+    if rec_side:
+        cover = "✅ within" if (straddle >= abs(need) and need > 0) else "⚠️ beyond"
+        be_block = (f"  Breakeven : {be:.0f}  (spot must move {abs(need):.0f} pts)\n"
+                    f"  Expected move covers it? {cover} the ~{straddle:.0f} pt expected move\n")
+
+    msg = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚖️ *CE vs PE — WHICH SIDE TO BUY*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏷 *{display} {strike}*  (strike is {pos})
+📅 Expiry : {expiry}   ⏰ {now}
+  Spot : ₹{spot:,.2f}   ATM : {atm_strike}   DTE : {dte}d
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌐 *EXPECTED MOVE (priced in by market)*
+  ± {straddle:.0f} pts by expiry  |  ~{one_sd:.0f} pts/day (1σ)
+  _This is how much movement is realistic — not a guarantee._
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧭 *MARKET DIRECTION ENGINE*
+  {direction['label']}   (score {dscore:+.1f})
+{dir_reasons}
+  PCR {direction['pcr']:.2f} | Max-pain {direction['max_pain']} | Support {direction['support']} | Resistance {direction['resistance']}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 *SIDE-BY-SIDE @ {strike}*
+```
+              CE          PE
+LTP      ₹{ce['ltp']:>8.2f}   ₹{pe['ltp']:>8.2f}
+Today    {ce['pct']:>+7.1f}%   {pe['pct']:>+7.1f}%
+Delta    {ce['delta']:>8.3f}   {pe['delta']:>8.3f}
+IV       {ce['iv']:>7.1f}%   {pe['iv']:>7.1f}%
+Theta/d  ₹{abs(ce['theta']):>7.1f}   ₹{abs(pe['theta']):>7.1f}
+OI chg   {ce['oichg']:>8,}   {pe['oichg']:>8,}
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 *ZERO-TO-HERO CHECK*
+ CE:
+{_z(z_ce)}
+ PE:
+{_z(z_pe)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{decay_block}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 *RECOMMENDATION*  (confidence: {conf})
+{rec_line}
+{be_block}━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ _Probability-based, NOT a guaranteed move._
+_Educational only. Not financial advice._
+━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
+    return msg
+
+
+# ─── FORWARD-TEST (REAL-BOT BACKTEST LOGGER) ─────────────────────────────────
+# At 10:00 / 12:00 / 13:00 / 14:00 / 15:00 IST every trading day the bot logs
+# its REAL prediction (CE / PE) for Nifty & Sensex nearest strike, then at the
+# 15:30 close it auto-verifies: win = index moved in the predicted direction.
+BACKTEST_FILE   = Path(__file__).parent / "backtest_log.json"
+BACKTEST_INDICES = ["nifty", "sensex"]
+SIGNAL_TIMES     = ["10:00", "12:00", "13:00", "14:00", "15:00"]
+IST = None
+try:
+    import pytz
+    IST = pytz.timezone("Asia/Kolkata")
+except Exception as _e:  # pragma: no cover
+    logger.warning(f"pytz unavailable — backtest scheduler disabled: {_e}")
+
+
+def _load_log() -> list:
+    if BACKTEST_FILE.exists():
+        try:
+            return json.loads(BACKTEST_FILE.read_text())
+        except Exception:
+            return []
+    return []
+
+
+def _save_log(log: list):
+    BACKTEST_FILE.write_text(json.dumps(log, indent=2))
+
+
+def nearest_expiry(index_key: str) -> Optional[str]:
+    """Front (nearest) option expiry for an index."""
+    try:
+        r = requests.get(f"{UPSTOX_BASE}/option/contract", headers=headers(),
+                         params={"instrument_key": index_key}, timeout=10)
+        j = r.json()
+        if j.get("status") == "success":
+            exps = sorted({c.get("expiry") for c in j.get("data", []) if c.get("expiry")})
+            return exps[0] if exps else None
+    except Exception as e:
+        logger.error(f"nearest_expiry error: {e}")
+    return None
+
+
+def make_prediction(index: str) -> Optional[dict]:
+    """Run the REAL direction engine live and return its CE/PE/NEUTRAL call."""
+    index_key = INDEX_KEYS[index]
+    spot = fetch_spot_price(index_key)
+    expiry = nearest_expiry(index_key)
+    if spot is None or not expiry:
+        return None
+    chain = fetch_option_chain(index_key, expiry)
+    if not chain:
+        return None
+    try:
+        dte = max((datetime.strptime(expiry, "%Y-%m-%d").date() - date.today()).days, 0)
+    except Exception:
+        dte = 2
+    direction = compute_direction(chain, spot, dte)
+    atm = find_atm_strike(chain, spot)
+    strike = int(atm.get("strike_price", 0)) if atm else 0
+    score = direction["score"]
+    side = "CE" if score >= 1 else ("PE" if score <= -1 else "NEUTRAL")
+    return {"index": index, "expiry": expiry, "spot": spot,
+            "strike": strike, "side": side, "score": score}
+
+
+async def job_record_signal(context: ContextTypes.DEFAULT_TYPE):
+    """Scheduled at each SIGNAL_TIME — log the live prediction (result=pending)."""
+    if date.today().weekday() >= 5:   # skip Sat/Sun
+        return
+    slot = context.job.data
+    today = date.today().isoformat()
+    log = _load_log()
+    loop = asyncio.get_event_loop()
+    for index in BACKTEST_INDICES:
+        if any(r["date"] == today and r["slot"] == slot and r["index"] == index for r in log):
+            continue  # already logged this slot today (e.g. after a restart)
+        pred = await loop.run_in_executor(None, make_prediction, index)
+        if not pred:
+            continue
+        log.append({
+            "date": today, "slot": slot, "index": index,
+            "expiry": pred["expiry"], "strike": pred["strike"],
+            "side": pred["side"], "score": pred["score"],
+            "spot_at_signal": pred["spot"], "close_price": None,
+            "result": "pending",
+        })
+    _save_log(log)
+    logger.info(f"Backtest: recorded {slot} signals")
+
+
+async def job_resolve(context: ContextTypes.DEFAULT_TYPE):
+    """Scheduled at 15:35 IST — verify today's pending predictions vs the close."""
+    today = date.today().isoformat()
+    log = _load_log()
+    loop = asyncio.get_event_loop()
+    closes = {}
+    for index in BACKTEST_INDICES:
+        closes[index] = await loop.run_in_executor(None, fetch_spot_price, INDEX_KEYS[index])
+    changed = False
+    for r in log:
+        if r["date"] == today and r["result"] == "pending":
+            close = closes.get(r["index"])
+            if close is None:
+                continue
+            r["close_price"] = close
+            if r["side"] == "NEUTRAL":
+                r["result"] = "neutral"
+            else:
+                moved = close - r["spot_at_signal"]
+                if abs(moved) < 1e-6:
+                    r["result"] = "no-trade"   # flat / market holiday
+                elif (r["side"] == "CE" and moved > 0) or (r["side"] == "PE" and moved < 0):
+                    r["result"] = "win"
+                else:
+                    r["result"] = "loss"
+            changed = True
+    if changed:
+        _save_log(log)
+    logger.info("Backtest: resolved today's signals")
+
+
+def _winrate(records: list):
+    wins = sum(1 for r in records if r["result"] == "win")
+    losses = sum(1 for r in records if r["result"] == "loss")
+    total = wins + losses
+    pct = (wins / total * 100) if total else 0.0
+    return wins, losses, total, pct
+
+
+def build_backtest_report() -> str:
+    log = _load_log()
+    resolved = [r for r in log if r["result"] in ("win", "loss")]
+    pending  = [r for r in log if r["result"] == "pending"]
+    neutral  = [r for r in log if r["result"] == "neutral"]
+
+    if not resolved and not pending:
+        return ("📭 *No forward-test data yet.*\n\n"
+                "The bot logs predictions at 10:00, 12:00, 1:00, 2:00 & 3:00 PM "
+                "every trading day and verifies them at the 3:30 close.\n"
+                "Come back after the next market session.")
+
+    ce = [r for r in resolved if r["side"] == "CE"]
+    pe = [r for r in resolved if r["side"] == "PE"]
+    cw, cl, ct, cp = _winrate(ce)
+    pw, pl, pt, pp = _winrate(pe)
+    ow, ol, ot, op = _winrate(resolved)
+
+    dates = sorted({r["date"] for r in log})
+    span = f"{dates[0]} → {dates[-1]}" if dates else "—"
+
+    # per time-slot
+    slot_lines = []
+    for s in SIGNAL_TIMES:
+        sr = [r for r in resolved if r["slot"] == s]
+        w, l, t, p = _winrate(sr)
+        if t:
+            slot_lines.append(f"  {s} : {p:5.1f}%  ({w}/{t})")
+    slot_block = "\n".join(slot_lines) or "  (none resolved yet)"
+
+    # per index
+    idx_lines = []
+    for ix in BACKTEST_INDICES:
+        ir = [r for r in resolved if r["index"] == ix]
+        w, l, t, p = _winrate(ir)
+        if t:
+            idx_lines.append(f"  {INDEX_DISPLAY.get(ix, ix):<11}: {p:5.1f}%  ({w}/{t})")
+    idx_block = "\n".join(idx_lines) or "  (none resolved yet)"
+
+    return f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧪 *FORWARD-TEST WIN RATE*  (real bot)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Period   : {span}
+Resolved : {ot} trades | Pending : {len(pending)} | Neutral skipped : {len(neutral)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 *OVERALL : {op:.1f}%*   ({ow}W / {ol}L)
+
+📈 *CE side : {cp:.1f}%*   ({cw}W / {cl}L  of {ct})
+📉 *PE side : {pp:.1f}%*   ({pw}W / {pl}L  of {pt})
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ *By time of day:*
+{slot_block}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏷 *By index:*
+{idx_block}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+_Win = index moved in the predicted direction by 3:30 close._
+_NEUTRAL calls are excluded (no trade taken)._
+━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
+
+
+async def cmd_backtest(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.args and context.args[0].lower() == "now":
+        # Manual one-off: log a prediction immediately (for testing the pipeline).
+        loop = asyncio.get_event_loop()
+        lines = []
+        for index in BACKTEST_INDICES:
+            pred = await loop.run_in_executor(None, make_prediction, index)
+            if pred:
+                lines.append(f"  {INDEX_DISPLAY[index]} {pred['strike']} → "
+                             f"*{pred['side']}* (score {pred['score']:+.1f}, spot {pred['spot']:.0f})")
+        await update.message.reply_text(
+            "🧪 *Live prediction snapshot:*\n" + ("\n".join(lines) or "  no data"),
+            parse_mode="Markdown")
+        return
+    await update.message.reply_text(build_backtest_report(), parse_mode="Markdown")
 
 
 # ─── TELEGRAM HANDLERS ────────────────────────────────────────────────────────
@@ -684,24 +1344,31 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 🔑 *Token Status:* {token_status}
 
-📌 *How to use — just send:*
+📌 *Single side (CE or PE):*
 ```
 nifty 25000 ce 19/05/2026
 banknifty 52000 pe 22/05/2026
-sensex 80000 ce 29/05/2026
-finnifty 24000 pe 19/05/2026
 ```
 
+⚖️ *Compare CE vs PE (NEW) — just drop CE/PE:*
+```
+nifty 25000 19/05/2026
+```
+→ Tells you *which side is more likely to move* + which to BUY.
+
 *Commands:*
-  /token — Set/update Upstox access token
-  /help  — Full help & examples
+  /token    — Set/update Upstox access token
+  /backtest — Real-bot forward-test win rate
+  /help     — Full help & examples
 
 *I will analyze:*
   ✅ Live Premium & Spot Price
   ✅ Delta, Theta, IV, Gamma, Vega
-  ✅ OI Analysis & PCR Ratio
-  ✅ Strike: ITM / ATM / OTM
-  ✅ Final Verdict: *UP ↑ or DOWN ↓*
+  ✅ OI / PCR / Max-pain / Support-Resistance
+  ✅ 🧭 Direction engine (CE vs PE edge)
+  ✅ 🌐 Expected move (realistic, priced-in)
+  ✅ 🔻 Depreciation (day-by-day theta decay)
+  ✅ 🚀 Zero-to-hero probability check
 
 ⏰ Market Hours: 9:15 AM – 3:30 PM IST"""
     await update.message.reply_text(text, parse_mode="Markdown")
@@ -725,59 +1392,92 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 *Full Examples:*
 ```
-nifty 25000 ce 19/05/2026
-banknifty 52000 pe 22/05/2026
-sensex 80000 ce 29/05/2026
-finnifty 24500 ce 2026-05-19
+nifty 25000 ce 19/05/2026     (CE only)
+banknifty 52000 pe 22/05/2026 (PE only)
+nifty 25000 19/05/2026        (CE vs PE)
+finnifty 24500 2026-05-19     (CE vs PE)
 ```
 
-*What each signal means:*
-  PCR > 1.2  → Bullish reversal likely
-  PCR < 0.7  → Bearish reversal likely
-  IV < 15%   → Cheap to buy options
-  IV > 25%   → Expensive, IV crush risk
-  Delta > 0.5 → Strong premium movement
-  Low DTE    → High theta decay risk"""
+*What the NEW signals mean:*
+  🧭 Direction → which side (CE/PE) has the edge,
+      blending PCR + OI writing + premium momentum + max-pain
+  🌐 Expected move → pts the market is actually pricing in
+      (ATM straddle). If your strike is farther than this,
+      the move is *unlikely* — that's your reality check.
+  🔻 Depreciation → how fast premium melts if price stays flat
+  🚀 Zero-to-hero → is a cheap OTM realistically reachable?
+      Needs: direction agrees + expected move covers distance + DTE ≥ 2
+
+*Classic signals:*
+  PCR > 1.2 → bullish | PCR < 0.7 → bearish
+  IV < 15% → cheap | IV > 25% → IV-crush risk
+  Delta > 0.5 → strong move | Low DTE → heavy decay
+
+*Forward-test (prove the bot):*
+  `/backtest`     → CE / PE / overall win rate
+  `/backtest now` → log a live prediction right now
+  The bot auto-logs its real CE/PE call at 10:00, 12:00,
+  1:00, 2:00 & 3:00 PM for Nifty & Sensex, then checks at
+  the 3:30 close. A win = index moved the predicted way.
+
+⚠️ _No tool can promise a "sure" move. These are
+probabilities — they stack the odds, never guarantee them._"""
     await update.message.reply_text(text, parse_mode="Markdown")
+
+
+def _compare_keyboard(index, strike, expiry):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔄 Refresh", callback_data=f"compare|{index}|{strike}|X|{expiry}"),
+         InlineKeyboardButton("📈 CE only", callback_data=f"refresh|{index}|{strike}|CE|{expiry}"),
+         InlineKeyboardButton("📉 PE only", callback_data=f"refresh|{index}|{strike}|PE|{expiry}")]
+    ])
+
+
+def _single_keyboard(index, strike, opt_type, expiry):
+    flip_type = "PE" if opt_type == "CE" else "CE"
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔄 Refresh",
+            callback_data=f"refresh|{index}|{strike}|{opt_type}|{expiry}"),
+         InlineKeyboardButton(f"↔ {flip_type}",
+            callback_data=f"refresh|{index}|{strike}|{flip_type}|{expiry}"),
+         InlineKeyboardButton("⚖️ CE vs PE",
+            callback_data=f"compare|{index}|{strike}|X|{expiry}")]
+    ])
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text or ""
     parsed = parse_input(text)
-    errors = validate(parsed)
 
-    if errors:
-        err_text = "⚠️ *Invalid format:*\n" + "\n".join(f"  • {e}" for e in errors)
-        err_text += "\n\n*Example:*\n`nifty 25000 ce 19/05/2026`"
-        await update.message.reply_text(err_text, parse_mode="Markdown")
-        return
+    # Compare mode: index + strike + expiry present, but NO CE/PE specified.
+    compare_mode = (parsed["index"] and parsed["strike"] and parsed["expiry"]
+                    and not parsed["opt_type"])
 
-    # Send "analyzing..." message
+    if not compare_mode:
+        errors = validate(parsed)
+        if errors:
+            err_text = "⚠️ *Invalid format:*\n" + "\n".join(f"  • {e}" for e in errors)
+            err_text += ("\n\n*Single side:*\n`nifty 25000 ce 19/05/2026`"
+                         "\n*Compare CE vs PE (no ce/pe):*\n`nifty 25000 19/05/2026`")
+            await update.message.reply_text(err_text, parse_mode="Markdown")
+            return
+
+    label = f"{INDEX_DISPLAY.get(parsed['index'], parsed['index'])} {parsed['strike']}"
+    label += " CE vs PE" if compare_mode else f" {parsed['opt_type']}"
     wait_msg = await update.message.reply_text(
-        f"⏳ Analyzing *{INDEX_DISPLAY.get(parsed['index'], parsed['index'])} "
-        f"{parsed['strike']} {parsed['opt_type']}* | Expiry: {parsed['expiry']}\n\n"
+        f"⏳ Analyzing *{label}* | Expiry: {parsed['expiry']}\n\n"
         "_Fetching live data from Upstox..._",
         parse_mode="Markdown"
     )
 
-    # Run analysis in executor to avoid blocking
     loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(None, run_analysis, parsed)
-
-    # Build inline keyboard for quick refresh / flip CE<->PE
-    flip_type = "PE" if parsed["opt_type"] == "CE" else "CE"
-    flip_text = f"nifty {parsed['strike']} {flip_type} {parsed['expiry']}" \
-        .replace("nifty", parsed["index"])
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(
-            f"🔄 Refresh",
-            callback_data=f"refresh|{parsed['index']}|{parsed['strike']}|{parsed['opt_type']}|{parsed['expiry']}"
-        ),
-        InlineKeyboardButton(
-            f"↔ Switch to {flip_type}",
-            callback_data=f"refresh|{parsed['index']}|{parsed['strike']}|{flip_type}|{parsed['expiry']}"
-        )]
-    ])
+    if compare_mode:
+        result = await loop.run_in_executor(None, run_compare_analysis, parsed)
+        keyboard = _compare_keyboard(parsed["index"], parsed["strike"], parsed["expiry"])
+    else:
+        result = await loop.run_in_executor(None, run_analysis, parsed)
+        keyboard = _single_keyboard(parsed["index"], parsed["strike"],
+                                    parsed["opt_type"], parsed["expiry"])
 
     await wait_msg.delete()
     await update.message.reply_text(result, parse_mode="Markdown", reply_markup=keyboard)
@@ -788,47 +1488,66 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer("Refreshing...")
 
     parts = query.data.split("|")
-    if parts[0] == "refresh" and len(parts) == 5:
-        parsed = {
-            "index":    parts[1],
-            "strike":   int(parts[2]),
-            "opt_type": parts[3],
-            "expiry":   parts[4],
-        }
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, run_analysis, parsed)
+    if len(parts) != 5:
+        return
 
-        flip_type = "PE" if parsed["opt_type"] == "CE" else "CE"
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(
-                "🔄 Refresh",
-                callback_data=f"refresh|{parsed['index']}|{parsed['strike']}|{parsed['opt_type']}|{parsed['expiry']}"
-            ),
-            InlineKeyboardButton(
-                f"↔ Switch to {flip_type}",
-                callback_data=f"refresh|{parsed['index']}|{parsed['strike']}|{flip_type}|{parsed['expiry']}"
-            )]
-        ])
+    action, index, strike_s, opt_type, expiry = parts
+    strike = int(strike_s)
+    loop = asyncio.get_event_loop()
+
+    if action == "compare":
+        parsed = {"index": index, "strike": strike, "opt_type": None, "expiry": expiry}
+        result = await loop.run_in_executor(None, run_compare_analysis, parsed)
+        keyboard = _compare_keyboard(index, strike, expiry)
+        await query.edit_message_text(result, parse_mode="Markdown", reply_markup=keyboard)
+    elif action == "refresh":
+        parsed = {"index": index, "strike": strike, "opt_type": opt_type, "expiry": expiry}
+        result = await loop.run_in_executor(None, run_analysis, parsed)
+        keyboard = _single_keyboard(index, strike, opt_type, expiry)
         await query.edit_message_text(result, parse_mode="Markdown", reply_markup=keyboard)
 
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
+async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE):
+    """Log errors instead of letting them crash the polling loop."""
+    logger.error("Handler error", exc_info=context.error)
+
+
 def main():
     if not TELEGRAM_BOT_TOKEN:
         raise SystemExit("❌ TELEGRAM_BOT_TOKEN not set in .env")
 
-    # Start Health Check Server in background thread
+    # Start Health Check Server + self-ping keep-alive in background threads
     threading.Thread(target=run_health_server, daemon=True).start()
+    threading.Thread(target=run_keepalive, daemon=True).start()
 
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help",  cmd_help))
     app.add_handler(CommandHandler("token", cmd_token))
+    app.add_handler(CommandHandler("backtest", cmd_backtest))
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_error_handler(on_error)
+
+    # ── Forward-test scheduler (logs real predictions, verifies at close) ──
+    jq = app.job_queue
+    if jq is not None and IST is not None:
+        for t in SIGNAL_TIMES:
+            h, m = map(int, t.split(":"))
+            jq.run_daily(job_record_signal, time=dtime(h, m, tzinfo=IST),
+                         data=t, name=f"signal_{t}")
+        jq.run_daily(job_resolve, time=dtime(15, 35, tzinfo=IST), name="resolve_close")
+        logger.info(f"Forward-test scheduled at {SIGNAL_TIMES} IST + resolve 15:35 IST")
+    else:
+        logger.warning("JobQueue/pytz not available — forward-test disabled "
+                       "(install python-telegram-bot[job-queue]).")
 
     print("Option Analyzer Bot is LIVE! Press Ctrl+C to stop.")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    # drop_pending_updates: after a restart, ignore the backlog so the bot
+    # doesn't choke on stale messages. PTB auto-recovers from transient
+    # 409 Conflicts (overlapping deploy) once the old instance dies.
+    app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
 
 
 if __name__ == "__main__":

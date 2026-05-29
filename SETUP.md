@@ -89,7 +89,29 @@ To keep your bot running 24/7 in the cloud:
    - `UPSTOX_API_KEY`
    - `UPSTOX_API_SECRET`
    - `UPSTOX_ACCESS_TOKEN` (Initial token)
-5. **Deploy!** The bot will now run as a Background Worker.
+5. **Deploy!** The bot runs as a **Web Service** (Render free tier has no free
+   Background Workers).
+
+### ⚠️ Keeping it alive 24/7 (IMPORTANT)
+
+Render's **free Web Service spins DOWN after ~15 min with no inbound HTTP
+traffic**. A polling Telegram bot only talks *outbound* to Telegram, so without
+help Render kills it and the bot stops responding (you then restart it, it works
+a while, dies again).
+
+The bot now fixes this automatically with a **self-ping keep-alive**:
+- It pings its own public URL every 10 minutes to stay awake.
+- Render auto-provides `RENDER_EXTERNAL_URL`, so **no config is needed**.
+- Optional: set `SELF_PING_URL` to your service URL to override.
+
+Belt-and-suspenders (recommended): also add an external monitor (free) such as
+**UptimeRobot** or **cron-job.org** pinging `https://YOUR-SERVICE.onrender.com/`
+every 10 minutes.
+
+> **Note — ephemeral disk:** Render's free disk is wiped on every redeploy/restart,
+> so `upstox_token.json` and `backtest_log.json` do **not** survive a rebuild.
+> Re-send `/token` after a redeploy. For a persistent forward-test log, attach a
+> Render persistent disk or use external storage.
 
 ## Step 7: Use the Bot
 
@@ -118,3 +140,5 @@ Morning (before 9:15 AM):
 | "Could not fetch spot price" | Token expired, get new one |
 | "Strike not found" | Check expiry date is valid |
 | "Option chain failed" | Market may be closed |
+| **Bot stops responding after a while / after redeploy** | Render free tier spun it down. The built-in self-ping keep-alive prevents this; also add an UptimeRobot monitor on the service URL. After a redeploy, re-send `/token` (disk is wiped). |
+| **409 Conflict in logs** | Two pollers on the same token. Don't run the bot locally and on Render at the same time; on redeploy it self-recovers once the old instance dies. |
