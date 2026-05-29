@@ -16,9 +16,11 @@ from datetime import datetime, date, time as dtime
 from pathlib import Path
 from typing import Optional
 import requests
+import socket
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import Conflict
 
 # ─── HEALTH CHECK SERVER ─────────────────────────────────────────────────────
 class HealthCheckHandler(BaseHTTPRequestHandler):
@@ -62,6 +64,40 @@ def run_keepalive():
             logger.info("Keep-alive ping OK")
         except Exception as e:
             logger.warning(f"Keep-alive ping failed: {e}")
+
+
+# ─── SINGLE-INSTANCE LOCK ───────────────────────────────────────────────────
+_instance_lock_socket = None  # module-level ref keeps the lock alive for the run
+
+def acquire_single_instance_lock():
+    """
+    Prevent two copies of the bot from polling the same token on the SAME
+    machine — the #1 cause of '409 Conflict: terminated by other getUpdates'
+    during local dev. Binds a fixed loopback port as a mutex: the 2nd process
+    can't bind, so it exits cleanly instead of fighting the 1st over getUpdates.
+
+    Cross-machine collisions (e.g. local + Render) can't be detected here —
+    those surface as 409s, which PTB auto-retries and on_error reports clearly.
+    Override with SINGLE_INSTANCE_LOCK=0 if you intentionally run two bots.
+    """
+    global _instance_lock_socket
+    if os.getenv("SINGLE_INSTANCE_LOCK", "1") == "0":
+        logger.info("Single-instance lock disabled (SINGLE_INSTANCE_LOCK=0).")
+        return
+    port = int(os.getenv("LOCK_PORT", "49231"))
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", port))  # no SO_REUSEADDR: 2nd bind must fail
+    except OSError:
+        s.close()
+        raise SystemExit(
+            f"❌ Another bot instance is already running on this machine "
+            f"(loopback lock port {port} is taken).\n"
+            f"   → Stop the other 'python bot.py' first, or set "
+            f"SINGLE_INSTANCE_LOCK=0 to override."
+        )
+    _instance_lock_socket = s  # hold the socket so the lock lives for the run
+    logger.info(f"Single-instance lock acquired (loopback port {port}).")
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters, ContextTypes
@@ -1510,12 +1546,25 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
 async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE):
     """Log errors instead of letting them crash the polling loop."""
+    if isinstance(context.error, Conflict):
+        # Another poller holds this token (a stray 'python bot.py' or an
+        # overlapping Render deploy). Telegram allows only ONE getUpdates per
+        # token. PTB keeps retrying and recovers once the duplicate dies, so
+        # log a concise warning rather than a noisy stack trace.
+        logger.warning(
+            "⚠️ 409 Conflict — another instance is polling this bot token. "
+            "Stop the duplicate (local run or old deploy); PTB will recover."
+        )
+        return
     logger.error("Handler error", exc_info=context.error)
 
 
 def main():
     if not TELEGRAM_BOT_TOKEN:
         raise SystemExit("❌ TELEGRAM_BOT_TOKEN not set in .env")
+
+    # Fail fast if another copy is already polling on this machine
+    acquire_single_instance_lock()
 
     # Start Health Check Server + self-ping keep-alive in background threads
     threading.Thread(target=run_health_server, daemon=True).start()
