@@ -20,19 +20,20 @@ import java.util.*;
 public class VixAuditRunner {
 
     // ── Same gates as live bot ─────────────────────────────────────────────
-    private static final double MIN_CONFIDENCE = 85.0;
+    private static final long BNF_PRIME_COOLDOWN = 12L * 60 * 1000;
+    private static final long COOLDOWN_MS = 10L * 60 * 1000;
+    private static final double VIX_HIGH = 25.0;
+    private static final double VIX_LOW = 10.0;
+    private static final double MIN_CONFIDENCE = 80.0;
+    private static final int LOOKAHEAD = 24;
     private static final Map<String, Double> MIN_POINTS = Map.of(
-        "NIFTY50", 25.0, "SENSEX", 60.0, "BANKNIFTY", 70.0
+        "NIFTY50", 25.0,
+        "SENSEX", 60.0,
+        "BANKNIFTY", 70.0
     );
-    private static final long COOLDOWN_MS         = 10L * 60 * 1000;
-    private static final int  LOOKAHEAD           = 24;
-
-    // ── VIX thresholds ────────────────────────────────────────────────────
-    private static final double VIX_HIGH = 20.0;  // skip if above
-    private static final double VIX_LOW  = 10.0;  // skip if below
 
     // ── Per-run accumulator ───────────────────────────────────────────────
-    static class RunResult {
+    private static class RunResult {
         int    totalTrades, fullWins, partialWins, losses;
         double netPoints;
         int    skippedDays;

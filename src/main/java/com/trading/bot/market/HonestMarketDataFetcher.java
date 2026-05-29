@@ -44,7 +44,8 @@ public class HonestMarketDataFetcher {
     // CORRECT Symbol mappings (tested and verified)
     private static final Map<String, String> SYMBOL_MAPPING = new HashMap<>(Map.of(
         "NIFTY50", "NSE_INDEX|Nifty 50",
-        "SENSEX", "BSE_INDEX|SENSEX"
+        "SENSEX", "BSE_INDEX|SENSEX",
+        "BANKNIFTY", "NSE_INDEX|Nifty Bank"
     ));
     
     private HonestMarketDataFetcher() {

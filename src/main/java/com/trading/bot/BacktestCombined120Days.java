@@ -35,7 +35,8 @@ public class BacktestCombined120Days {
     private static final double  REG_MIN_CONFIDENCE = 85.0;
     private static final Map<String, Double> REG_MIN_POINTS = Map.of(
         "NIFTY50",   25.0,
-        "SENSEX",    60.0
+        "SENSEX",    60.0,
+        "BANKNIFTY", 70.0
     );
     private static final long REG_COOLDOWN_MS     = 10L * 60 * 1000;
     private static final int  LOOKAHEAD           = 24;
@@ -61,7 +62,10 @@ public class BacktestCombined120Days {
     private static final int LOSS = 0, PARTIAL_WIN = 1, FULL_WIN = 2;
 
     // ── Shared signal record ────────────────────────────────────────────────
+    private static final long BNF_PRIME_COOLDOWN = 12L * 60 * 1000;
+
     static class Rec {
+
         String date, time, symbol, direction, outcome, source; // source = "REGULAR" | "EXPIRY"
         double entry, tgtPts, slPts, tgtPx, slPx, pts, confidence;
         String reason;

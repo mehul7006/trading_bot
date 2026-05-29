@@ -24,6 +24,7 @@ public class BacktestLast30Days {
     private static final long BNF_PRIME_COOLDOWN_MS   = 12L * 60 * 1000;
     private static final int  LOOKAHEAD               = 24;
     private static final int  BACKTEST_DAYS           = 30;
+    private static final double MIN_CONFIDENCE        = 80.0;
     // Load enough days for 200-candle indicator warmup (14 days) + 30-day scan window + buffer
     private static final int  LOAD_DAYS              = 47;
 

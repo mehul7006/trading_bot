@@ -31,7 +31,7 @@ public class TwoWeekAudit {
         AIPredictor predictor = new AIPredictor();
         predictor.initialize();
 
-        String[] symbols = {"NIFTY50", "SENSEX"};
+        String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
         
         // Last 14 Days
         LocalDate end = LocalDate.now();

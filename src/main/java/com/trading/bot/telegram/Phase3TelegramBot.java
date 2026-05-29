@@ -96,6 +96,7 @@ public class Phase3TelegramBot {
     // Movement alert thresholds (%)
     private static final double NIFTY_MOVE_THRESHOLD   = 0.35; // 0.35% ~ 85 pts on Nifty
     private static final double SENSEX_MOVE_THRESHOLD  = 0.30; // 0.30% ~ 230 pts on Sensex
+    private static final double BANKNIFTY_MOVE_THRESHOLD = 0.40; // 0.40% ~ 200 pts on BankNifty
 
     // ADX trend state alerts — "STRONG", "CHOPPY", "NORMAL"
     private final Map<String, Long>   lastTrendAlertTime  = new ConcurrentHashMap<>();
@@ -680,7 +681,7 @@ public class Phase3TelegramBot {
         if (isScanning && scanFuture != null && !scanFuture.isCancelled() && !scanFuture.isDone()) {
             sendMessage(chatId,
                 "✅ *Scan Already Running*\n\n" +
-                "📡 Monitoring NIFTY50, SENSEX, BANKNIFTY.\n" +
+                "📡 Monitoring NIFTY50, SENSEX.\n" +
                 "🔔 You are now subscribed — signals will be sent to you.");
             return;
         }
@@ -756,7 +757,7 @@ public class Phase3TelegramBot {
         if (todayCallsGenerated.get() >= 10) return;
         
         try {
-            String[] symbols = {"NIFTY50", "SENSEX", "BANKNIFTY"};
+            String[] symbols = {"NIFTY50", "SENSEX"}; // BankNifty removed
             for (String symbol : symbols) {
                 if (!isScanning) break;
                 scanEquitySymbol(chatId, symbol);
@@ -1255,7 +1256,7 @@ public class Phase3TelegramBot {
                             && now.isBefore(java.time.LocalTime.of(15, 35));
         if (!isMarketOpen) return;
 
-        String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
+        String[] symbols = {"NIFTY50", "SENSEX"}; // BankNifty removed
         for (String sym : symbols) {
             try {
                 List<SimpleMarketData> data = marketDataFetcher.getRealMarketData5Min(sym);
@@ -1809,7 +1810,7 @@ public class Phase3TelegramBot {
               .format(DateTimeFormatter.ofPattern("dd-MMM-yyyy")))
           .append("\n\n");
 
-        String[] symbols = {"NIFTY50", "BANKNIFTY", "SENSEX"};
+        String[] symbols = {"NIFTY50", "SENSEX"}; // BankNifty removed
         for (String sym : symbols) {
             try {
                 List<SimpleMarketData> all = marketDataFetcher.getRealMarketData5Min(sym);
