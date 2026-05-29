@@ -152,10 +152,39 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <!-- Stop generating dependency-reduced-pom.xml (uber-jar only) -->
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <!-- Drop files that overlap across jars and just add noise / break shading -->
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <!-- App runs on the classpath (fat jar), so module descriptors are unused -->
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/versions/*/module-info.class</exclude>
+                                        <!-- Signed-jar signatures break once classes are merged -->
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <!-- Per-jar legal files that collide; harmless to drop from an uber-jar -->
+                                        <exclude>META-INF/LICENSE</exclude>
+                                        <exclude>META-INF/LICENSE.txt</exclude>
+                                        <exclude>META-INF/LICENSE.md</exclude>
+                                        <exclude>META-INF/NOTICE</exclude>
+                                        <exclude>META-INF/NOTICE.txt</exclude>
+                                        <exclude>META-INF/NOTICE.md</exclude>
+                                        <exclude>META-INF/NOTICE.markdown</exclude>
+                                        <exclude>META-INF/DEPENDENCIES</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>com.trading.bot.CloudLauncher</mainClass>
                                 </transformer>
+                                <!-- Merge META-INF/services files so ALL Jackson modules and Jersey
+                                     auto-discoverables stay registered (not just one arbitrary jar's copy) -->
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
                         </configuration>
                     </execution>
