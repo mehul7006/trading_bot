@@ -19,7 +19,22 @@ import java.util.HashMap;
  * No fake neural networks or random number generation.
  */
 public class AIPredictor {
-    
+
+    /** Toggle SENSEX V31 (high-WR trend-pullback). When true, predictSensexStrategy() delegates
+     *  to {@link SensexStrategyV31}. When false, falls through to V29 logic. Default ON. */
+    public static boolean USE_SENSEX_V31 = true;
+
+    /** Toggle BANKNIFTY V33.3 (mean-reversion at RSI/BB extremes). When true, BANKNIFTY symbol
+     *  routes to {@link BankNiftyMeanReversionV33} instead of predictDefaultStrategy.
+     *  120-day backtest: 113 calls, 77.9% WR, +2,192 pts. Default ON per user approval. */
+    public static boolean USE_BANKNIFTY_V33 = true;
+
+    /** Toggle NIFTY V31.2 (trend-pullback, mirror of SENSEX V31.1). When true,
+     *  predictNiftyStrategy() delegates to {@link NiftyStrategyV31}. When false, falls
+     *  through to V29 logic. 120-day backtest: 23 calls, 73.9% WR, +322 pts (vs V29 55.2%).
+     *  Default ON per user approval. */
+    public static boolean USE_NIFTY_V31 = true;
+
     private boolean isInitialized = false;
     private final OrderBlockDetector obDetector = new OrderBlockDetector();
     private final FairValueGapDetector fvgDetector = new FairValueGapDetector();
@@ -96,7 +111,12 @@ public class AIPredictor {
             double smcScore = calculateSMCScoreInternal(ob, fvg, liq);
             smcData.put("smcScore", smcScore);
             smcData.put("bias", smcScore > 15 ? "BULLISH" : (smcScore < -15 ? "BEARISH" : "NEUTRAL"));
+            // Store OB levels for directional suppression in applyInstitutionalBoosts
+            smcData.put("nearResistance", ob.nearestResistance != null ? ob.nearestResistance.lowPrice : 0.0);
+            smcData.put("nearSupport",    ob.nearestSupport    != null ? ob.nearestSupport.highPrice    : 0.0);
         }
+        // Store current price + ATR for OB suppression (no re-read needed in boost method)
+        smcData.put("currentPrice", data.get(data.size() - 1).price);
 
         SimpleMarketData latest = data.get(data.size() - 1);
         double currentPrice = latest.price;
@@ -118,12 +138,16 @@ public class AIPredictor {
             prediction = predictNiftyStrategy(symbol, data, currentPrice, ema50, rsi, adx, atr, latest, avgVol, optionData, smcData, greeksData);
         } else if ("SENSEX".equals(symbol)) {
             prediction = predictSensexStrategy(symbol, data, currentPrice, ema50, rsi, adx, atr, latest, avgVol, optionData, smcData, greeksData);
+        } else if ("BANKNIFTY".equals(symbol) && USE_BANKNIFTY_V33) {
+            // BANKNIFTY V33.3 mean-reversion (RSI extreme + BB touch + reversal candle).
+            // 120-day backtest: 113 calls, 77.9% WR, +2,192 pts. Set USE_BANKNIFTY_V33=false to revert.
+            prediction = BankNiftyMeanReversionV33.predict(symbol, data, currentPrice, rsi, atr, latest);
         } else {
             prediction = predictDefaultStrategy(symbol, data, currentPrice, ema50, rsi, adx, atr, latest, avgVol, optionData, smcData, greeksData);
         }
 
         // Apply enhanced technical filters (ORB, PDH/PDL, MACD, Volume, Engulfing, Structure, etc.)
-        double vwapForFilters = new AdvancedIndicatorsEngine().calculateVWAP(data);
+        double vwapForFilters = new AdvancedIndicatorsEngine().calculateSessionVWAP(data);
         EnhancedFilters ef = computeEnhancedFilters(data, currentPrice, symbol, optionData, vwapForFilters, atr);
         prediction = applyEnhancedFilters(prediction, ef, symbol, currentPrice, optionData);
 
@@ -149,9 +173,30 @@ public class AIPredictor {
         if (pred == null || pred.predictedDirection.equals("NEUTRAL")) return pred;
         if (smc == null) return pred;
 
-        double smcScore = (double) smc.getOrDefault("smcScore", 0.0);
+        double smcScore      = (double) smc.getOrDefault("smcScore", 0.0);
+        double nearResistance= (double) smc.getOrDefault("nearResistance", 0.0);
+        double nearSupport   = (double) smc.getOrDefault("nearSupport",    0.0);
+        double obPrice       = (double) smc.getOrDefault("currentPrice",   0.0);
         double confidence = pred.confidence;
         String reasoning = pred.predictionReasoning;
+
+        // ── OB directional suppression: suppress UP near bearish OB, DOWN near bullish OB
+        if (obPrice > 0) {
+            double atrProxy = obPrice * 0.005; // ~0.5% as ATR proxy if not available
+            if (pred.predictedDirection.equals("UP") && nearResistance > obPrice) {
+                double dist = nearResistance - obPrice;
+                if (dist < atrProxy * 3) { // within 3x atr of resistance OB
+                    confidence -= 12;
+                    reasoning += " | ⚠️OB Resistance@" + String.format("%.0f", nearResistance);
+                }
+            } else if (pred.predictedDirection.equals("DOWN") && nearSupport > 0 && nearSupport < obPrice) {
+                double dist = obPrice - nearSupport;
+                if (dist < atrProxy * 3) { // within 3x atr of support OB
+                    confidence -= 12;
+                    reasoning += " | ⚠️OB Support@" + String.format("%.0f", nearSupport);
+                }
+            }
+        }
 
         // Boost if SMC aligns with Technicals
         if (pred.predictedDirection.equals("UP") && smcScore > 15) {
@@ -209,6 +254,14 @@ public class AIPredictor {
     }
 
     private AIPrediction predictNiftyStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema50, double rsi, double adx, double atr, SimpleMarketData latest, double avgVol, OptionData optionData, Map<String, Object> smcData, Map<String, Double> greeksData) {
+        // ── V31.2 dispatch: trend-pullback w/ MTF alignment, calibrated confidence, R:R 1:1.5.
+        //    Toggle via AIPredictor.USE_NIFTY_V31. V29 logic below is preserved as rollback.
+        if (USE_NIFTY_V31) {
+            double ema20Nf  = calculateEMA(data, 20);
+            double ema200Nf = calculateEMA(data, 200);
+            return NiftyStrategyV31.predict(symbol, data, currentPrice,
+                    ema20Nf, ema50, ema200Nf, rsi, adx, atr, latest);
+        }
         AIPrediction trend = niftyTrendStrategy(symbol, data, currentPrice, ema50, rsi, adx, atr, latest, optionData);
         AIPrediction reversion = niftyMeanReversionStrategy(symbol, data, currentPrice, rsi, atr, latest, optionData);
         AIPrediction breakout = niftyBreakoutStrategy(symbol, data, currentPrice, adx, atr, latest, optionData);
@@ -248,7 +301,7 @@ public class AIPredictor {
         String finalDirection = "NEUTRAL";
         double finalConfidence = 0;
 
-        double vwap = new AdvancedIndicatorsEngine().calculateVWAP(data);
+        double vwap = new AdvancedIndicatorsEngine().calculateSessionVWAP(data);
         boolean aboveVWAP    = currentPrice > vwap;
         boolean belowVWAP    = currentPrice < vwap;
 
@@ -259,11 +312,7 @@ public class AIPredictor {
         boolean macdBull = macd[0] > macd[1];
         boolean macdBear = macd[0] < macd[1];
 
-        // ── 4-signal count: sub-strategy calls (trend + scalper + vwapBounce) + inline vwapProx
-        // niftyTrendStrategy:       EMA10/EMA20 crossover + ADX>15 + RSI>50/<50 — fires in moderate trends
-        // niftyOptionScalperStrategy: ADX>22 + RSI>55 UP / RSI<45 DOWN — relaxed for better coverage
-        // detectVWAPBounce:         VWAP bounce signal
-        // vwapProxDir:              4th signal — price hugging VWAP (same as bankNiftyVWAPStrategy)
+        // ── 5-signal count: (trend + scalper + vwapBounce) + vwapProx + Stochastic
         int bullishCount = 0;
         int bearishCount = 0;
         for (AIPrediction p : new AIPrediction[]{trend, scalper, vwapBounce}) {
@@ -275,6 +324,10 @@ public class AIPredictor {
         else if (currentPrice < vwap && currentPrice > vwap - atr * 0.5) vwapProxDirNf = "DOWN";
         if (vwapProxDirNf.equals("UP"))   bullishCount++;
         else if (vwapProxDirNf.equals("DOWN")) bearishCount++;
+        // 5th vote: real Stochastic
+        AdvancedIndicatorsEngine.StochasticResult stochNf = new AdvancedIndicatorsEngine().calculateStochastic(data, 14, 3);
+        if ("BULLISH".equals(stochNf.signal) || "OVERSOLD".equals(stochNf.signal))   bullishCount++;
+        else if ("BEARISH".equals(stochNf.signal) || "OVERBOUGHT".equals(stochNf.signal)) bearishCount++;
 
         // ── RSI 5-bars-ago momentum gate: RSI declining OR strong MACD needed for DOWN trades
         // Filters choppy/stalling entries where bearish momentum is ambiguous
@@ -282,11 +335,14 @@ public class AIPredictor {
         boolean rsiRisingNf  = rsi > rsi5agoNf + 0.5;
         boolean rsiFallingNf = rsi < rsi5agoNf - 0.5;
         double macdHistNf    = macd[0] - macd[1];
-        boolean macdBearStrongNf = macdHistNf < -atr * 0.015; // meaningful negative histogram
-        boolean macdBullStrongNf = macdHistNf >  atr * 0.015; // meaningful positive histogram
+        boolean macdBearStrongNf = macdHistNf < -atr * 0.015;
+        boolean macdBullStrongNf = macdHistNf >  atr * 0.015;
 
-        // ── Prime window: 11:00-12:15 (tightened from 12:29 — last 15 min has lower WR due to pre-lunch exits)
-        // ORB disabled; afternoon blocked due to historically low WR
+        // ── Early window: 9:45-10:45 (Tier 3 — strong momentum continuation after open)
+        boolean isEarlyWindow_NF = !ctNf.isBefore(java.time.LocalTime.of(9, 45))
+                                && !ctNf.isAfter(java.time.LocalTime.of(10, 45));
+
+        // ── Prime window: 11:00-12:15
         boolean isPrimeWindow_NF = !ctNf.isBefore(java.time.LocalTime.of(11, 0))
                                 && !ctNf.isAfter(java.time.LocalTime.of(12, 15));
 
@@ -316,7 +372,20 @@ public class AIPredictor {
             }
         }
 
-        // Raised gate from 85 → 88 to enforce higher-conviction signals only
+        // ── Tier 3: Early window 9:45-10:45 — strong momentum continuation (requires ≥3 votes + ADX≥25)
+        if (isEarlyWindow_NF && finalDirection.equals("NEUTRAL")) {
+            if (bullishCount >= 3 && adx > 25 && rsi > 50 && rsi < 70
+                    && aboveVWAP && ema200Up && macdBull && bias15min.equals("UP")) {
+                finalDirection = "UP";
+                finalConfidence = 88 + bullishCount + (rsiRisingNf ? 2 : 0);
+            } else if (bearishCount >= 3 && adx > 25 && rsi < 50 && rsi > 30
+                    && belowVWAP && ema200Down && macdBear && (rsiFallingNf || macdBearStrongNf)
+                    && bias15min.equals("DOWN")) {
+                finalDirection = "DOWN";
+                finalConfidence = 88 + bearishCount + (rsiFallingNf ? 2 : 0);
+            }
+        }
+
         if (finalConfidence < 88) {
             finalDirection = "NEUTRAL";
             finalConfidence = 0;
@@ -329,6 +398,14 @@ public class AIPredictor {
     }
 
     private AIPrediction predictSensexStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema50, double rsi, double adx, double atr, SimpleMarketData latest, double avgVol, OptionData optionData, Map<String, Object> smcData, Map<String, Double> greeksData) {
+        // ── V31 dispatch: high-WR trend-pullback with multi-TF alignment, calibrated confidence,
+        //    R:R 1:1.5. Toggle via AIPredictor.USE_SENSEX_V31. V29 logic below is preserved.
+        if (USE_SENSEX_V31) {
+            double ema20Sx  = calculateEMA(data, 20);
+            double ema200Sx = calculateEMA(data, 200);
+            return SensexStrategyV31.predict(symbol, data, currentPrice,
+                    ema20Sx, ema50, ema200Sx, rsi, adx, atr, latest);
+        }
         AIPrediction trend = sensexTrendStrategy(symbol, data, currentPrice, ema50, rsi, adx, atr, optionData);
         AIPrediction reversion = sensexMeanReversionStrategy(symbol, data, currentPrice, rsi, atr, optionData);
         AIPrediction breakout = sensexBreakoutStrategy(symbol, data, currentPrice, adx, atr, latest, optionData);
@@ -369,7 +446,7 @@ public class AIPredictor {
         String finalDirection = "NEUTRAL";
         double finalConfidence = 0;
 
-        double vwap = new AdvancedIndicatorsEngine().calculateVWAP(data);
+        double vwap = new AdvancedIndicatorsEngine().calculateSessionVWAP(data);
         boolean aboveVWAP    = currentPrice > vwap;
         boolean belowVWAP    = currentPrice < vwap;
 
@@ -381,11 +458,7 @@ public class AIPredictor {
         boolean macdBull = macd[0] > macd[1];
         boolean macdBear = macd[0] < macd[1];
 
-        // ── 4-signal count: sub-strategy calls (trend + scalper + vwapBounce) + inline vwapProx
-        // sensexTrendStrategy:         EMA10 + ADX>15 — fires in moderate trends
-        // sensexOptionScalperStrategy: ADX>22 + RSI>55 UP / RSI<45 DOWN
-        // detectVWAPBounce:            VWAP bounce signal
-        // vwapProxDir:                 4th signal — price hugging VWAP
+        // ── 5-signal count: (trend + scalper + vwapBounce) + vwapProx + Stochastic
         int bullishCount = 0;
         int bearishCount = 0;
         for (AIPrediction p : new AIPrediction[]{trend, scalper, vwapBounce}) {
@@ -397,6 +470,10 @@ public class AIPredictor {
         else if (currentPrice < vwap && currentPrice > vwap - atr * 0.5) vwapProxDirSx = "DOWN";
         if (vwapProxDirSx.equals("UP"))   bullishCount++;
         else if (vwapProxDirSx.equals("DOWN")) bearishCount++;
+        // 5th vote: real Stochastic
+        AdvancedIndicatorsEngine.StochasticResult stochSx = new AdvancedIndicatorsEngine().calculateStochastic(data, 14, 3);
+        if ("BULLISH".equals(stochSx.signal) || "OVERSOLD".equals(stochSx.signal))    bullishCount++;
+        else if ("BEARISH".equals(stochSx.signal) || "OVERBOUGHT".equals(stochSx.signal)) bearishCount++;
 
         // ── RSI 5-bars-ago + MACD histogram: momentum gates for DOWN trades
         double rsi5agoSx = data.size() > 22 ? calculateRSI(data.subList(0, data.size() - 5), 14) : rsi;
@@ -407,11 +484,14 @@ public class AIPredictor {
         boolean macdBullStrongSx = macdHistSx >  atr * 0.015;
 
         // ── VWAP commitment zones: for Sensex, require meaningful below-VWAP for DOWN
-        // (confirmed to help Sensex from 59% to 65% WR)
         boolean committedAboveVWAPSx = currentPrice > vwap + atr * 0.08;
         boolean committedBelowVWAPSx = currentPrice < vwap - atr * 0.08;
 
-        // ── Prime window tightened: 11:00-12:30 (was 13:00 — last 30 min is lunch-hour chop, lower WR)
+        // ── Early window: 9:45-10:45 (Tier 3 — strong momentum continuation)
+        boolean isEarlyWindow_SX = !ctSx.isBefore(java.time.LocalTime.of(9, 45))
+                                 && !ctSx.isAfter(java.time.LocalTime.of(10, 45));
+
+        // ── Prime window: 11:00-12:30
         boolean isPrimeWindow_SX = !ctSx.isBefore(java.time.LocalTime.of(11, 0))
                                  && !ctSx.isAfter(java.time.LocalTime.of(12, 30));
 
@@ -440,7 +520,20 @@ public class AIPredictor {
             }
         }
 
-        // Raised gate from 85 → 88 to enforce higher-conviction signals only
+        // ── Tier 3: Early window 9:45-10:45 — strong momentum continuation (requires ≥3 votes + ADX≥25)
+        if (isEarlyWindow_SX && finalDirection.equals("NEUTRAL")) {
+            if (bullishCount >= 3 && adx > 25 && rsi > 50 && rsi < 70
+                    && committedAboveVWAPSx && ema200Up && macdBull && bias15min.equals("UP")) {
+                finalDirection = "UP";
+                finalConfidence = 88 + bullishCount + (rsiRisingSx ? 2 : 0);
+            } else if (bearishCount >= 3 && adx > 25 && rsi < 50 && rsi > 30
+                    && committedBelowVWAPSx && ema200Down && macdBear && (rsiFallingSx || macdBearStrongSx)
+                    && bias15min.equals("DOWN")) {
+                finalDirection = "DOWN";
+                finalConfidence = 88 + bearishCount + (rsiFallingSx ? 2 : 0);
+            }
+        }
+
         if (finalConfidence < 88) {
             finalDirection = "NEUTRAL";
             finalConfidence = 0;
@@ -452,7 +545,7 @@ public class AIPredictor {
         return new AIPrediction(finalDirection, Math.min(99, finalConfidence), finalConfidence/100.0, adx, rsi, atr/currentPrice, 80, "SENSEX_V29", "Sensex V29.0: " + String.join(" | ", reasoningList), dynTS_sx[0], dynTS_sx[1], false);
     }
 
-    private AIPrediction predictNiftyStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema50, double rsi, double adx, double atr, SimpleMarketData latest, double avgVol, OptionData optionData, Map<String, Object> smcData, Map<String, Double> greeksData) {
+    private AIPrediction niftyTrendStrategy(String symbol, List<SimpleMarketData> data, double currentPrice, double ema50, double rsi, double adx, double atr, SimpleMarketData latest, OptionData optionData) {
         double ema10 = calculateEMA(data, 10);
         double ema20 = calculateEMA(data, 20);
         boolean isBullishTrend = currentPrice > ema20 && ema10 > ema20;
@@ -664,6 +757,10 @@ public class AIPredictor {
         boolean macdBearish;         // MACD line below signal line
         boolean maxPainBullish;      // price below max pain → gravitates UP
         boolean maxPainBearish;      // price above max pain → gravitates DOWN
+        boolean gapUp;               // significant gap-up at open (>0.5%)
+        boolean gapDown;             // significant gap-down at open (>0.5%)
+        boolean highVolatilityRegime;// ATR > 2.5x 20-period average — too choppy
+        boolean lowVolatilityRegime; // ATR < 0.4x 20-period average — no trend
     }
 
     private EnhancedFilters computeEnhancedFilters(List<SimpleMarketData> data, double currentPrice,
@@ -723,7 +820,52 @@ public class AIPredictor {
             f.maxPainBearish = currentPrice > optionData.maxPain * 1.002;
         }
 
+        // ── Opening gap detection (today's open vs yesterday's close)
+        double[] gap = detectOpeningGap(data);
+        f.gapUp   = gap[0] > 0.005;  // > 0.5% gap up
+        f.gapDown = gap[1] > 0.005;  // > 0.5% gap down
+
+        // ── ATR volatility regime: current ATR vs its 20-period average
+        double atrRatio = calculateATRRatio(data, atr);
+        f.highVolatilityRegime = atrRatio > 2.5;
+        f.lowVolatilityRegime  = atrRatio < 0.4;
+
         return f;
+    }
+
+    private double[] detectOpeningGap(List<SimpleMarketData> data) {
+        if (data == null || data.size() < 2) return new double[]{0, 0};
+        java.time.LocalDate today = data.get(data.size() - 1).timestamp != null
+            ? data.get(data.size() - 1).timestamp.toLocalDate() : null;
+        if (today == null) return new double[]{0, 0};
+        double prevClose = 0, todayOpen = 0;
+        for (int i = data.size() - 1; i >= 0; i--) {
+            SimpleMarketData d = data.get(i);
+            if (d.timestamp == null) continue;
+            java.time.LocalDate day = d.timestamp.toLocalDate();
+            if (day.isBefore(today) && prevClose == 0) prevClose = d.price;
+            if (day.equals(today) && d.timestamp.toLocalTime().equals(java.time.LocalTime.of(9, 15))) {
+                todayOpen = (d.open > 0) ? d.open : d.price;
+            }
+            if (prevClose > 0 && todayOpen > 0) break;
+        }
+        if (prevClose <= 0 || todayOpen <= 0) return new double[]{0, 0};
+        double gapPct = (todayOpen - prevClose) / prevClose;
+        return new double[]{Math.max(gapPct, 0), Math.max(-gapPct, 0)};
+    }
+
+    private double calculateATRRatio(List<SimpleMarketData> data, double currentATR) {
+        if (data.size() < 35) return 1.0;
+        int lookback = Math.min(20, data.size() / 2 - 1);
+        double sumATR = 0;
+        for (int i = 0; i < lookback; i++) {
+            int end = data.size() - 1 - i;
+            int start = Math.max(0, end - 14);
+            if (end - start < 2) continue;
+            sumATR += calculateATR(data.subList(start, end), Math.min(14, end - start - 1));
+        }
+        double avgATR = sumATR / lookback;
+        return avgATR > 0 ? currentATR / avgATR : 1.0;
     }
 
     /**
@@ -745,9 +887,25 @@ public class AIPredictor {
             return createDefaultAIPrediction("Near round number — institutional hesitation zone");
         }
 
+        // ── Hard skip: high volatility regime (whipsaw risk)
+        if (ef.highVolatilityRegime) {
+            return createDefaultAIPrediction("High ATR regime — skipping (whipsaw risk)");
+        }
+
+        // ── Hard skip: low volatility regime (no trend)
+        if (ef.lowVolatilityRegime) {
+            return createDefaultAIPrediction("Low ATR regime — no momentum available");
+        }
+
         boolean isUp = pred.predictedDirection.equals("UP");
         double boost = 0;
         List<String> reasons = new ArrayList<>();
+
+        // ── Gap alignment: boost signals aligning with overnight gap; penalize counter-gap
+        if (isUp  && ef.gapUp)   { boost += 3; reasons.add("GapUp↑"); }
+        if (!isUp && ef.gapDown) { boost += 3; reasons.add("GapDown↓"); }
+        if (isUp  && ef.gapDown) { boost -= 5; reasons.add("⚠️CounterGapDown"); }
+        if (!isUp && ef.gapUp)   { boost -= 5; reasons.add("⚠️CounterGapUp"); }
 
         // ── Volume surge: removes false breakouts
         if (ef.volumeSurge) { boost += 4; reasons.add("VolSurge✓"); }
@@ -1083,19 +1241,38 @@ public class AIPredictor {
     }
 
     /**
-     * 15-minute trend bias from 5-min data: resample to 15-min, apply EMA20 slope.
+     * 15-minute trend bias from 5-min data: resample to true 15-min buckets by timestamp,
+     * then apply EMA20 slope on bucket closes.
      * Returns "UP", "DOWN", or "NEUTRAL".
      */
     private String calculate15MinBias(List<SimpleMarketData> data) {
         if (data.size() < 30) return "NEUTRAL";
+
+        // Use last 90 5-min bars (7.5 hours) for the resample
         int startIdx = Math.max(0, data.size() - 90);
         List<SimpleMarketData> recent = data.subList(startIdx, data.size());
 
-        // Group every 3 consecutive 5-min bars into one 15-min bar (close = 3rd bar's close)
         List<Double> prices15m = new ArrayList<>();
-        for (int i = 0; i + 2 < recent.size(); i += 3) {
-            prices15m.add(recent.get(i + 2).price);
+
+        if (recent.get(0).timestamp != null) {
+            // ── Timestamp-based bucketing: group into 15-min slots anchored to 9:15 IST
+            // Bucket index = minutes since 9:15 / 15  →  one bucket per 15-min candle
+            java.util.TreeMap<Integer, Double> buckets = new java.util.TreeMap<>();
+            for (SimpleMarketData d : recent) {
+                java.time.LocalTime lt = d.timestamp.toLocalTime();
+                int minutesSinceOpen = (lt.getHour() - 9) * 60 + (lt.getMinute() - 15);
+                if (minutesSinceOpen < 0) continue; // before market open
+                int bucket = minutesSinceOpen / 15;
+                buckets.put(bucket, d.price); // last bar in bucket = close
+            }
+            prices15m.addAll(buckets.values());
+        } else {
+            // ── Fallback: count-based grouping when timestamps are absent
+            for (int i = 0; i + 2 < recent.size(); i += 3) {
+                prices15m.add(recent.get(i + 2).price);
+            }
         }
+
         if (prices15m.size() < 20) return "NEUTRAL";
 
         double emaNow  = calculateEMAFromValues(prices15m, 20);

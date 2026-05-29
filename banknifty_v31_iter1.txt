@@ -1,0 +1,65 @@
+????????????????????????????????????????????????????????????????????????????????
+?   BANKNIFTY V31 STANDALONE 120-DAY BACKTEST  —  NOT INTEGRATED INTO LIVE     ?
+????????????????????????????????????????????????????????????????????????????????
+? Fetching HONEST market data (5-Min Resampled) for: BANKNIFTY
+? Loaded 6000 candles from disk cache for BANKNIFTY
+? Updating live data for BANKNIFTY...
+? Historical API URL: https://api.upstox.com/v2/historical-candle/NSE_INDEX%7CNifty%20Bank/1minute/2026-05-29/2026-05-28
+? Fetched 0 historical candles for BANKNIFTY
+? Intraday: fetched 375 candles for BANKNIFTY
+? Cache updated & saved. Size: 6000 candles.
+Loaded 6000 candles for BANKNIFTY.
+
+Scanning 2026-01-30 ? 2026-05-29 (80 trading days)
+
+
+?????????????????? BANKNIFTY V31 RESULTS ??????????????????
+  Total Calls   : 35
+  Full Wins     : 14 (40.0% true WR)
+  Partial Wins  : 4
+  Losses        : 17
+  Win Rate (W+P): 51.4%
+  Net Points    : +382
+  Trading days with signals: 31  |  Avg calls/active day: 1.13
+
+  VERDICT: 51.4% WR — ? DO NOT INTEGRATE (below 65%)
+
+  Per-call detail:
+  Date         Time   Dir        Entry   +Tgt    -SL  Conf Result            P&L
+  ?????????????????????????????????????????????????????????????????????????????????????
+  2026-02-04   09:45  UP        60,287     90     60   93% LOSS              -60
+  2026-02-06   12:40  DOWN      59,800     60     40   92% LOSS              -40
+  2026-02-10   12:50  UP        60,776     60     40   94% LOSS              -40
+  2026-02-11   11:35  UP        60,701     60     40   92% LOSS              -40
+  2026-02-12   10:05  UP        60,809     60     40   95% PARTIAL WIN       +18
+  2026-02-13   11:25  DOWN      60,320     60     40   94% WIN               +60
+  2026-02-16   14:50  UP        60,893     60     40   93% WIN               +60
+  2026-02-17   11:25  UP        61,051     63     42   94% WIN               +63
+  2026-02-18   09:45  UP        61,244     70     46   93% LOSS              -46
+  2026-02-19   14:55  DOWN      60,858     60     40   93% LOSS              -40
+  2026-02-20   14:50  UP        61,276     60     40   93% LOSS              -40
+  2026-02-24   10:35  UP        61,287     60     40   95% LOSS              -40
+  2026-03-05   12:00  DOWN      58,748     71     47   92% PARTIAL WIN       +21
+  2026-03-06   10:35  DOWN      58,403     75     50   95% PARTIAL WIN       +22
+  2026-03-12   11:50  DOWN      55,094     82     55   94% LOSS              -55
+  2026-03-17   15:00  UP        54,842     98     65   93% WIN               +98
+  2026-03-19   14:40  DOWN      53,699     70     47   93% WIN               +70
+  2026-04-06   12:00  UP        51,662     89     59   94% WIN               +89
+  2026-04-15   14:50  UP        56,392     60     40   93% LOSS              -40
+  2026-04-17   10:25  UP        56,253     81     54   95% LOSS              -54
+  2026-04-17   12:30  UP        56,328     60     40   94% WIN               +60
+  2026-04-20   10:20  UP        56,882    128     85   93% WIN              +128
+  2026-04-23   12:35  DOWN      56,438     60     40   94% WIN               +60
+  2026-04-27   11:35  DOWN      55,954     76     51   92% LOSS              -51
+  2026-05-04   15:00  DOWN      54,800     67     45   93% LOSS              -45
+  2026-05-05   09:55  DOWN      54,664    103     69   95% WIN              +103
+  2026-05-05   10:35  DOWN      54,438     77     51   95% WIN               +77
+  2026-05-07   12:15  UP        55,993     60     40   92% WIN               +60
+  2026-05-07   12:25  UP        55,990     60     40   94% LOSS              -40
+  2026-05-12   15:00  DOWN      53,553     70     47   93% WIN               +70
+  2026-05-15   10:30  UP        54,251     82     55   95% LOSS              -55
+  2026-05-19   14:55  DOWN      53,453     63     42   93% WIN               +63
+  2026-05-22   12:55  UP        54,169     60     40   94% LOSS              -40
+  2026-05-29   10:40  UP        55,003     84     56   93% PARTIAL WIN       +25
+  2026-05-29   11:55  UP        55,101     60     40   94% LOSS              -40
+

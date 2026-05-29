@@ -1,0 +1,62 @@
+????????????????????????????????????????????????????????????????????????????????
+?   NIFTY V31 FAST 120-DAY BACKTEST  —  Trend-Pullback (test only)            ?
+????????????????????????????????????????????????????????????????????????????????
+? Fetching HONEST market data (5-Min Resampled) for: NIFTY50
+? Loaded 6000 candles from disk cache for NIFTY50
+? Updating live data for NIFTY50...
+? Historical API URL: https://api.upstox.com/v2/historical-candle/NSE_INDEX%7CNifty%2050/1minute/2026-05-29/2026-05-28
+? Fetched 0 historical candles for NIFTY50
+? Intraday: fetched 375 candles for NIFTY50
+? Cache updated & saved. Size: 6000 candles.
+Loaded 6000 candles for NIFTY50.
+
+Scanning 2026-01-30 ? 2026-05-29 (80 trading days)
+
+
+?????????????????? NIFTY V31 RESULTS ??????????????????
+
+  Total Calls       : 23
+  Full Wins         : 13 (56.5% true WR)
+  Partial Wins      : 4
+  Losses            : 6
+  Win Rate (W+P)    : 73.9%
+  Net Points        : +322
+  Avg Confidence    : 93.1
+
+  Direction breakdown:
+    UP   11 calls | WR 63.6% (full 54.5%)
+    DOWN 12 calls | WR 83.3% (full 58.3%)
+
+  Daily call distribution:
+    1: 15 | 2: 4 | 3: 0 | 4: 0 | 5+: 0
+    Trading days with signals: 19
+    Avg calls/active day: 1.21
+
+  VERDICT: 73.9% WR — ? HIT TARGET — ask user permission to integrate
+
+  Per-call detail:
+  Date         Time   Dir        Entry   +Tgt    -SL  Conf Result            P&L
+  ?????????????????????????????????????????????????????????????????????????????????????
+  2026-02-04   09:45  UP        25,786     44     29   94% LOSS              -29
+  2026-02-06   10:35  DOWN      25,522     30     20   95% WIN               +30
+  2026-02-06   10:45  DOWN      25,508     30     20   93% PARTIAL WIN        +9
+  2026-02-18   12:20  UP        25,720     30     20   92% WIN               +30
+  2026-02-24   12:10  DOWN      25,466     30     20   92% WIN               +30
+  2026-02-26   11:45  DOWN      25,483     30     20   94% WIN               +30
+  2026-03-06   10:40  DOWN      24,620     30     20   95% WIN               +30
+  2026-03-06   12:45  DOWN      24,596     30     20   92% PARTIAL WIN        +9
+  2026-03-12   13:00  DOWN      23,703     30     20   91% WIN               +30
+  2026-03-16   12:50  DOWN      23,124     30     20   92% LOSS              -20
+  2026-03-20   12:10  DOWN      23,233     30     20   92% WIN               +30
+  2026-04-06   12:00  UP        22,668     34     23   92% WIN               +34
+  2026-04-06   12:35  UP        22,668     33     22   94% WIN               +33
+  2026-04-07   10:45  UP        22,932     39     26   93% LOSS              -26
+  2026-04-17   11:35  UP        24,289     30     20   91% WIN               +30
+  2026-04-20   10:10  UP        24,380     41     28   94% WIN               +41
+  2026-04-20   10:20  UP        24,403     43     29   93% WIN               +43
+  2026-04-23   10:50  DOWN      24,211     30     20   95% WIN               +30
+  2026-05-05   10:35  DOWN      23,941     30     20   95% PARTIAL WIN        +9
+  2026-05-07   12:25  UP        24,355     30     20   92% LOSS              -20
+  2026-05-14   10:55  DOWN      23,430     31     21   95% LOSS              -21
+  2026-05-15   10:30  UP        23,815     30     20   93% PARTIAL WIN        +9
+  2026-05-22   12:50  UP        23,832     30     20   92% LOSS              -20
