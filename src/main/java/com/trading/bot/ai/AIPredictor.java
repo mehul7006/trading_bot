@@ -35,6 +35,18 @@ public class AIPredictor {
      *  Default ON per user approval. */
     public static boolean USE_NIFTY_V31 = true;
 
+    /** Toggle NIFTY mean-reversion FALLBACK ({@link NiftyMeanReversionV33}). When true and
+     *  V31 returns NEUTRAL, tries V33MR (RSI extreme + BB touch + reversal candle).
+     *  Multipath 80-day backtest: 175 MR calls @ 73.1% WR (NIFTY combined 191 @ 72.8%, 96% daily coverage).
+     *  Only effective when USE_NIFTY_V31 is also true. Default ON per user approval. */
+    public static boolean USE_NIFTY_MR = true;
+
+    /** Toggle SENSEX mean-reversion FALLBACK ({@link SensexMeanReversionV33}). When true and
+     *  V31 returns NEUTRAL, tries V33MR. Multipath 80-day backtest: 180 MR calls @ 74.4% WR
+     *  (SENSEX combined 203 @ 74.4%, 96% daily coverage).
+     *  Only effective when USE_SENSEX_V31 is also true. Default ON per user approval. */
+    public static boolean USE_SENSEX_MR = true;
+
     private boolean isInitialized = false;
     private final OrderBlockDetector obDetector = new OrderBlockDetector();
     private final FairValueGapDetector fvgDetector = new FairValueGapDetector();
@@ -259,8 +271,14 @@ public class AIPredictor {
         if (USE_NIFTY_V31) {
             double ema20Nf  = calculateEMA(data, 20);
             double ema200Nf = calculateEMA(data, 200);
-            return NiftyStrategyV31.predict(symbol, data, currentPrice,
+            AIPrediction v31Nf = NiftyStrategyV31.predict(symbol, data, currentPrice,
                     ema20Nf, ema50, ema200Nf, rsi, adx, atr, latest);
+            if (!"NEUTRAL".equals(v31Nf.predictedDirection)) return v31Nf;
+            // V33MR fallback: when V31 has no trend-pullback setup, try mean-reversion at RSI extremes
+            if (USE_NIFTY_MR) {
+                return NiftyMeanReversionV33.predict(symbol, data, currentPrice, rsi, atr, latest);
+            }
+            return v31Nf;
         }
         AIPrediction trend = niftyTrendStrategy(symbol, data, currentPrice, ema50, rsi, adx, atr, latest, optionData);
         AIPrediction reversion = niftyMeanReversionStrategy(symbol, data, currentPrice, rsi, atr, latest, optionData);
@@ -403,8 +421,14 @@ public class AIPredictor {
         if (USE_SENSEX_V31) {
             double ema20Sx  = calculateEMA(data, 20);
             double ema200Sx = calculateEMA(data, 200);
-            return SensexStrategyV31.predict(symbol, data, currentPrice,
+            AIPrediction v31Sx = SensexStrategyV31.predict(symbol, data, currentPrice,
                     ema20Sx, ema50, ema200Sx, rsi, adx, atr, latest);
+            if (!"NEUTRAL".equals(v31Sx.predictedDirection)) return v31Sx;
+            // V33MR fallback: when V31 has no trend-pullback setup, try mean-reversion at RSI extremes
+            if (USE_SENSEX_MR) {
+                return SensexMeanReversionV33.predict(symbol, data, currentPrice, rsi, atr, latest);
+            }
+            return v31Sx;
         }
         AIPrediction trend = sensexTrendStrategy(symbol, data, currentPrice, ema50, rsi, adx, atr, optionData);
         AIPrediction reversion = sensexMeanReversionStrategy(symbol, data, currentPrice, rsi, atr, optionData);
