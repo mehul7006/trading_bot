@@ -256,7 +256,8 @@ public class LiquidityAnalyzer {
                 
                 if (volatility < 0.01) { // Low volatility period
                     SimpleMarketData current = priceHistory.get(i);
-                    double liquidityStrength = 40 + (Math.random() * 30); // 40-70% for internal
+                    // Deterministic strength: lower volatility → stronger consolidation/liquidity (40-70 range)
+                    double liquidityStrength = 40 + Math.min(30.0, (0.01 - volatility) * 3000.0);
                     long estimatedVolume = estimateLiquidityVolume(current, liquidityStrength);
                     
                     String reasoning = String.format("Range liquidity at %.2f, volatility: %.3f",
@@ -324,8 +325,9 @@ public class LiquidityAnalyzer {
      * Estimate liquidity volume at a level
      */
     private long estimateLiquidityVolume(SimpleMarketData reference, double strength) {
-        // Estimate based on reference volume and strength
-        return (long) (reference.volume * (strength / 100.0) * (0.5 + Math.random() * 0.5));
+        // Deterministic: reference volume scaled by strength fraction × 0.75 (mid-range factor,
+        // matches the expected value of the previous 0.5 + Math.random() * 0.5 formula but is reproducible)
+        return (long) (reference.volume * (strength / 100.0) * 0.75);
     }
     
     /**

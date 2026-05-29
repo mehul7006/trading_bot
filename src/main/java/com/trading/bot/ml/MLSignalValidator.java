@@ -392,13 +392,55 @@ public class MLSignalValidator {
     }
     
     private double calculateVolatilityTrend(List<SimpleMarketData> data) {
-        // Simplified: compare recent vs older volatility
-        return 0.5; // Placeholder
+        // Recent 10-bar realised vol vs older 20-bar realised vol.
+        // 0.5 = flat, >0.5 = expanding, <0.5 = contracting.
+        if (data == null || data.size() < 30) return 0.5;
+        int n = data.size();
+        double recent = stdDevReturns(data, n - 10, 10);
+        double older  = stdDevReturns(data, n - 30, 20);
+        if (older <= 0) return 0.5;
+        double ratio = recent / older;
+        return Math.max(0.0, Math.min(1.0, 0.5 + (ratio - 1.0) * 0.5));
     }
-    
+
     private double calculateBollingerPosition(List<SimpleMarketData> data) {
-        // Simplified: assume middle of bands
-        return 0.5; // Placeholder
+        // Bollinger %B: 0.0 = at lower band, 0.5 = midline, 1.0 = at upper band
+        if (data == null || data.size() < 20) return 0.5;
+        int n = data.size();
+        double sum = 0;
+        for (int i = n - 20; i < n; i++) sum += data.get(i).price;
+        double sma = sum / 20.0;
+        double var = 0;
+        for (int i = n - 20; i < n; i++) {
+            double diff = data.get(i).price - sma;
+            var += diff * diff;
+        }
+        double sd = Math.sqrt(var / 20.0);
+        if (sd <= 0) return 0.5;
+        double upper = sma + 2.0 * sd;
+        double lower = sma - 2.0 * sd;
+        double price = data.get(n - 1).price;
+        double pctB = (price - lower) / (upper - lower);
+        return Math.max(0.0, Math.min(1.0, pctB));
+    }
+
+    private double stdDevReturns(List<SimpleMarketData> data, int startIdx, int len) {
+        if (startIdx < 1 || startIdx + len > data.size()) return 0.0;
+        double mean = 0;
+        for (int i = startIdx; i < startIdx + len; i++) {
+            double prev = data.get(i - 1).price;
+            if (prev <= 0) continue;
+            mean += (data.get(i).price - prev) / prev;
+        }
+        mean /= len;
+        double var = 0;
+        for (int i = startIdx; i < startIdx + len; i++) {
+            double prev = data.get(i - 1).price;
+            if (prev <= 0) continue;
+            double r = (data.get(i).price - prev) / prev;
+            var += (r - mean) * (r - mean);
+        }
+        return Math.sqrt(var / len);
     }
     
     private double calculateVolatilityBreakout(List<SimpleMarketData> data) {
@@ -431,7 +473,20 @@ public class MLSignalValidator {
     }
     
     private double calculateMomentumDivergence(List<SimpleMarketData> data) {
-        // Simplified: no divergence detected
+        // Bearish divergence: price made higher high but 5-bar momentum weaker than prior 5-bar momentum.
+        // Bullish divergence: price made lower low but momentum stronger.
+        // Returns +0.5 (bearish), -0.5 (bullish), or 0 (no divergence).
+        if (data == null || data.size() < 20) return 0.0;
+        int n = data.size();
+        double priceNow = data.get(n - 1).price;
+        double pricePrev = data.get(n - 11).price;
+        double priceChange = pricePrev > 0 ? (priceNow - pricePrev) / pricePrev : 0;
+        double momNow  = data.get(n - 6).price > 0
+                ? (data.get(n - 1).price - data.get(n - 6).price)  / data.get(n - 6).price : 0;
+        double momPrev = data.get(n - 16).price > 0
+                ? (data.get(n - 11).price - data.get(n - 16).price) / data.get(n - 16).price : 0;
+        if (priceChange >  0.005 && momNow < momPrev * 0.8) return  0.5;
+        if (priceChange < -0.005 && momNow > momPrev * 0.8) return -0.5;
         return 0.0;
     }
     
