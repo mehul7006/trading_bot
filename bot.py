@@ -12,6 +12,7 @@ import time
 import logging
 import asyncio
 import json
+import hashlib
 from datetime import datetime, date, time as dtime
 from pathlib import Path
 from typing import Optional
@@ -1563,12 +1564,16 @@ def main():
     if not TELEGRAM_BOT_TOKEN:
         raise SystemExit("❌ TELEGRAM_BOT_TOKEN not set in .env")
 
-    # Fail fast if another copy is already polling on this machine
-    acquire_single_instance_lock()
+    # Webhook when a public URL is available (Render auto-provides
+    # RENDER_EXTERNAL_URL); polling otherwise (local dev). Webhooks make the
+    # multi-instance 409 Conflict impossible: Telegram PUSHES updates to one
+    # URL instead of every instance fighting over getUpdates.
+    webhook_base = os.getenv("WEBHOOK_URL") or os.getenv("RENDER_EXTERNAL_URL")
+    use_webhook = bool(webhook_base)
 
-    # Start Health Check Server + self-ping keep-alive in background threads
-    threading.Thread(target=run_health_server, daemon=True).start()
-    threading.Thread(target=run_keepalive, daemon=True).start()
+    # The loopback lock only guards polling; webhook mode can't conflict.
+    if not use_webhook:
+        acquire_single_instance_lock()
 
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", cmd_start))
@@ -1592,11 +1597,39 @@ def main():
         logger.warning("JobQueue/pytz not available — forward-test disabled "
                        "(install python-telegram-bot[job-queue]).")
 
-    print("Option Analyzer Bot is LIVE! Press Ctrl+C to stop.")
-    # drop_pending_updates: after a restart, ignore the backlog so the bot
-    # doesn't choke on stale messages. PTB auto-recovers from transient
-    # 409 Conflicts (overlapping deploy) once the old instance dies.
-    app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
+    if use_webhook:
+        port = int(os.environ.get("PORT", 10000))
+        # Unguessable path derived from the token; secret header double-checks
+        # every incoming request actually came from Telegram.
+        url_path = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).hexdigest()[:32]
+        secret = os.getenv("WEBHOOK_SECRET") or url_path
+        webhook_url = f"{webhook_base.rstrip('/')}/{url_path}"
+        # Keep-alive still needed: Render's free tier idles after ~15 min with
+        # no inbound traffic, and Telegram only sends webhooks when there's a
+        # message. The self-ping keeps the service awake between messages.
+        threading.Thread(target=run_keepalive, daemon=True).start()
+        logger.info(f"Starting in WEBHOOK mode → {webhook_url}")
+        print("Option Analyzer Bot is LIVE (webhook mode)!")
+        # PTB's webhook server owns $PORT and registers the webhook with
+        # Telegram. drop_pending_updates skips the stale backlog on restart.
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            url_path=url_path,
+            secret_token=secret,
+            webhook_url=webhook_url,
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True,
+        )
+    else:
+        # Local dev: health server + self-ping + long-polling.
+        threading.Thread(target=run_health_server, daemon=True).start()
+        threading.Thread(target=run_keepalive, daemon=True).start()
+        logger.info("Starting in POLLING mode (local/dev).")
+        print("Option Analyzer Bot is LIVE (polling)! Press Ctrl+C to stop.")
+        # drop_pending_updates: ignore the backlog after a restart. PTB
+        # auto-recovers from transient 409 Conflicts once the duplicate dies.
+        app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
 
 
 if __name__ == "__main__":
