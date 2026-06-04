@@ -189,6 +189,43 @@ def fetch_spot_price(index_key: str) -> Optional[float]:
     return None
 
 
+def fetch_index_quote(index_key: str) -> dict:
+    """
+    Richer index quote: spot (ltp) PLUS the index's OWN intraday move.
+    The intraday trend of the underlying is the single best predictor of which
+    side (CE/PE) pays — the old engine ignored it and read only OI/premium,
+    which biased it toward PE. Returns {'ltp', 'prev_close', 'change_pct'}.
+    """
+    out = {"ltp": None, "prev_close": 0.0, "change_pct": 0.0,
+           "day_high": 0.0, "day_low": 0.0, "day_open": 0.0}
+    try:
+        r = requests.get(
+            f"{UPSTOX_BASE}/market-quote/quotes",
+            headers=headers(),
+            params={"instrument_key": index_key},
+            timeout=8,
+        )
+        data = r.json()
+        if data.get("status") == "success":
+            key = list(data["data"].keys())[0]
+            q = data["data"][key]
+            ltp = float(q.get("last_price", 0) or 0)
+            ohlc = q.get("ohlc") or {}
+            prev = float(ohlc.get("close", 0) or 0)
+            net = q.get("net_change", None)
+            net = float(net) if net not in (None, "") else (ltp - prev if prev > 0 else 0.0)
+            base = prev if prev > 0 else (ltp - net)
+            out["ltp"] = ltp
+            out["prev_close"] = base
+            out["change_pct"] = (net / base * 100) if base > 0 else 0.0
+            out["day_open"] = float(ohlc.get("open", 0) or 0)
+            out["day_high"] = float(ohlc.get("high", 0) or 0)
+            out["day_low"] = float(ohlc.get("low", 0) or 0)
+    except Exception as e:
+        logger.error(f"fetch_index_quote error: {e}")
+    return out
+
+
 def fetch_option_chain(index_key: str, expiry: str) -> Optional[list]:
     try:
         r = requests.get(
@@ -347,19 +384,34 @@ def oi_walls(chain: list):
     return sup_strike, res_strike
 
 
-def compute_direction(chain: list, spot: float, dte: int) -> dict:
+def compute_direction(chain: list, spot: float, dte: int, index_change_pct: float = 0.0,
+                      day_high: float = 0.0, day_low: float = 0.0) -> dict:
     """
     Intraday + expiry BLENDED market-direction engine.
       score > 0  => bullish (CE side favoured)
       score < 0  => bearish (PE side favoured)
-    Combines: total PCR, fresh OI writing (intraday), ATM premium momentum
-    (intraday), and max-pain pull (expiry).
+    Combines: the underlying's OWN intraday trend (primary anchor), total PCR,
+    fresh OI writing, ATM premium momentum, option VOLUME conviction, intraday
+    range position, and max-pain pull (expiry).
     """
     reasons = []
     score = 0.0
 
+    # 0. Underlying intraday trend — the most DIRECT directional read and the
+    #    primary anchor. Without it the engine inferred direction only from OI,
+    #    which tilts bearish on normal days (call-writing is always heavy).
+    if index_change_pct >= 0.50:
+        score += 2.5; reasons.append(f"Index {index_change_pct:+.2f}% today → strong up-trend (bullish)")
+    elif index_change_pct >= 0.15:
+        score += 1.0; reasons.append(f"Index {index_change_pct:+.2f}% today → mild up-drift (bullish)")
+    elif index_change_pct <= -0.50:
+        score -= 2.5; reasons.append(f"Index {index_change_pct:+.2f}% today → strong down-trend (bearish)")
+    elif index_change_pct <= -0.15:
+        score -= 1.0; reasons.append(f"Index {index_change_pct:+.2f}% today → mild down-drift (bearish)")
+
     tot_ce_oi = tot_pe_oi = 0
     tot_ce_oichg = tot_pe_oichg = 0
+    tot_ce_vol = tot_pe_vol = 0
     for r in chain:
         ce_md = r.get("call_options", {}).get("market_data", {})
         pe_md = r.get("put_options", {}).get("market_data", {})
@@ -367,26 +419,57 @@ def compute_direction(chain: list, spot: float, dte: int) -> dict:
         tot_pe_oi += _i(pe_md, "oi")
         tot_ce_oichg += _i(ce_md, "oi_day_change")
         tot_pe_oichg += _i(pe_md, "oi_day_change")
+        tot_ce_vol += _i(ce_md, "volume")
+        tot_pe_vol += _i(pe_md, "volume")
 
     pcr = (tot_pe_oi / tot_ce_oi) if tot_ce_oi > 0 else 0.0
 
-    # 1. Total PCR — overall sentiment (expiry weight)
-    if pcr > 1.3:
+    # 1. Total PCR — overall sentiment (symmetric bands around 1.0)
+    if pcr > 1.25:
         score += 2; reasons.append(f"PCR {pcr:.2f} → put-heavy, strong support (bullish)")
     elif pcr > 1.05:
         score += 1; reasons.append(f"PCR {pcr:.2f} → mildly bullish")
-    elif pcr < 0.7:
+    elif pcr < 0.80:
         score -= 2; reasons.append(f"PCR {pcr:.2f} → call-heavy, strong resistance (bearish)")
     elif pcr < 0.95:
         score -= 1; reasons.append(f"PCR {pcr:.2f} → mildly bearish")
 
-    # 2. Fresh OI writing TODAY — who is selling? (intraday weight)
-    if tot_ce_oichg > 0 and tot_ce_oichg > tot_pe_oichg * 1.2:
-        score -= 1.5
-        reasons.append(f"Fresh CALL writing (+{tot_ce_oichg:,}) → sellers expect ↓ (bearish)")
-    elif tot_pe_oichg > 0 and tot_pe_oichg > tot_ce_oichg * 1.2:
+    # 2. Fresh OI writing TODAY — who is selling? Requires CLEAR dominance
+    #    (>1.3x) so that routine call-writing no longer reads as bearish.
+    if tot_pe_oichg > 0 and tot_pe_oichg > tot_ce_oichg * 1.3:
         score += 1.5
-        reasons.append(f"Fresh PUT writing (+{tot_pe_oichg:,}) → sellers expect ↑ (bullish)")
+        reasons.append(f"Fresh PUT writing dominates (+{tot_pe_oichg:,}) → support building (bullish)")
+    elif tot_ce_oichg > 0 and tot_ce_oichg > tot_pe_oichg * 1.3:
+        score -= 1.5
+        reasons.append(f"Fresh CALL writing dominates (+{tot_ce_oichg:,}) → resistance building (bearish)")
+
+    # 2b. VOLUME conviction — volume is the fuel behind any move. Which side is
+    #     actually being TRADED today? Heavy CALL turnover confirms up-conviction,
+    #     heavy PUT turnover confirms down-conviction. (Confirmation, weight ±1.)
+    vol_total = tot_ce_vol + tot_pe_vol
+    if vol_total > 0:
+        vol_pcr = (tot_pe_vol / tot_ce_vol) if tot_ce_vol > 0 else 9.0
+        if tot_ce_vol > tot_pe_vol * 1.3:
+            score += 1
+            reasons.append(f"CALL volume dominates ({tot_ce_vol:,} vs {tot_pe_vol:,}) → "
+                           f"buy-side conviction (bullish)")
+        elif tot_pe_vol > tot_ce_vol * 1.3:
+            score -= 1
+            reasons.append(f"PUT volume dominates ({tot_pe_vol:,} vs {tot_ce_vol:,}) → "
+                           f"sell-side conviction (bearish)")
+        else:
+            reasons.append(f"Volume balanced (CE {tot_ce_vol:,} / PE {tot_pe_vol:,}, "
+                           f"vol-PCR {vol_pcr:.2f}) → no conviction edge")
+
+    # 2c. INTRADAY RANGE POSITION — where is price within today's high–low band?
+    #     Holding near the highs = buyers in control; pinned near lows = sellers.
+    if day_high > day_low > 0:
+        rng = day_high - day_low
+        pos = (spot - day_low) / rng if rng > 0 else 0.5
+        if pos >= 0.75:
+            score += 1; reasons.append(f"Spot in top {100 - pos * 100:.0f}% of day range → buyers in control (bullish)")
+        elif pos <= 0.25:
+            score -= 1; reasons.append(f"Spot in bottom {pos * 100:.0f}% of day range → sellers in control (bearish)")
 
     # 3. ATM premium momentum TODAY — which side are buyers bidding up? (intraday)
     atm = find_atm_strike(chain, spot)
@@ -404,6 +487,19 @@ def compute_direction(chain: list, spot: float, dte: int) -> dict:
             score -= 1.5
             reasons.append(f"ATM PE {pe_chg:+.0f}% vs CE {ce_chg:+.0f}% → buyers favour PUTs (bearish)")
 
+        # 3b. IV SKEW (fear gauge) — when PUTS are pricier than CALLS, traders are
+        #     paying up for downside protection = fear (bearish). Pricier CALLS =
+        #     upside chase (bullish). This is the option market's own emotion read.
+        ce_iv = _f(atm.get("call_options", {}).get("option_greeks", {}), "iv")
+        pe_iv = _f(atm.get("put_options", {}).get("option_greeks", {}), "iv")
+        if ce_iv > 0 and pe_iv > 0:
+            if pe_iv - ce_iv > 1.5:
+                score -= 1
+                reasons.append(f"IV skew: PUT IV {pe_iv:.1f}% > CALL {ce_iv:.1f}% → hedging/fear (bearish)")
+            elif ce_iv - pe_iv > 1.5:
+                score += 1
+                reasons.append(f"IV skew: CALL IV {ce_iv:.1f}% > PUT {pe_iv:.1f}% → upside chase (bullish)")
+
     # 4. Max-pain pull (expiry magnet)
     mp = max_pain(chain)
     if mp:
@@ -412,18 +508,29 @@ def compute_direction(chain: list, spot: float, dte: int) -> dict:
         elif mp < spot * 0.998:
             score -= 1; reasons.append(f"Max-pain {mp} < spot → expiry pull down (bearish)")
 
-    if score >= 3:
+    # 4b. OI-WALL PROXIMITY — biggest PUT-OI strike = support (buyers defend),
+    #     biggest CALL-OI strike = resistance (sellers defend). Sitting on support
+    #     favours a bounce (bullish); pinned under resistance caps upside (bearish).
+    sup, res = oi_walls(chain)
+    if sup and res and res > sup and res > spot > sup:
+        d_res, d_sup = res - spot, spot - sup
+        if d_sup > 0 and d_res > 0:
+            if d_sup < d_res * 0.5:
+                score += 1; reasons.append(f"Spot near PUT-OI support {sup} → bounce zone (bullish)")
+            elif d_res < d_sup * 0.5:
+                score -= 1; reasons.append(f"Spot near CALL-OI resistance {res} → capped (bearish)")
+
+    if score >= 3.5:
         label = "🟢 BULLISH — CE side favoured ↑"
     elif score >= 1:
         label = "🟢 MILD BULLISH — slight CE edge"
-    elif score <= -3:
+    elif score <= -3.5:
         label = "🔴 BEARISH — PE side favoured ↓"
     elif score <= -1:
         label = "🔴 MILD BEARISH — slight PE edge"
     else:
         label = "⚪ NEUTRAL — no clear edge, sideways/theta risk"
 
-    sup, res = oi_walls(chain)
     return {
         "score": score, "label": label, "reasons": reasons,
         "pcr": pcr, "max_pain": mp, "support": sup, "resistance": res,
@@ -519,6 +626,83 @@ def side_metrics(row: dict, opt_type: str, spot: float, strike: int,
     }
 
 
+def build_trade_plan(opt_type: str, ltp: float, delta: float, straddle: float,
+                     one_sd: float, dte: int, direction_score: float,
+                     spot: float, strike: int) -> dict:
+    """
+    Volatility-based, DIRECTION-GATED trade plan for an option BUYER.
+
+    The old plan was a fixed Target ×1.45 / SL ×0.62 that ignored direction —
+    so it kept hitting SL: a −38% stop is tripped by routine theta + noise while
+    +45% needs a big favourable move, AND it suggested buying even when the
+    engine's read was AGAINST your side. This version:
+      • refuses to suggest a buy when direction disagrees with the side, and
+      • sizes Target/SL from the option's OWN expected move (≈ index move × |Δ|),
+        keeping the target reachable inside the priced-in move and the stop tight.
+    """
+    if ltp <= 0:
+        return {"ok": False, "note": "No live premium (market closed / illiquid strike)."}
+
+    aligned = (opt_type == "CE" and direction_score > 0) or \
+              (opt_type == "PE" and direction_score < 0)
+    against = (opt_type == "CE" and direction_score <= -1) or \
+              (opt_type == "PE" and direction_score >= 1)
+
+    abs_d = max(abs(delta), 0.05)
+    # Premium move the market PRICES IN for ~1 session (one_sd index pts × |Δ|).
+    prem_1d = one_sd * abs_d
+
+    # Target: reachable inside a normal day's move; clamp 15%–60% of premium.
+    tgt_gain = min(max(prem_1d, ltp * 0.15), ltp * 0.60)
+    target = round(ltp + tgt_gain, 2)
+    # Stop: tighter than the target's risk (≈ half), clamp 10%–22% of premium —
+    # wide enough to survive noise, tight enough to cap the loss.
+    sl_risk = min(max(prem_1d * 0.5, ltp * 0.10), ltp * 0.22)
+    stoploss = round(max(ltp - sl_risk, 0.05), 2)
+
+    risk = ltp - stoploss
+    reward = target - ltp
+    rr = round(reward / risk, 1) if risk > 0 else 0.0
+    needs_pts = round(reward / abs_d) if abs_d > 0 else 0  # index pts to reach target
+    reachable = one_sd >= needs_pts if needs_pts > 0 else True
+
+    if against:
+        return {
+            "ok": False, "aligned": False,
+            "note": (f"⚠️ Market direction is AGAINST {opt_type} right now — a long "
+                     f"here has a high chance of hitting SL. Wait for alignment, or "
+                     f"consider the {'PE' if opt_type == 'CE' else 'CE'} side."),
+            "target": target, "stoploss": stoploss, "rr": rr, "needs_pts": needs_pts,
+        }
+
+    bias = ("✅ direction agrees" if aligned else "⚪ direction flat — momentum trade only")
+    reach_txt = ("✅ reachable in a normal day" if reachable
+                 else "⚠️ needs a bigger-than-usual move")
+    return {
+        "ok": True, "aligned": aligned, "bias": bias,
+        "target": target, "stoploss": stoploss, "rr": rr,
+        "needs_pts": needs_pts, "expected_pts": round(one_sd), "reachable": reach_txt,
+    }
+
+
+def render_trade_plan(plan: dict, ltp: float, opt_type: str = "") -> str:
+    """Format a build_trade_plan() dict into the message trade-plan block."""
+    if not plan.get("ok"):
+        body = f"  {plan.get('note', 'No trade suggested.')}"
+        if plan.get("target"):
+            body += (f"\n  _If you still take it →_ Entry ₹{ltp:.2f} | "
+                     f"Target ₹{plan['target']:.2f} | SL ₹{plan['stoploss']:.2f}")
+        return body
+    return (
+        f"  Entry    : ₹{ltp:.2f}\n"
+        f"  Target   : ₹{plan['target']:.2f}\n"
+        f"  Stoploss : ₹{plan['stoploss']:.2f}\n"
+        f"  R:R Ratio: 1:{plan['rr']}   ({plan['bias']})\n"
+        f"  Move req : ~{plan['needs_pts']} index pts to target "
+        f"(market prices ~{plan['expected_pts']}/day) → {plan['reachable']}"
+    )
+
+
 # ─── INPUT PARSER ─────────────────────────────────────────────────────────────
 def parse_input(text: str) -> dict:
     t = text.lower().strip()
@@ -573,7 +757,9 @@ def run_analysis(parsed: dict) -> str:
     display = INDEX_DISPLAY[index]
 
     # ── Fetch live data ──
-    spot = fetch_spot_price(index_key)
+    quote = fetch_index_quote(index_key)
+    spot = quote["ltp"]
+    index_change_pct = quote["change_pct"]
     chain = fetch_option_chain(index_key, expiry)
 
     if spot is None:
@@ -835,19 +1021,15 @@ def run_analysis(parsed: dict) -> str:
         confidence  = "LOW"
         verdict_short = "NEUTRAL ↔"
 
-    # Trade plan
-    if ltp > 0:
-        target    = round(ltp * 1.45, 2)
-        stoploss  = round(ltp * 0.62, 2)
-        risk      = ltp - stoploss
-        reward    = target - ltp
-        rr        = round(reward / risk, 1) if risk > 0 else 0
-    else:
-        target = stoploss = rr = 0
-
     # ── NEW: direction context, expected move, depreciation, zero-to-hero ──
-    direction = compute_direction(chain, spot, dte)
+    direction = compute_direction(chain, spot, dte, index_change_pct,
+                                  quote["day_high"], quote["day_low"])
     straddle, one_sd, atm_strike = expected_move(chain, spot, dte)
+
+    # Volatility-based, direction-gated trade plan (replaces fixed ×1.45/×0.62)
+    plan = build_trade_plan(opt_type, ltp, delta, straddle, one_sd, dte,
+                            direction["score"], spot, strike)
+    trade_plan_block = render_trade_plan(plan, ltp, opt_type)
     decay = theta_decay_projection(ltp, theta, dte)
     zth = zero_to_hero(ltp, delta, dte, strike, spot, opt_type, straddle, direction["score"])
 
@@ -925,16 +1107,17 @@ Confidence : *{confidence}*
 {decay_block}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 *SUGGESTED TRADE PLAN*
-  Entry    : ₹{ltp:.2f}
-  Target   : ₹{target:.2f}
-  Stoploss : ₹{stoploss:.2f}
-  R:R Ratio: 1:{rr}
+{trade_plan_block}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚠️ _Educational use only._
 _Not financial advice._
 _Trade at your own risk._
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
 
+    try:
+        log_query_prediction(index, strike, direction["score"], spot)
+    except Exception as e:
+        logger.warning(f"query log failed: {e}")
     return msg
 
 
@@ -950,7 +1133,9 @@ def run_compare_analysis(parsed: dict) -> str:
     index_key = INDEX_KEYS[index]
     display   = INDEX_DISPLAY[index]
 
-    spot  = fetch_spot_price(index_key)
+    quote = fetch_index_quote(index_key)
+    spot  = quote["ltp"]
+    index_change_pct = quote["change_pct"]
     chain = fetch_option_chain(index_key, expiry)
     if spot is None:
         return "❌ Could not fetch live spot price.\nCheck: market open? token valid?"
@@ -971,7 +1156,8 @@ def run_compare_analysis(parsed: dict) -> str:
     except Exception:
         dte, T = 7, 7 / 365.0
 
-    direction = compute_direction(chain, spot, dte)
+    direction = compute_direction(chain, spot, dte, index_change_pct,
+                                  quote["day_high"], quote["day_low"])
     dscore    = direction["score"]
     straddle, one_sd, atm_strike = expected_move(chain, spot, dte)
 
@@ -1042,6 +1228,18 @@ def run_compare_analysis(parsed: dict) -> str:
         be_block = (f"  Breakeven : {be:.0f}  (spot must move {abs(need):.0f} pts)\n"
                     f"  Expected move covers it? {cover} the ~{straddle:.0f} pt expected move\n")
 
+    # Trade plan for the recommended side (volatility-based, direction-gated)
+    if rec_side:
+        _plan = build_trade_plan(rec_side, rec["ltp"], rec["delta"], straddle, one_sd,
+                                 dte, dscore, spot, strike)
+        plan_block = (f"💡 *TRADE PLAN — {strike} {rec_side}*\n"
+                      f"{render_trade_plan(_plan, rec['ltp'], rec_side)}\n"
+                      f"━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+    else:
+        plan_block = ("💡 *TRADE PLAN*\n  No directional buy — bias is flat. "
+                      "Buying either side mostly bleeds theta; wait for a breakout.\n"
+                      "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+
     msg = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚖️ *CE vs PE — WHICH SIDE TO BUY*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1080,9 +1278,14 @@ OI chg   {ce['oichg']:>8,}   {pe['oichg']:>8,}
 🎯 *RECOMMENDATION*  (confidence: {conf})
 {rec_line}
 {be_block}━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️ _Probability-based, NOT a guaranteed move._
+{plan_block}⚠️ _Probability-based, NOT a guaranteed move._
 _Educational only. Not financial advice._
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
+
+    try:
+        log_query_prediction(index, strike, dscore, spot)
+    except Exception as e:
+        logger.warning(f"query log failed: {e}")
     return msg
 
 
@@ -1110,8 +1313,51 @@ def _load_log() -> list:
     return []
 
 
+_log_lock = threading.Lock()
+
+
 def _save_log(log: list):
     BACKTEST_FILE.write_text(json.dumps(log, indent=2))
+
+
+def _now_ist() -> datetime:
+    return datetime.now(IST) if IST is not None else datetime.now()
+
+
+def _market_open_now() -> bool:
+    """True only Mon–Fri 09:15–15:30 IST (NSE/BSE session)."""
+    now = _now_ist()
+    if now.weekday() >= 5:
+        return False
+    return dtime(9, 15) <= now.time() <= dtime(15, 30)
+
+
+def log_query_prediction(index: str, strike: int, score: float, spot: Optional[float]):
+    """
+    Record a user-requested analysis as a forward-test entry so on-demand calls
+    also count toward the win rate. Logged ONLY during market hours and deduped
+    to one entry per (date, hour, index) to avoid flooding the log on repeats.
+    Resolved at the 15:35 close by the same job as the scheduled signals.
+    """
+    if spot is None or index not in BACKTEST_INDICES or not _market_open_now():
+        return
+    side = "CE" if score >= 1 else ("PE" if score <= -1 else "NEUTRAL")
+    today = date.today().isoformat()
+    slot = _now_ist().strftime("%H:00")
+    with _log_lock:
+        log = _load_log()
+        if any(r.get("date") == today and r.get("slot") == slot
+               and r.get("index") == index and r.get("source") == "query"
+               for r in log):
+            return
+        log.append({
+            "date": today, "slot": slot, "index": index,
+            "expiry": None, "strike": strike, "side": side, "score": score,
+            "spot_at_signal": spot, "close_price": None,
+            "result": "pending", "source": "query",
+        })
+        _save_log(log)
+    logger.info(f"Backtest: logged on-demand query {index} {side} @ {slot}")
 
 
 def nearest_expiry(index_key: str) -> Optional[str]:
@@ -1131,7 +1377,8 @@ def nearest_expiry(index_key: str) -> Optional[str]:
 def make_prediction(index: str) -> Optional[dict]:
     """Run the REAL direction engine live and return its CE/PE/NEUTRAL call."""
     index_key = INDEX_KEYS[index]
-    spot = fetch_spot_price(index_key)
+    quote = fetch_index_quote(index_key)
+    spot = quote["ltp"]
     expiry = nearest_expiry(index_key)
     if spot is None or not expiry:
         return None
@@ -1142,7 +1389,8 @@ def make_prediction(index: str) -> Optional[dict]:
         dte = max((datetime.strptime(expiry, "%Y-%m-%d").date() - date.today()).days, 0)
     except Exception:
         dte = 2
-    direction = compute_direction(chain, spot, dte)
+    direction = compute_direction(chain, spot, dte, quote["change_pct"],
+                                  quote["day_high"], quote["day_low"])
     atm = find_atm_strike(chain, spot)
     strike = int(atm.get("strike_price", 0)) if atm else 0
     score = direction["score"]
@@ -1157,53 +1405,61 @@ async def job_record_signal(context: ContextTypes.DEFAULT_TYPE):
         return
     slot = context.job.data
     today = date.today().isoformat()
-    log = _load_log()
     loop = asyncio.get_event_loop()
+    # Gather predictions OUTSIDE the lock (network I/O), then commit atomically.
+    new_entries = []
     for index in BACKTEST_INDICES:
-        if any(r["date"] == today and r["slot"] == slot and r["index"] == index for r in log):
-            continue  # already logged this slot today (e.g. after a restart)
         pred = await loop.run_in_executor(None, make_prediction, index)
         if not pred:
             continue
-        log.append({
+        new_entries.append({
             "date": today, "slot": slot, "index": index,
             "expiry": pred["expiry"], "strike": pred["strike"],
             "side": pred["side"], "score": pred["score"],
             "spot_at_signal": pred["spot"], "close_price": None,
-            "result": "pending",
+            "result": "pending", "source": "scheduled",
         })
-    _save_log(log)
+    with _log_lock:
+        log = _load_log()
+        for e in new_entries:
+            if any(r.get("date") == e["date"] and r.get("slot") == e["slot"]
+                   and r.get("index") == e["index"] and r.get("source") == "scheduled"
+                   for r in log):
+                continue  # already logged this slot today (e.g. after a restart)
+            log.append(e)
+        _save_log(log)
     logger.info(f"Backtest: recorded {slot} signals")
 
 
 async def job_resolve(context: ContextTypes.DEFAULT_TYPE):
     """Scheduled at 15:35 IST — verify today's pending predictions vs the close."""
     today = date.today().isoformat()
-    log = _load_log()
     loop = asyncio.get_event_loop()
     closes = {}
     for index in BACKTEST_INDICES:
         closes[index] = await loop.run_in_executor(None, fetch_spot_price, INDEX_KEYS[index])
-    changed = False
-    for r in log:
-        if r["date"] == today and r["result"] == "pending":
-            close = closes.get(r["index"])
-            if close is None:
-                continue
-            r["close_price"] = close
-            if r["side"] == "NEUTRAL":
-                r["result"] = "neutral"
-            else:
-                moved = close - r["spot_at_signal"]
-                if abs(moved) < 1e-6:
-                    r["result"] = "no-trade"   # flat / market holiday
-                elif (r["side"] == "CE" and moved > 0) or (r["side"] == "PE" and moved < 0):
-                    r["result"] = "win"
+    with _log_lock:
+        log = _load_log()
+        changed = False
+        for r in log:
+            if r["date"] == today and r["result"] == "pending":
+                close = closes.get(r["index"])
+                if close is None:
+                    continue
+                r["close_price"] = close
+                if r["side"] == "NEUTRAL":
+                    r["result"] = "neutral"
                 else:
-                    r["result"] = "loss"
-            changed = True
-    if changed:
-        _save_log(log)
+                    moved = close - r["spot_at_signal"]
+                    if abs(moved) < 1e-6:
+                        r["result"] = "no-trade"   # flat / market holiday
+                    elif (r["side"] == "CE" and moved > 0) or (r["side"] == "PE" and moved < 0):
+                        r["result"] = "win"
+                    else:
+                        r["result"] = "loss"
+                changed = True
+        if changed:
+            _save_log(log)
     logger.info("Backtest: resolved today's signals")
 
 
@@ -1291,6 +1547,82 @@ async def cmd_backtest(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown")
         return
     await update.message.reply_text(build_backtest_report(), parse_mode="Markdown")
+
+
+def build_stats_report() -> str:
+    """
+    Consolidated win-rate dashboard over EVERYTHING in one place: scheduled
+    hourly checks + on-demand queries. Daily breakdown, by-hour, CE vs PE, and
+    a scheduled-vs-query split — the numbers you'd show a buyer.
+    """
+    log = _load_log()
+    resolved = [r for r in log if r["result"] in ("win", "loss")]
+    pending = [r for r in log if r["result"] == "pending"]
+    if not resolved and not pending:
+        return ("📭 *No data yet.* The bot logs its CE/PE call at 10/12/1/2/3 PM "
+                "and on every analysis you run, then scores them at the 3:30 close. "
+                "Check back after the next session.")
+
+    ow, ol, ot, op = _winrate(resolved)
+    ce = [r for r in resolved if r["side"] == "CE"]
+    pe = [r for r in resolved if r["side"] == "PE"]
+    cw, cl, ct, cp = _winrate(ce)
+    pw, pl, pt, pp = _winrate(pe)
+
+    # by day (most recent 10)
+    day_lines = []
+    for d in sorted({r["date"] for r in resolved})[-10:]:
+        dr = [r for r in resolved if r["date"] == d]
+        w, l, t, p = _winrate(dr)
+        if t:
+            day_lines.append(f"  {d} : {p:5.1f}%  ({w}/{t})")
+    day_block = "\n".join(day_lines) or "  (none resolved yet)"
+
+    # by hour (all distinct slots, sorted)
+    hour_lines = []
+    for s in sorted({r.get("slot", "?") for r in resolved}):
+        sr = [r for r in resolved if r.get("slot") == s]
+        w, l, t, p = _winrate(sr)
+        if t:
+            hour_lines.append(f"  {s} : {p:5.1f}%  ({w}/{t})")
+    hour_block = "\n".join(hour_lines) or "  (none resolved yet)"
+
+    # source split
+    sched = [r for r in resolved if r.get("source", "scheduled") == "scheduled"]
+    query = [r for r in resolved if r.get("source") == "query"]
+    sw, sl_, st_, sp = _winrate(sched)
+    qw, ql, qt, qp = _winrate(query)
+    src_block = (f"  Scheduled : {sp:5.1f}%  ({sw}/{st_})\n"
+                 f"  My queries: {qp:5.1f}%  ({qw}/{qt})")
+
+    dates = sorted({r["date"] for r in log})
+    span = f"{dates[0]} → {dates[-1]}" if dates else "—"
+
+    return f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 *WIN-RATE DASHBOARD*  (all checks)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Period   : {span}
+Resolved : {ot} | Pending : {len(pending)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 *OVERALL : {op:.1f}%*   ({ow}W / {ol}L)
+📈 CE side : {cp:.1f}%   ({cw}W / {cl}L of {ct})
+📉 PE side : {pp:.1f}%   ({pw}W / {pl}L of {pt})
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🗂 *By source:*
+{src_block}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📅 *By day (last 10):*
+{day_block}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ *By hour:*
+{hour_block}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+_Win = index moved the predicted way by the 3:30 close._
+━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
+
+
+async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(build_stats_report(), parse_mode="Markdown")
 
 
 # ─── TELEGRAM HANDLERS ────────────────────────────────────────────────────────
@@ -1396,13 +1728,14 @@ nifty 25000 19/05/2026
 *Commands:*
   /token    — Set/update Upstox access token
   /backtest — Real-bot forward-test win rate
+  /stats    — Full win-rate dashboard (by day/hour/side)
   /help     — Full help & examples
 
 *I will analyze:*
   ✅ Live Premium & Spot Price
   ✅ Delta, Theta, IV, Gamma, Vega
-  ✅ OI / PCR / Max-pain / Support-Resistance
-  ✅ 🧭 Direction engine (CE vs PE edge)
+  ✅ OI / PCR / Volume / Max-pain / S-R
+  ✅ 🧭 Direction engine (index trend + OI + volume + range)
   ✅ 🌐 Expected move (realistic, priced-in)
   ✅ 🔻 Depreciation (day-by-day theta decay)
   ✅ 🚀 Zero-to-hero probability check
@@ -1436,8 +1769,9 @@ finnifty 24500 2026-05-19     (CE vs PE)
 ```
 
 *What the NEW signals mean:*
-  🧭 Direction → which side (CE/PE) has the edge,
-      blending PCR + OI writing + premium momentum + max-pain
+  🧭 Direction → which side (CE/PE) has the edge, blending the
+      index's own intraday trend + PCR + OI writing + VOLUME
+      conviction + intraday range position + premium momentum + max-pain
   🌐 Expected move → pts the market is actually pricing in
       (ATM straddle). If your strike is farther than this,
       the move is *unlikely* — that's your reality check.
@@ -1453,9 +1787,12 @@ finnifty 24500 2026-05-19     (CE vs PE)
 *Forward-test (prove the bot):*
   `/backtest`     → CE / PE / overall win rate
   `/backtest now` → log a live prediction right now
+  `/stats`        → full dashboard: by day, by hour, CE vs PE,
+                    scheduled vs your-own-queries win rate
   The bot auto-logs its real CE/PE call at 10:00, 12:00,
-  1:00, 2:00 & 3:00 PM for Nifty & Sensex, then checks at
-  the 3:30 close. A win = index moved the predicted way.
+  1:00, 2:00 & 3:00 PM for Nifty & Sensex AND on every analysis
+  you run during market hours, then checks at the 3:30 close.
+  A win = index moved the predicted way.
 
 ⚠️ _No tool can promise a "sure" move. These are
 probabilities — they stack the odds, never guarantee them._"""
@@ -1580,6 +1917,7 @@ def main():
     app.add_handler(CommandHandler("help",  cmd_help))
     app.add_handler(CommandHandler("token", cmd_token))
     app.add_handler(CommandHandler("backtest", cmd_backtest))
+    app.add_handler(CommandHandler("stats", cmd_stats))
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_error_handler(on_error)
