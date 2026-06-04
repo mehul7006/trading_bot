@@ -164,6 +164,11 @@ INDEX_DISPLAY = {
     "midcapnifty": "MIDCAP NIFTY",
 }
 
+# India VIX — the market's fear gauge. Rising VIX = fear (Nifty usually falls);
+# falling VIX = calm/complacency (mildly supportive). Fetched from Upstox with
+# the same token, so no extra API/key is needed.
+VIX_KEY = "NSE_INDEX|India VIX"
+
 # ─── UPSTOX API ───────────────────────────────────────────────────────────────
 def headers() -> dict:
     return {
@@ -385,14 +390,15 @@ def oi_walls(chain: list):
 
 
 def compute_direction(chain: list, spot: float, dte: int, index_change_pct: float = 0.0,
-                      day_high: float = 0.0, day_low: float = 0.0) -> dict:
+                      day_high: float = 0.0, day_low: float = 0.0,
+                      vix_level: float = 0.0, vix_change: float = 0.0) -> dict:
     """
     Intraday + expiry BLENDED market-direction engine.
       score > 0  => bullish (CE side favoured)
       score < 0  => bearish (PE side favoured)
     Combines: the underlying's OWN intraday trend (primary anchor), total PCR,
     fresh OI writing, ATM premium momentum, option VOLUME conviction, intraday
-    range position, and max-pain pull (expiry).
+    range position, IV skew, India VIX (fear gauge), and max-pain pull (expiry).
     """
     reasons = []
     score = 0.0
@@ -520,6 +526,15 @@ def compute_direction(chain: list, spot: float, dte: int, index_change_pct: floa
             elif d_res < d_sup * 0.5:
                 score -= 1; reasons.append(f"Spot near CALL-OI resistance {res} → capped (bearish)")
 
+    # 4c. INDIA VIX (fear gauge) — VIX is inversely correlated with Nifty. A
+    #     sharp VIX spike means traders are buying protection → risk-off (bearish);
+    #     VIX cooling = stability returning (mildly bullish).
+    if vix_level > 0:
+        if vix_change >= 4:
+            score -= 1; reasons.append(f"India VIX {vix_level:.1f} ({vix_change:+.1f}%) → fear spiking (bearish)")
+        elif vix_change <= -4:
+            score += 1; reasons.append(f"India VIX {vix_level:.1f} ({vix_change:+.1f}%) → fear cooling (bullish)")
+
     if score >= 3.5:
         label = "🟢 BULLISH — CE side favoured ↑"
     elif score >= 1:
@@ -534,6 +549,7 @@ def compute_direction(chain: list, spot: float, dte: int, index_change_pct: floa
     return {
         "score": score, "label": label, "reasons": reasons,
         "pcr": pcr, "max_pain": mp, "support": sup, "resistance": res,
+        "vix": vix_level, "vix_change": vix_change,
     }
 
 
@@ -1022,8 +1038,10 @@ def run_analysis(parsed: dict) -> str:
         verdict_short = "NEUTRAL ↔"
 
     # ── NEW: direction context, expected move, depreciation, zero-to-hero ──
+    vix = fetch_index_quote(VIX_KEY)
     direction = compute_direction(chain, spot, dte, index_change_pct,
-                                  quote["day_high"], quote["day_low"])
+                                  quote["day_high"], quote["day_low"],
+                                  vix["ltp"] or 0.0, vix["change_pct"])
     straddle, one_sd, atm_strike = expected_move(chain, spot, dte)
 
     # Volatility-based, direction-gated trade plan (replaces fixed ×1.45/×0.62)
@@ -1046,6 +1064,9 @@ def run_analysis(parsed: dict) -> str:
               (opt_type == "PE" and direction["score"] < 0)
     align_txt = "✅ matches your side" if aligned else \
                 ("⚠️ AGAINST your side" if direction["score"] != 0 else "⚪ neutral")
+
+    vix_line = (f"😨 *INDIA VIX:* {direction['vix']:.2f} ({direction['vix_change']:+.1f}%) — fear gauge"
+                if direction.get("vix", 0) > 0 else "😨 *INDIA VIX:* n/a (market closed)")
 
     # ─────────────────────────────────────────────────────
     # FORMAT RESPONSE
@@ -1102,6 +1123,7 @@ Confidence : *{confidence}*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧭 *MARKET DIRECTION:* {direction['label']}
   Your {opt_type} side → {align_txt}
+{vix_line}
 🌐 *EXPECTED MOVE:* ± {straddle:.0f} pts by expiry (~{one_sd:.0f}/day)
 {zth_block}
 {decay_block}
@@ -1156,8 +1178,10 @@ def run_compare_analysis(parsed: dict) -> str:
     except Exception:
         dte, T = 7, 7 / 365.0
 
+    vix = fetch_index_quote(VIX_KEY)
     direction = compute_direction(chain, spot, dte, index_change_pct,
-                                  quote["day_high"], quote["day_low"])
+                                  quote["day_high"], quote["day_low"],
+                                  vix["ltp"] or 0.0, vix["change_pct"])
     dscore    = direction["score"]
     straddle, one_sd, atm_strike = expected_move(chain, spot, dte)
 
@@ -1255,6 +1279,7 @@ def run_compare_analysis(parsed: dict) -> str:
   {direction['label']}   (score {dscore:+.1f})
 {dir_reasons}
   PCR {direction['pcr']:.2f} | Max-pain {direction['max_pain']} | Support {direction['support']} | Resistance {direction['resistance']}
+  😨 India VIX {direction['vix']:.2f} ({direction['vix_change']:+.1f}%) — fear gauge
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📊 *SIDE-BY-SIDE @ {strike}*
 ```
@@ -1389,8 +1414,10 @@ def make_prediction(index: str) -> Optional[dict]:
         dte = max((datetime.strptime(expiry, "%Y-%m-%d").date() - date.today()).days, 0)
     except Exception:
         dte = 2
+    vix = fetch_index_quote(VIX_KEY)
     direction = compute_direction(chain, spot, dte, quote["change_pct"],
-                                  quote["day_high"], quote["day_low"])
+                                  quote["day_high"], quote["day_low"],
+                                  vix["ltp"] or 0.0, vix["change_pct"])
     atm = find_atm_strike(chain, spot)
     strike = int(atm.get("strike_price", 0)) if atm else 0
     score = direction["score"]
@@ -1735,7 +1762,8 @@ nifty 25000 19/05/2026
   ✅ Live Premium & Spot Price
   ✅ Delta, Theta, IV, Gamma, Vega
   ✅ OI / PCR / Volume / Max-pain / S-R
-  ✅ 🧭 Direction engine (index trend + OI + volume + range)
+  ✅ 😨 India VIX (fear gauge) + IV skew
+  ✅ 🧭 Direction engine (index trend + OI + volume + range + VIX)
   ✅ 🌐 Expected move (realistic, priced-in)
   ✅ 🔻 Depreciation (day-by-day theta decay)
   ✅ 🚀 Zero-to-hero probability check
@@ -1771,7 +1799,8 @@ finnifty 24500 2026-05-19     (CE vs PE)
 *What the NEW signals mean:*
   🧭 Direction → which side (CE/PE) has the edge, blending the
       index's own intraday trend + PCR + OI writing + VOLUME
-      conviction + intraday range position + premium momentum + max-pain
+      conviction + intraday range position + IV skew + India VIX
+      (fear gauge) + premium momentum + max-pain
   🌐 Expected move → pts the market is actually pricing in
       (ATM straddle). If your strike is farther than this,
       the move is *unlikely* — that's your reality check.
