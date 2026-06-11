@@ -73,6 +73,8 @@ public class AuditAgent implements Agent {
                 long cooldownMillis = getCooldownMillis(symbol, slab);
                 if (currentTimestamp.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() - lastSignalTime < cooldownMillis) continue;
 
+                // Full history — faithful to live bot (predictor uses deep SMC/liquidity context).
+                // History truncation materially changes signals, so no cap is used here.
                 List<SimpleMarketData> history = data.subList(0, i + 1);
                 AIPredictor.AIPrediction prediction = predictionAgent.generateSignal(symbol, history);
 
@@ -114,15 +116,18 @@ public class AuditAgent implements Agent {
     }
 
     private long getCooldownMillis(String symbol, int slab) {
-        return 10L * 60 * 1000;
+        // Match live bot: 2-min cooldown per symbol (Phase3TelegramBot line 893)
+        return 2L * 60 * 1000;
     }
 
     private boolean passesGates(String symbol, int slab, AIPredictor.AIPrediction p) {
-        // V24.1 Audit Gates: Aligned with live bot thresholds for honest win-rate measurement
-        double minConf = 85;
+        // LIVE-MATCHED gates: mirror Phase3TelegramBot main-scan thresholds
+        // so the audit call volume matches what users actually receive (~2-3/day).
+        double minConf = 70;
         double minPts = switch (symbol) {
-            case "NIFTY50"   -> 35.0;
-            case "SENSEX"    -> 100.0;
+            case "NIFTY50"   -> 25.0;
+            case "SENSEX"    -> 60.0;
+            case "BANKNIFTY" -> 70.0;
             default          -> 20.0;
         };
 
