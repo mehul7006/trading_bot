@@ -145,6 +145,27 @@ def set_access_token(token: str):
     _current_token["value"] = token
     _save_token(token)
 
+# ── Long-lived extended fallback token ───────────────────────────────────────
+# An "isExtended" Upstox token (valid for months, e.g. until 2027) used as an
+# automatic safety net: if you forget to refresh the daily token and a live call
+# comes back 401, the bot transparently switches to this token so it keeps
+# fetching data instead of going dark. Kept OUT of source (it is long-lived and
+# the repo is shared): set UPSTOX_FALLBACK_TOKEN as an env var on Render; locally
+# it is read from the gitignored upstox_token.json ("fallback_access_token").
+def _load_fallback_token() -> str:
+    env = os.getenv("UPSTOX_FALLBACK_TOKEN", "")
+    if env:
+        return env
+    if TOKEN_FILE.exists():
+        try:
+            return json.loads(TOKEN_FILE.read_text()).get("fallback_access_token", "")
+        except Exception:
+            pass
+    return ""
+
+FALLBACK_TOKEN = _load_fallback_token()
+_using_fallback = {"on": False}
+
 UPSTOX_ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN", "")  # kept for compat
 UPSTOX_BASE = "https://api.upstox.com/v2"
 
@@ -177,15 +198,39 @@ def headers() -> dict:
     }
 
 
+def _activate_fallback():
+    """Switch the in-memory active token to the extended fallback (no file write,
+    so the user's daily-token slot is preserved). A later /token with a fresh
+    valid token overrides this until the next 401."""
+    if FALLBACK_TOKEN and get_access_token() != FALLBACK_TOKEN:
+        _current_token["value"] = FALLBACK_TOKEN
+        _using_fallback["on"] = True
+        logger.warning("Upstox token rejected (401) — switched to extended "
+                       "fallback token to keep the bot running.")
+
+
+def upstox_get(url: str, params: dict = None, timeout: int = 8) -> dict:
+    """GET an Upstox endpoint, auto-falling back to the long-lived extended token
+    on a 401 (primary token missing/expired), then retrying once. Returns parsed
+    JSON (or {} on network error) so every caller keeps its existing parsing."""
+    try:
+        r = requests.get(url, headers=headers(), params=params, timeout=timeout)
+        if r.status_code == 401 and FALLBACK_TOKEN and get_access_token() != FALLBACK_TOKEN:
+            _activate_fallback()
+            r = requests.get(url, headers=headers(), params=params, timeout=timeout)
+        return r.json()
+    except Exception as e:
+        logger.error(f"upstox_get error for {url}: {e}")
+        return {}
+
+
 def fetch_spot_price(index_key: str) -> Optional[float]:
     try:
-        r = requests.get(
+        data = upstox_get(
             f"{UPSTOX_BASE}/market-quote/quotes",
-            headers=headers(),
             params={"instrument_key": index_key},
             timeout=8,
         )
-        data = r.json()
         if data.get("status") == "success":
             safe_key = list(data["data"].keys())[0]
             return float(data["data"][safe_key].get("last_price", 0))
@@ -204,13 +249,11 @@ def fetch_index_quote(index_key: str) -> dict:
     out = {"ltp": None, "prev_close": 0.0, "change_pct": 0.0,
            "day_high": 0.0, "day_low": 0.0, "day_open": 0.0}
     try:
-        r = requests.get(
+        data = upstox_get(
             f"{UPSTOX_BASE}/market-quote/quotes",
-            headers=headers(),
             params={"instrument_key": index_key},
             timeout=8,
         )
-        data = r.json()
         if data.get("status") == "success":
             key = list(data["data"].keys())[0]
             q = data["data"][key]
@@ -233,13 +276,11 @@ def fetch_index_quote(index_key: str) -> dict:
 
 def fetch_option_chain(index_key: str, expiry: str) -> Optional[list]:
     try:
-        r = requests.get(
+        data = upstox_get(
             f"{UPSTOX_BASE}/option/chain",
-            headers=headers(),
             params={"instrument_key": index_key, "expiry_date": expiry},
             timeout=10,
         )
-        data = r.json()
         if data.get("status") == "success":
             return data.get("data", [])
     except Exception as e:
@@ -1452,9 +1493,8 @@ def log_query_prediction(index: str, strike: int, score: float, spot: Optional[f
 def nearest_expiry(index_key: str) -> Optional[str]:
     """Front (nearest) option expiry for an index."""
     try:
-        r = requests.get(f"{UPSTOX_BASE}/option/contract", headers=headers(),
-                         params={"instrument_key": index_key}, timeout=10)
-        j = r.json()
+        j = upstox_get(f"{UPSTOX_BASE}/option/contract",
+                       params={"instrument_key": index_key}, timeout=10)
         if j.get("status") == "success":
             exps = sorted({c.get("expiry") for c in j.get("data", []) if c.get("expiry")})
             return exps[0] if exps else None

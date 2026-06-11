@@ -21,6 +21,11 @@ services:
         sync: false
       - key: UPSTOX_ACCESS_TOKEN
         sync: false
+      # Long-lived "extended" Upstox token (valid for months). Used automatically
+      # as a fallback when the daily UPSTOX_ACCESS_TOKEN is missing/expired (401),
+      # so the bot keeps fetching data even if you forget the daily refresh.
+      - key: UPSTOX_FALLBACK_TOKEN
+        sync: false
       # Auto-injected by Render from the database above. If you created the
       # service WITHOUT a blueprint, instead add DATABASE_URL manually in the
       # dashboard (Internal Database URL of your Render Postgres).
