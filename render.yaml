@@ -1,10 +1,6 @@
-# Free Postgres persists the forward-test win-rate log across restarts/redeploys
-# (Render's free web filesystem is ephemeral, which is why accuracy was null).
-databases:
-  - name: option-analyzer-db
-    plan: free
-    region: singapore
-
+# Win-rate log is persisted to a Render Postgres (already deployed separately)
+# because Render's free web filesystem is ephemeral — that was the null-accuracy
+# cause. DATABASE_URL is set manually (see envVars below) to point at that DB.
 services:
   - type: web
     name: option-analyzer-bot
@@ -26,10 +22,8 @@ services:
       # so the bot keeps fetching data even if you forget the daily refresh.
       - key: UPSTOX_FALLBACK_TOKEN
         sync: false
-      # Auto-injected by Render from the database above. If you created the
-      # service WITHOUT a blueprint, instead add DATABASE_URL manually in the
-      # dashboard (Internal Database URL of your Render Postgres).
+      # Internal Database URL of your already-deployed Render Postgres. Paste it
+      # in the dashboard (Environment tab). The bot auto-creates its table on
+      # first connect — no SQL/migrations needed.
       - key: DATABASE_URL
-        fromDatabase:
-          name: option-analyzer-db
-          property: connectionString
+        sync: false
