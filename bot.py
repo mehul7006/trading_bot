@@ -493,26 +493,34 @@ def compute_direction(chain: list, spot: float, dte: int, index_change_pct: floa
             score -= 1.5
             reasons.append(f"ATM PE {pe_chg:+.0f}% vs CE {ce_chg:+.0f}% → buyers favour PUTs (bearish)")
 
-        # 3b. IV SKEW (fear gauge) — when PUTS are pricier than CALLS, traders are
-        #     paying up for downside protection = fear (bearish). Pricier CALLS =
-        #     upside chase (bullish). This is the option market's own emotion read.
+        # 3b. IV SKEW (fear gauge) — index PUTS ALWAYS carry a standing crash-
+        #     insurance premium (~2 IV pts above calls) even on calm/up days, so
+        #     the old "PUT IV > CALL IV → bearish" rule fired almost EVERY day and
+        #     baked a permanent bearish tilt into the engine. We now measure skew
+        #     vs that baseline: only GENUINELY steep put skew counts as fresh fear,
+        #     and calls reaching/over puts (rare) is a real upside-chase signal.
         ce_iv = _f(atm.get("call_options", {}).get("option_greeks", {}), "iv")
         pe_iv = _f(atm.get("put_options", {}).get("option_greeks", {}), "iv")
         if ce_iv > 0 and pe_iv > 0:
-            if pe_iv - ce_iv > 1.5:
+            skew = pe_iv - ce_iv          # +ve = puts pricier (the normal state)
+            PUT_SKEW_BASELINE = 2.0       # typical standing index put skew (IV pts)
+            if skew - PUT_SKEW_BASELINE > 2.5:    # skew >4.5 = real, elevated fear
                 score -= 1
-                reasons.append(f"IV skew: PUT IV {pe_iv:.1f}% > CALL {ce_iv:.1f}% → hedging/fear (bearish)")
-            elif ce_iv - pe_iv > 1.5:
+                reasons.append(f"IV skew steep: PUT IV {pe_iv:.1f}% ≫ CALL {ce_iv:.1f}% → elevated fear (bearish)")
+            elif skew < 0.0:                       # calls pricier than puts → rare, bullish
                 score += 1
-                reasons.append(f"IV skew: CALL IV {ce_iv:.1f}% > PUT {pe_iv:.1f}% → upside chase (bullish)")
+                reasons.append(f"IV skew flipped: CALL IV {ce_iv:.1f}% > PUT {pe_iv:.1f}% → upside chase (bullish)")
 
-    # 4. Max-pain pull (expiry magnet)
+    # 4. Max-pain pull (expiry magnet) — this is an EXPIRY-WEEK phenomenon: the
+    #    pin only tugs hard in the last day or two. Applying it every day added a
+    #    standing bearish tilt on trending-up days (max-pain lags below a rising
+    #    spot). Gate it to dte <= 2 so it only speaks when it actually matters.
     mp = max_pain(chain)
-    if mp:
+    if mp and dte <= 2:
         if mp > spot * 1.002:
-            score += 1; reasons.append(f"Max-pain {mp} > spot → expiry pull up (bullish)")
+            score += 1; reasons.append(f"Max-pain {mp} > spot (expiry {dte}d) → pin pull up (bullish)")
         elif mp < spot * 0.998:
-            score -= 1; reasons.append(f"Max-pain {mp} < spot → expiry pull down (bearish)")
+            score -= 1; reasons.append(f"Max-pain {mp} < spot (expiry {dte}d) → pin pull down (bearish)")
 
     # 4b. OI-WALL PROXIMITY — biggest PUT-OI strike = support (buyers defend),
     #     biggest CALL-OI strike = resistance (sellers defend). Sitting on support
@@ -1329,7 +1337,50 @@ except Exception as _e:  # pragma: no cover
     logger.warning(f"pytz unavailable — backtest scheduler disabled: {_e}")
 
 
+# ── Persistence backend ──────────────────────────────────────────────────────
+# Render's free filesystem is EPHEMERAL: backtest_log.json is wiped on every
+# redeploy / idle-spindown, so logged predictions never survived to be resolved
+# and the win rate was always empty. When DATABASE_URL is set (Render Postgres)
+# the whole log is stored as one JSONB row so it survives restarts. Locally
+# (no DATABASE_URL) it transparently falls back to the JSON file.
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+_db_conn = None
+_db_lock = threading.Lock()
+
+
+def _db():
+    """Return a live psycopg2 connection (creating the table once), or None."""
+    global _db_conn
+    if not DATABASE_URL:
+        return None
+    try:
+        import psycopg2
+        if _db_conn is None or _db_conn.closed:
+            _db_conn = psycopg2.connect(DATABASE_URL, sslmode="require",
+                                        connect_timeout=10)
+            _db_conn.autocommit = True
+            with _db_conn.cursor() as cur:
+                cur.execute("CREATE TABLE IF NOT EXISTS backtest_state "
+                            "(id INT PRIMARY KEY, data JSONB NOT NULL)")
+        return _db_conn
+    except Exception as e:
+        logger.error(f"Postgres unavailable, using file fallback: {e}")
+        _db_conn = None
+        return None
+
+
 def _load_log() -> list:
+    conn = _db()
+    if conn is not None:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT data FROM backtest_state WHERE id = 1")
+                row = cur.fetchone()
+                return row[0] if row else []
+        except Exception as e:
+            logger.error(f"DB load failed, trying file: {e}")
+            global _db_conn
+            _db_conn = None
     if BACKTEST_FILE.exists():
         try:
             return json.loads(BACKTEST_FILE.read_text())
@@ -1342,6 +1393,19 @@ _log_lock = threading.Lock()
 
 
 def _save_log(log: list):
+    conn = _db()
+    if conn is not None:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO backtest_state (id, data) VALUES (1, %s::jsonb) "
+                    "ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data",
+                    [json.dumps(log)])
+            return
+        except Exception as e:
+            logger.error(f"DB save failed, writing file: {e}")
+            global _db_conn
+            _db_conn = None
     BACKTEST_FILE.write_text(json.dumps(log, indent=2))
 
 
@@ -1459,7 +1523,17 @@ async def job_record_signal(context: ContextTypes.DEFAULT_TYPE):
 
 
 async def job_resolve(context: ContextTypes.DEFAULT_TYPE):
-    """Scheduled at 15:35 IST — verify today's pending predictions vs the close."""
+    """Verify today's pending predictions vs the close.
+
+    Runs at the scheduled 15:35 IST close AND once on every startup. The startup
+    run lets a restart-AFTER-close still resolve predictions whose 15:35 job was
+    missed because Render's free instance had spun down. We only resolve once the
+    session has actually closed (>=15:30 IST) so a mid-session restart never
+    grades a 10:00 signal against an 11:00 price.
+    """
+    if IST is not None and _now_ist().time() < dtime(15, 30):
+        logger.info("Resolve skipped — market not yet closed.")
+        return
     today = date.today().isoformat()
     loop = asyncio.get_event_loop()
     closes = {}
@@ -1959,7 +2033,11 @@ def main():
             jq.run_daily(job_record_signal, time=dtime(h, m, tzinfo=IST),
                          data=t, name=f"signal_{t}")
         jq.run_daily(job_resolve, time=dtime(15, 35, tzinfo=IST), name="resolve_close")
-        logger.info(f"Forward-test scheduled at {SIGNAL_TIMES} IST + resolve 15:35 IST")
+        # Catch-up: if we restart after the close, resolve any predictions whose
+        # 15:35 job was missed while the free instance was spun down. The job's
+        # own >=15:30 guard makes this a no-op during live session hours.
+        jq.run_once(job_resolve, when=15, name="resolve_startup")
+        logger.info(f"Forward-test scheduled at {SIGNAL_TIMES} IST + resolve 15:35 IST (+startup catch-up)")
     else:
         logger.warning("JobQueue/pytz not available — forward-test disabled "
                        "(install python-telegram-bot[job-queue]).")
