@@ -20,8 +20,25 @@ public class AuditAgent implements Agent {
     private final MarketDataAgent marketDataAgent;
     private final PredictionAgent predictionAgent;
 
+    /** One audited prediction with its real outcome — for prediction-wise listing. */
+    public static class CallRecord {
+        public LocalDateTime time;
+        public String symbol;
+        public String direction;
+        public double entry;
+        public double target;       // estimatedMovePoints
+        public double stopLoss;
+        public double confidence;
+        public String outcome;      // "FULL WIN" / "PARTIAL" / "LOSS"
+        public double points;       // realized points (signed)
+        public String model;        // aiModel source (e.g. NIFTY_V31, SENSEX_V33_MR)
+        public double rsi;          // RSI at entry (prediction.marketRegimePrediction)
+        public double adx;          // trend strength at entry (prediction.neuralNetworkScore)
+    }
+
     public static class AuditResult {
         public String symbol;
+        public final List<CallRecord> calls = new ArrayList<>();
         public int totalTrades;
         public int fullWins;
         public int partialWins;
@@ -111,6 +128,115 @@ public class AuditAgent implements Agent {
             res.winRate = res.totalTrades > 0 ? ((double)(res.fullWins + res.partialWins) / res.totalTrades) * 100 : 0;
         } catch (Exception e) {
             System.err.println("❌ Audit error for " + symbol + ": " + e.getMessage());
+        }
+        return res;
+    }
+
+    /**
+     * Detailed honest audit over the LAST N trading days.
+     * Identical signal logic, gates, cooldown and outcome verification as runAudit(),
+     * but: (a) only counts calls whose date falls in the last {@code lastNTradingDays}
+     * trading sessions present in the data, while still using all earlier candles for
+     * indicator warm-up, and (b) records every counted prediction in res.calls.
+     *
+     * @param fetchDays           calendar days of data to pull (must comfortably exceed
+     *                            the trading window + 200-candle warm-up)
+     * @param lastNTradingDays    number of most-recent trading sessions to score
+     */
+    public AuditResult runAuditDetailed(String symbol, int fetchDays, int lastNTradingDays) {
+        AuditResult res = new AuditResult();
+        res.symbol = symbol;
+
+        try {
+            List<SimpleMarketData> data = marketDataAgent.getHistoricalData(symbol, fetchDays);
+            if (data == null || data.size() < 200) return res;
+
+            // Determine the window: last N distinct trading dates in the data.
+            java.util.TreeSet<LocalDate> distinctDates = new java.util.TreeSet<>();
+            for (SimpleMarketData d : data) {
+                if (d.timestamp != null) distinctDates.add(d.timestamp.toLocalDate());
+            }
+            List<LocalDate> sorted = new ArrayList<>(distinctDates);
+            int fromIdx = Math.max(0, sorted.size() - lastNTradingDays);
+            Set<LocalDate> windowDays = new HashSet<>(sorted.subList(fromIdx, sorted.size()));
+
+            long lastSignalTime = 0;
+            Set<LocalDate> tradingDaysSet = new HashSet<>();
+            // LIVE-MATCHED daily cap (Phase3TelegramBot.scanEquitySymbol). NIFTY uses a tighter
+            // cap (2) because its trend-pullback edge is choppier — the 3rd marginal call/day
+            // historically loses. SENSEX/BANKNIFTY keep 3.
+            int dailyCap = "NIFTY50".equals(symbol) ? 2 : 3;
+            java.util.Map<LocalDate, Integer> callsPerDay = new java.util.HashMap<>();
+
+            for (int i = 200; i < data.size(); i++) {
+                SimpleMarketData latest = data.get(i);
+                LocalDateTime currentTimestamp = latest.timestamp;
+                LocalDate day = currentTimestamp.toLocalDate();
+                if (!windowDays.contains(day)) continue; // outside scored window (warm-up only)
+                if (callsPerDay.getOrDefault(day, 0) >= dailyCap) continue; // daily cap reached (live behaviour)
+
+                java.time.LocalTime time = currentTimestamp.toLocalTime();
+                if (time.isBefore(java.time.LocalTime.of(9, 15)) || time.isAfter(java.time.LocalTime.of(15, 25))) continue;
+                int slab = getTimeSlab(time);
+                long cooldownMillis = getCooldownMillis(symbol, slab);
+                if (currentTimestamp.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() - lastSignalTime < cooldownMillis) continue;
+
+                List<SimpleMarketData> history = data.subList(0, i + 1);
+                AIPredictor.AIPrediction prediction = predictionAgent.generateSignal(symbol, history);
+
+                if (passesGates(symbol, slab, prediction)) {
+                    res.totalTrades++;
+                    tradingDaysSet.add(day);
+                    callsPerDay.merge(day, 1, Integer::sum);
+                    lastSignalTime = currentTimestamp.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+
+                    int outcome = verifyOutcome(data, i, prediction, 24);
+
+                    CallRecord cr = new CallRecord();
+                    cr.time = currentTimestamp;
+                    cr.symbol = symbol;
+                    cr.direction = prediction.predictedDirection;
+                    cr.entry = latest.price;
+                    cr.target = prediction.estimatedMovePoints;
+                    cr.stopLoss = prediction.suggestedStopLoss;
+                    cr.confidence = prediction.confidence;
+                    cr.model = prediction.aiModel;
+                    cr.rsi = prediction.marketRegimePrediction;
+                    cr.adx = prediction.neuralNetworkScore;
+
+                    double pts;
+                    if (outcome == 2) {
+                        res.fullWins++;
+                        pts = prediction.estimatedMovePoints;
+                        cr.outcome = "FULL WIN";
+                        if (slab == 0) { res.fullWins_9_11++; res.trades_9_11++; res.netPoints_9_11 += pts; }
+                        else if (slab == 1) { res.fullWins_11_13++; res.trades_11_13++; res.netPoints_11_13 += pts; }
+                        else { res.fullWins_13_1530++; res.trades_13_1530++; res.netPoints_13_1530 += pts; }
+                    } else if (outcome == 1) {
+                        res.partialWins++;
+                        pts = prediction.estimatedMovePoints * 0.3;
+                        cr.outcome = "PARTIAL";
+                        if (slab == 0) { res.partialWins_9_11++; res.trades_9_11++; res.netPoints_9_11 += pts; }
+                        else if (slab == 1) { res.partialWins_11_13++; res.trades_11_13++; res.netPoints_11_13 += pts; }
+                        else { res.partialWins_13_1530++; res.trades_13_1530++; res.netPoints_13_1530 += pts; }
+                    } else {
+                        res.losses++;
+                        pts = -prediction.suggestedStopLoss;
+                        cr.outcome = "LOSS";
+                        if (slab == 0) { res.losses_9_11++; res.trades_9_11++; res.netPoints_9_11 += pts; }
+                        else if (slab == 1) { res.losses_11_13++; res.trades_11_13++; res.netPoints_11_13 += pts; }
+                        else { res.losses_13_1530++; res.trades_13_1530++; res.netPoints_13_1530 += pts; }
+                    }
+                    cr.points = pts;
+                    res.netPoints += pts;
+                    res.calls.add(cr);
+                }
+            }
+            res.tradingDays = tradingDaysSet.size();
+            res.nonTradingDays = windowDays.size() - res.tradingDays;
+            res.winRate = res.totalTrades > 0 ? ((double)(res.fullWins + res.partialWins) / res.totalTrades) * 100 : 0;
+        } catch (Exception e) {
+            System.err.println("❌ Detailed audit error for " + symbol + ": " + e.getMessage());
         }
         return res;
     }

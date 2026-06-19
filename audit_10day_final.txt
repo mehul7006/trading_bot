@@ -1,0 +1,91 @@
+=======================================================================
+  HONEST 10-TRADING-DAY AUDIT  (live-bot-matched logic)
+  Data: real Upstox 1-min -> 5-min candles | gates = live thresholds
+  Live constraints applied: 2-min cooldown + max 3 calls/symbol/day
+=======================================================================
+WARNING: sun.reflect.Reflection.getCallerClass is not supported. This will impact performance.
+? Real Strategy Predictor initialized (Segment-Specific Optimization Mode)
+? Fetching HONEST market data (5-Min Resampled) for: NIFTY50
+? Loaded 5925 candles from disk cache for NIFTY50
+? Updating live data for NIFTY50...
+? Historical API URL: https://api.upstox.com/v2/historical-candle/NSE_INDEX%7CNifty%2050/1minute/2026-06-18/2026-06-17
+? Fetched 375 historical candles for NIFTY50
+? Intraday: fetched 375 candles for NIFTY50
+? Cache updated & saved. Size: 5925 candles.
+
+-----------------------------------------------------------------------
+ NIFTY50 — last 10 trading days
+-----------------------------------------------------------------------
+   TIME             DIR       ENTRY  TARGET    SL   RSI   ADX       PTS OUTCOME   MODEL
+   2026-06-05 10:25 UP     23470.55      32    21    54    33     -21.3 LOSS      NIFTY_V31
+   2026-06-10 11:00 UP     23378.50      30    20    52    30     +30.0 FULL WIN  NIFTY_V31
+   2026-06-18 10:00 UP     24116.05      30    20    62    33      +9.0 PARTIAL   NIFTY_V31
+   .................................................................
+   Calls: 3 | Full: 1 | Partial: 1 | Loss: 1
+   Win rate (full+partial): 66.7%  | Strict accuracy (full only): 33.3%
+   Net points: +17.7 | Trading days w/ signals: 3 | Calls/day: 1.00
+? Fetching HONEST market data (5-Min Resampled) for: BANKNIFTY
+? Loaded 5925 candles from disk cache for BANKNIFTY
+? Updating live data for BANKNIFTY...
+? Historical API URL: https://api.upstox.com/v2/historical-candle/NSE_INDEX%7CNifty%20Bank/1minute/2026-06-18/2026-06-17
+? Fetched 375 historical candles for BANKNIFTY
+? Intraday: fetched 375 candles for BANKNIFTY
+? Cache updated & saved. Size: 5925 candles.
+
+-----------------------------------------------------------------------
+ BANKNIFTY — last 10 trading days
+-----------------------------------------------------------------------
+   TIME             DIR       ENTRY  TARGET    SL   RSI   ADX       PTS OUTCOME   MODEL
+   2026-06-05 10:30 DOWN   54508.75      82   122    55     0     +81.6 FULL WIN  BANKNIFTY_V33_MR
+   2026-06-05 10:35 DOWN   54328.05      86   128    43     0     +85.5 FULL WIN  BANKNIFTY_V33_MR
+   .................................................................
+   Calls: 2 | Full: 2 | Partial: 0 | Loss: 0
+   Win rate (full+partial): 100.0%  | Strict accuracy (full only): 100.0%
+   Net points: +167.1 | Trading days w/ signals: 1 | Calls/day: 2.00
+? Fetching HONEST market data (5-Min Resampled) for: SENSEX
+? Loaded 5925 candles from disk cache for SENSEX
+? Updating live data for SENSEX...
+? Historical API URL: https://api.upstox.com/v2/historical-candle/BSE_INDEX%7CSENSEX/1minute/2026-06-18/2026-06-17
+? Fetched 375 historical candles for SENSEX
+? Intraday: fetched 375 candles for SENSEX
+? Cache updated & saved. Size: 5925 candles.
+
+-----------------------------------------------------------------------
+ SENSEX — last 10 trading days
+-----------------------------------------------------------------------
+   TIME             DIR       ENTRY  TARGET    SL   RSI   ADX       PTS OUTCOME   MODEL
+   2026-06-05 09:45 UP     74496.29      83    56    63    28     +25.0 PARTIAL   SENSEX_V31
+   2026-06-05 09:50 UP     74535.42      84    56    63    28     -55.8 LOSS      SENSEX_V31
+   2026-06-05 10:10 UP     74577.77      99    66    64    29     +29.8 PARTIAL   SENSEX_V31
+   2026-06-10 10:10 DOWN   74242.89      60    90    71     0     +18.1 PARTIAL   SENSEX_V33_MR
+   2026-06-18 09:55 UP     77248.61      75    50    59    28     +22.5 PARTIAL   SENSEX_V31
+   2026-06-18 10:00 UP     77227.68      75    50    56    29     +75.0 FULL WIN  SENSEX_V31
+   2026-06-18 10:05 UP     77255.30      75    50    61    29     +22.5 PARTIAL   SENSEX_V31
+   .................................................................
+   Calls: 7 | Full: 1 | Partial: 5 | Loss: 1
+   Win rate (full+partial): 85.7%  | Strict accuracy (full only): 14.3%
+   Net points: +137.1 | Trading days w/ signals: 3 | Calls/day: 2.33
+
+=======================================================================
+  OVERALL — all 3 indices — last 10 trading days
+=======================================================================
+   Total calls        : 12
+   Full wins          : 4
+   Partial wins       : 6
+   Losses (SL hit)    : 2
+   WIN RATE (W+P)     : 83.3%
+   ACCURACY (full)    : 33.3%
+   TOTAL NET POINTS   : +321.9 pts
+=======================================================================
+  Per-model breakdown (model = sub-strategy that fired):
+   MODEL             CALLS    W+P   FULL   LOSS      WR%   NETPTS
+   BANKNIFTY_V33_MR      2      2      2      0   100.0%   +167.1
+   NIFTY_V31             3      2      1      1    66.7%    +17.7
+   SENSEX_V31            6      5      1      1    83.3%   +119.0
+   SENSEX_V33_MR         1      1      0      0   100.0%    +18.1
+=======================================================================
+  Honesty notes:
+   - Outcome from REAL forward candles (target vs SL, 24x5min lookahead).
+   - Partial = +30% of target; Loss = -full SL. Same math as live audit.
+   - Warm-up candles before the window are NOT scored (no look-ahead).
+=======================================================================

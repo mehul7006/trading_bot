@@ -784,8 +784,11 @@ public class Phase3TelegramBot {
 
     private void scanEquitySymbol(long chatId, String symbol) {
         try {
-            // Per-symbol daily limit: max 3 calls/symbol — quality over quantity
-            if (todayCallsBySymbol.getOrDefault(symbol, 0) >= 3) return;
+            // Per-symbol daily limit — quality over quantity. NIFTY capped at 2 (its
+            // trend-pullback edge is choppier; the 3rd marginal call/day historically
+            // loses — see honest audit). SENSEX/BANKNIFTY keep 3.
+            int dailyCap = "NIFTY50".equals(symbol) ? 2 : 3;
+            if (todayCallsBySymbol.getOrDefault(symbol, 0) >= dailyCap) return;
 
             List<SimpleMarketData> data5 = marketDataFetcher.getRealMarketData5Min(symbol);
             if (data5 == null || data5.isEmpty()) {
